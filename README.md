@@ -47,21 +47,15 @@ The repo includes a `railway.toml` with healthcheck and restart policy. To deplo
 
 1. **Create the service** — point Railway at this repo. Nixpacks auto-detects
    Next.js and runs `npm run build` then `npm run start`.
-2. **Add a Postgres plugin** in the same project. Railway will create a
-   `DATABASE_URL` reference variable automatically.
+2. **Add a Postgres plugin** in the same project.
 3. **Set environment variables** on the service:
    - `DATABASE_URL` = `${{Postgres.DATABASE_URL}}`
    - `DATABASE_SSL` = `true` (Railway managed Postgres requires SSL)
 4. **Generate a public domain** under *Settings → Networking → Generate Domain*.
-5. **Seed the database** (one-off, from your local machine):
 
-   ```bash
-   DATABASE_URL="<railway-public-postgres-url>" DATABASE_SSL=true \
-     npm run db:setup
-   ```
-
-   Use the Postgres service's *public* connection URL (under "Connect"), not the
-   internal one, when running this from your laptop.
+The schema and seed data are applied automatically on every deploy by the
+`preDeployCommand` in `railway.toml` (`npm run db:setup`). Both `db/schema.sql`
+and `db/seed.sql` are idempotent, so re-running them on each deploy is safe.
 
 The `/api/health` endpoint always returns HTTP 200 once the server is up; the
 JSON body indicates whether the database is reachable. This means Railway's
