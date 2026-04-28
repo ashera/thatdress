@@ -1,13 +1,14 @@
 {
   "name": "ebikeflip",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "db:setup": "node scripts/db-setup.mjs"
+    "db:setup": "node scripts/db-setup.mjs",
+    "prepare": "git config core.hooksPath .githooks 2>/dev/null || true"
   },
   "engines": {
     "node": ">=20.0.0"

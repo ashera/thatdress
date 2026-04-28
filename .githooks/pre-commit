@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Auto-bump the patch version on every commit. The new version is staged
+# into the same commit, so package.json + package-lock.json bump together.
+#
+# Skip in merge/rebase/cherry-pick states to avoid weird interactions.
+set -e
+
+git_dir=$(git rev-parse --git-dir)
+if [ -e "$git_dir/MERGE_HEAD" ] \
+  || [ -e "$git_dir/CHERRY_PICK_HEAD" ] \
+  || [ -e "$git_dir/REBASE_HEAD" ] \
+  || [ -d "$git_dir/rebase-merge" ] \
+  || [ -d "$git_dir/rebase-apply" ]; then
+  exit 0
+fi
+
+# Skip if package.json isn't part of this commit AND nothing else changed in
+# package.json — but always bump otherwise. Easier: just always bump.
+npm version patch --no-git-tag-version --silent >/dev/null
+
+git add package.json package-lock.json
