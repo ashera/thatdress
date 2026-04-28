@@ -12,6 +12,9 @@ const ERRORS: Record<string, string> = {
   "email-taken": "An account with that email already exists.",
 };
 
+const inputClass =
+  "rounded-md border border-sand-300 bg-white/80 px-3 py-2 text-sm text-sand-900 outline-none transition-colors placeholder:text-sand-400 focus:border-ocean-500 focus:ring-2 focus:ring-ocean-200 dark:border-ocean-800 dark:bg-ocean-900/60 dark:text-sand-50 dark:placeholder:text-sand-500 dark:focus:border-ocean-400 dark:focus:ring-ocean-700/50";
+
 export default async function RegisterPage({
   searchParams,
 }: {
@@ -25,14 +28,17 @@ export default async function RegisterPage({
   const errorMessage = error ? ERRORS[error] ?? "Something went wrong." : null;
 
   return (
-    <div className="flex flex-1 items-center justify-center bg-zinc-50 px-6 py-16 dark:bg-black">
-      <main className="w-full max-w-sm">
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-950 dark:text-zinc-50">
-          Create an account
+    <div className="flex flex-1 items-center justify-center bg-gradient-to-b from-ocean-100 via-sand-50 to-sand-100 px-6 py-16 dark:from-ocean-950 dark:via-ocean-900 dark:to-ocean-950">
+      <main className="w-full max-w-sm rounded-2xl border border-sand-200 bg-white/80 p-8 shadow-sm backdrop-blur dark:border-ocean-800 dark:bg-ocean-900/60">
+        <h1 className="text-2xl font-semibold tracking-tight text-sand-900 dark:text-sand-50">
+          Join the boardwalk
         </h1>
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          Already have one?{" "}
-          <Link href="/login" className="font-medium underline">
+        <p className="mt-1 text-sm text-sand-700 dark:text-sand-300">
+          Already have an account?{" "}
+          <Link
+            href="/login"
+            className="font-medium text-ocean-700 underline dark:text-ocean-300"
+          >
             Log in
           </Link>
           .
@@ -40,7 +46,7 @@ export default async function RegisterPage({
 
         <form action={register} className="mt-6 flex flex-col gap-4">
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
+            <span className="text-sm font-medium text-sand-800 dark:text-sand-200">
               Email
             </span>
             <input
@@ -48,12 +54,12 @@ export default async function RegisterPage({
               name="email"
               required
               autoComplete="email"
-              className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-zinc-100"
+              className={inputClass}
             />
           </label>
 
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
+            <span className="text-sm font-medium text-sand-800 dark:text-sand-200">
               Password
             </span>
             <input
@@ -63,20 +69,22 @@ export default async function RegisterPage({
               minLength={8}
               maxLength={72}
               autoComplete="new-password"
-              className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-zinc-100"
+              className={inputClass}
             />
-            <span className="text-xs text-zinc-500">At least 8 characters.</span>
+            <span className="text-xs text-sand-500 dark:text-sand-400">
+              At least 8 characters.
+            </span>
           </label>
 
           {errorMessage ? (
-            <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300">
+            <p className="rounded-md border border-coral-200 bg-coral-50 px-3 py-2 text-sm text-coral-800 dark:border-coral-700/50 dark:bg-coral-900/30 dark:text-coral-200">
               {errorMessage}
             </p>
           ) : null}
 
           <button
             type="submit"
-            className="mt-1 rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+            className="mt-1 rounded-full bg-ocean-700 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-ocean-800 dark:bg-ocean-500 dark:hover:bg-ocean-400"
           >
             Create account
           </button>
