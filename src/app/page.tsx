@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { query } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -69,6 +70,21 @@ export default async function Home() {
             <code>.env.example</code>.
           </p>
         </section>
+
+        <nav className="flex flex-wrap gap-3">
+          <Link
+            href="/listings"
+            className="rounded-full border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+          >
+            View listings →
+          </Link>
+          <a
+            href="/api/health"
+            className="rounded-full border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-900 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+          >
+            /api/health
+          </a>
+        </nav>
       </main>
     </div>
   );

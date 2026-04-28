@@ -4,18 +4,16 @@ import { query } from "@/lib/db";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  let database: { ok: boolean; error?: string; time?: string };
   try {
     const result = await query<{ now: string }>("SELECT NOW() as now");
-    return NextResponse.json({
-      status: "ok",
-      database: "connected",
-      time: result.rows[0]?.now ?? null,
-    });
+    database = { ok: true, time: String(result.rows[0]?.now ?? "") };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "unknown error";
-    return NextResponse.json(
-      { status: "error", database: "disconnected", error: message },
-      { status: 503 },
-    );
+    database = {
+      ok: false,
+      error: error instanceof Error ? error.message : "unknown error",
+    };
   }
+
+  return NextResponse.json({ status: "ok", database });
 }
