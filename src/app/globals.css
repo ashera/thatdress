@@ -1,26 +1,79 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fbf7ee;
+  --foreground: #1f2933;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a1820;
+    --foreground: #e6eef4;
+  }
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* Sand — warm beach tones */
+  --color-sand-50:  #fbf7ee;
+  --color-sand-100: #f4ecd8;
+  --color-sand-200: #e9dcb8;
+  --color-sand-300: #dbc893;
+  --color-sand-400: #c7ae6a;
+  --color-sand-500: #b0944c;
+  --color-sand-600: #8c7338;
+  --color-sand-700: #6b5728;
+  --color-sand-800: #4a3c1b;
+  --color-sand-900: #2d2510;
+  --color-sand-950: #18130a;
+
+  /* Ocean — teal blue */
+  --color-ocean-50:  #e6f7f8;
+  --color-ocean-100: #c1ecee;
+  --color-ocean-200: #92dcdf;
+  --color-ocean-300: #5bc6cb;
+  --color-ocean-400: #2eb1b7;
+  --color-ocean-500: #149aa1;
+  --color-ocean-600: #0e7c86;
+  --color-ocean-700: #0b636c;
+  --color-ocean-800: #084e55;
+  --color-ocean-900: #053439;
+  --color-ocean-950: #021f22;
+
+  /* Coral — sunset accent */
+  --color-coral-50:  #fff1eb;
+  --color-coral-100: #ffe0d2;
+  --color-coral-200: #ffc2a2;
+  --color-coral-300: #ffa372;
+  --color-coral-400: #fa8757;
+  --color-coral-500: #f4845f;
+  --color-coral-600: #dd623f;
+  --color-coral-700: #b54a2d;
+  --color-coral-800: #863621;
+  --color-coral-900: #582317;
+  --color-coral-950: #2e1109;
+
+  /* Concrete — urban neutral */
+  --color-concrete-50:  #f6f6f4;
+  --color-concrete-100: #e9e9e5;
+  --color-concrete-200: #d2d2cc;
+  --color-concrete-300: #b4b4ad;
+  --color-concrete-400: #908f86;
+  --color-concrete-500: #71706a;
+  --color-concrete-600: #565651;
+  --color-concrete-700: #3f3f3b;
+  --color-concrete-800: #2a2a27;
+  --color-concrete-900: #1a1a18;
+  --color-concrete-950: #0d0d0c;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
 }

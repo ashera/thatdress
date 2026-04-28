@@ -6,21 +6,32 @@ export async function AuthNav() {
   const user = await getCurrentUser();
 
   return (
-    <nav className="flex w-full items-center justify-between border-b border-zinc-200 bg-white/70 px-6 py-3 backdrop-blur dark:border-zinc-800 dark:bg-black/40">
+    <nav className="sticky top-0 z-10 flex w-full items-center justify-between border-b border-sand-200/80 bg-sand-50/80 px-6 py-3 backdrop-blur dark:border-ocean-800/70 dark:bg-ocean-950/70">
       <Link
         href="/"
-        className="text-sm font-semibold tracking-tight text-zinc-900 dark:text-zinc-100"
+        className="group flex items-center gap-2 text-sm font-semibold tracking-tight"
       >
-        ebikeflip
+        <span
+          aria-hidden
+          className="grid h-6 w-6 place-items-center rounded-sm bg-ocean-700 text-[11px] font-bold text-white shadow-sm ring-1 ring-coral-500/40 dark:bg-ocean-500"
+        >
+          eb
+        </span>
+        <span className="flex items-baseline">
+          <span className="text-ocean-700 dark:text-ocean-200">ebike</span>
+          <span className="text-coral-600 dark:text-coral-400">flip</span>
+        </span>
       </Link>
 
       {user ? (
         <div className="flex items-center gap-3 text-sm">
-          <span className="text-zinc-600 dark:text-zinc-400">{user.email}</span>
+          <span className="hidden text-sand-700 dark:text-sand-200 sm:inline">
+            {user.email}
+          </span>
           <form action={logout}>
             <button
               type="submit"
-              className="rounded-md border border-zinc-300 bg-white px-3 py-1.5 font-medium text-zinc-900 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+              className="rounded-full border border-sand-300 bg-white/70 px-3 py-1.5 font-medium text-sand-800 transition-colors hover:bg-white dark:border-ocean-700 dark:bg-ocean-900/60 dark:text-sand-100 dark:hover:bg-ocean-900"
             >
               Log out
             </button>
@@ -30,13 +41,13 @@ export async function AuthNav() {
         <div className="flex items-center gap-2 text-sm">
           <Link
             href="/login"
-            className="rounded-md px-3 py-1.5 font-medium text-zinc-900 transition-colors hover:bg-zinc-100 dark:text-zinc-100 dark:hover:bg-zinc-800"
+            className="rounded-full px-3 py-1.5 font-medium text-sand-800 transition-colors hover:bg-sand-100 dark:text-sand-100 dark:hover:bg-ocean-900"
           >
             Log in
           </Link>
           <Link
             href="/register"
-            className="rounded-md bg-zinc-900 px-3 py-1.5 font-medium text-white transition-colors hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+            className="rounded-full bg-ocean-700 px-3 py-1.5 font-medium text-white shadow-sm transition-colors hover:bg-ocean-800 dark:bg-ocean-500 dark:hover:bg-ocean-400"
           >
             Register
           </Link>
