@@ -26,3 +26,8 @@ CREATE TABLE IF NOT EXISTS listings (
   price_cents INTEGER     NOT NULL CHECK (price_cents >= 0),
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE listings
+  ADD COLUMN IF NOT EXISTS seller_id BIGINT REFERENCES users(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS listings_seller_id_idx ON listings (seller_id);
