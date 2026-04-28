@@ -26,7 +26,7 @@ export default async function NewListingPage({
   const errorMessage = error ? ERRORS[error] ?? "Something went wrong." : null;
 
   return (
-    <div className="bg-zinc-50 px-6 py-16 dark:bg-black">
+    <div className="flex-1 bg-zinc-50 px-6 py-16 dark:bg-black">
       <main className="mx-auto w-full max-w-xl">
         <Link
           href="/listings"

@@ -23,7 +23,7 @@ export default async function Home() {
   const status = await getDbStatus();
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-50 px-6 py-16 font-sans dark:bg-black">
+    <div className="flex flex-1 flex-col items-center justify-center bg-zinc-50 px-6 py-16 font-sans dark:bg-black">
       <main className="flex w-full max-w-2xl flex-col gap-10">
         <header className="flex flex-col gap-3">
           <span className="text-sm font-medium uppercase tracking-widest text-zinc-500">

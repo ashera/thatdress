@@ -22,7 +22,7 @@ export default async function LoginPage({
   const errorMessage = error ? ERRORS[error] ?? "Something went wrong." : null;
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 px-6 py-16 dark:bg-black">
+    <div className="flex flex-1 items-center justify-center bg-zinc-50 px-6 py-16 dark:bg-black">
       <main className="w-full max-w-sm">
         <h1 className="text-2xl font-semibold tracking-tight text-zinc-950 dark:text-zinc-50">
           Log in

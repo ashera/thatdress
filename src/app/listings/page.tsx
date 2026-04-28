@@ -49,7 +49,7 @@ export default async function ListingsPage() {
   const [result, user] = await Promise.all([fetchListings(), getCurrentUser()]);
 
   return (
-    <div className="bg-zinc-50 px-6 py-16 font-sans dark:bg-black">
+    <div className="flex-1 bg-zinc-50 px-6 py-16 font-sans dark:bg-black">
       <main className="mx-auto flex w-full max-w-2xl flex-col gap-8">
         <header className="flex items-end justify-between gap-4">
           <div className="flex flex-col gap-2">
