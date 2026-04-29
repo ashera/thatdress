@@ -1,42 +1,7 @@
 import Image from "next/image";
-import { query } from "@/lib/db";
 import { ButtonLink, Spec } from "./_components/ui";
 
-export const dynamic = "force-dynamic";
-
-type DbStatus =
-  | { ok: true; time: string }
-  | { ok: false; error: string };
-
-async function getDbStatus(): Promise<DbStatus> {
-  try {
-    const result = await query<{ now: string }>("SELECT NOW() as now");
-    return { ok: true, time: String(result.rows[0]?.now ?? "") };
-  } catch (error) {
-    return {
-      ok: false,
-      error: error instanceof Error ? error.message : "unknown error",
-    };
-  }
-}
-
-async function getListingCount(): Promise<number | null> {
-  try {
-    const result = await query<{ n: string }>(
-      "SELECT COUNT(*)::text AS n FROM listings",
-    );
-    return Number(result.rows[0]?.n ?? 0);
-  } catch {
-    return null;
-  }
-}
-
-export default async function Home() {
-  const [status, listingCount] = await Promise.all([
-    getDbStatus(),
-    getListingCount(),
-  ]);
-
+export default function Home() {
   return (
     <div className="page">
       <section className="hero">
@@ -75,25 +40,6 @@ export default async function Home() {
               <ButtonLink href="/listings/new" variant="ghost" size="lg" icon="plus">
                 List your bike
               </ButtonLink>
-            </div>
-          </div>
-
-          <div className="meta-grid">
-            <div>
-              <b>{listingCount ?? "—"}</b>
-              <span>Listings</span>
-            </div>
-            <div>
-              <b>{status.ok ? "Live" : "Down"}</b>
-              <span>Database</span>
-            </div>
-            <div style={{ gridColumn: "span 2" }}>
-              <span
-                className={`status-pill ${status.ok ? "--ok" : "--err"}`}
-              >
-                <span className="dot" />
-                {status.ok ? `Connected · ${status.time}` : status.error}
-              </span>
             </div>
           </div>
         </div>

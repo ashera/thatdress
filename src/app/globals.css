@@ -157,6 +157,12 @@ input, select, textarea { font: inherit; color: inherit; }
   width: 100%;
   gap: var(--s-5);
 }
+.topbar .brand-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  min-width: 0;
+}
 .topbar .brand {
   display: flex;
   align-items: center;
@@ -166,6 +172,33 @@ input, select, textarea { font: inherit; color: inherit; }
   letter-spacing: -0.02em;
   color: var(--ink-1);
   text-decoration: none;
+}
+.topbar-stats {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-pill);
+  background: var(--surface-sunken);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  white-space: nowrap;
+  line-height: 1;
+}
+.topbar-stats b { color: var(--ink-1); font-weight: 700; }
+.topbar-stats .sep { color: var(--hairline-strong); }
+.topbar-stats .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  display: inline-block;
+}
+.topbar-stats.--ok .dot { background: var(--ok-500); }
+.topbar-stats.--err .dot { background: var(--danger-500); }
+@media (max-width: 640px) {
+  .topbar-stats { display: none; }
 }
 .topbar .brand-mark {
   width: 28px; height: 28px;
@@ -498,7 +531,7 @@ textarea.input {
 }
 .hero-grid {
   display: grid;
-  grid-template-columns: 1.2fr 1fr;
+  grid-template-columns: minmax(0, 1.2fr);
   gap: var(--s-9);
   align-items: end;
 }
@@ -517,29 +550,8 @@ textarea.input {
   color: var(--ink-3);
   font-size: var(--t-body-l);
 }
-.hero .meta-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--s-5);
-  padding: var(--s-6);
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-4);
-  background: var(--surface);
-}
-.hero .meta-grid div { font-family: var(--font-mono); font-size: var(--t-body-s); }
-.hero .meta-grid b {
-  display: block; color: var(--ink-1);
-  font-family: var(--font-display); font-size: 28px; line-height: 1; margin-bottom: 6px;
-}
-.hero .meta-grid span {
-  color: var(--ink-4);
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  font-size: 11px;
-}
-
 @media (max-width: 768px) {
-  .hero-grid { grid-template-columns: 1fr; gap: var(--s-7); }
+  .hero-grid { gap: var(--s-7); }
 }
 
 /* =========================================================
