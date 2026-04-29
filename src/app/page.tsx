@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { query } from "@/lib/db";
 import { ButtonLink, Spec } from "./_components/ui";
 
@@ -39,6 +40,15 @@ export default async function Home() {
   return (
     <div className="page">
       <section className="hero">
+        <div className="hero-bike" aria-hidden>
+          <Image
+            src="/big-bike.png"
+            alt=""
+            fill
+            priority
+            sizes="(max-width: 900px) 100vw, 60vw"
+          />
+        </div>
         <div className="hero-grid">
           <div>
             <p className="eyebrow">Peer-to-peer eBike marketplace</p>

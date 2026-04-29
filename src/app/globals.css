@@ -455,7 +455,46 @@ textarea.input {
    HERO
    ========================================================= */
 .hero {
+  position: relative;
   padding: var(--s-11) 0 var(--s-9);
+  isolation: isolate;
+  overflow: hidden;
+}
+.hero-bike {
+  position: absolute;
+  top: 50%;
+  right: -8%;
+  transform: translateY(-50%);
+  width: 62%;
+  max-width: 820px;
+  aspect-ratio: 1140 / 920;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.95;
+  filter: drop-shadow(0 30px 40px oklch(20% 0.02 60 / 0.08));
+  mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 22%,
+    black 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 22%,
+    black 100%
+  );
+}
+.hero-bike img {
+  object-fit: contain;
+  object-position: center right;
+}
+@media (max-width: 900px) {
+  .hero-bike {
+    width: 100%;
+    right: -20%;
+    opacity: 0.18;
+  }
 }
 .hero-grid {
   display: grid;
