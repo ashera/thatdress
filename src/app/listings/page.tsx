@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { query } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { EbikeSketch } from "../_components/decor";
+import { ButtonLink } from "../_components/ui";
+import { ListingCard, listingFromRow } from "../_components/listing-card";
 
 export const dynamic = "force-dynamic";
 
@@ -13,12 +13,6 @@ type Listing = {
   created_at: string;
   seller_email: string | null;
 };
-
-const priceFmt = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-  maximumFractionDigits: 0,
-});
 
 async function fetchListings(): Promise<
   | { ok: true; listings: Listing[] }
@@ -48,93 +42,65 @@ async function fetchListings(): Promise<
 
 export default async function ListingsPage() {
   const [result, user] = await Promise.all([fetchListings(), getCurrentUser()]);
+  const count = result.ok ? result.listings.length : 0;
 
   return (
-    <div className="relative flex-1 overflow-hidden bg-gradient-to-b from-sand-50 to-sand-100 px-6 py-16 dark:from-ocean-950 dark:to-ocean-900">
-      <EbikeSketch
-        className="pointer-events-none absolute -right-10 top-10 -z-0 hidden h-44 w-auto rotate-3 text-concrete-700 opacity-[0.08] dark:text-sand-100 dark:opacity-[0.10] md:block"
-      />
-      <EbikeSketch
-        className="pointer-events-none absolute -left-12 bottom-24 -z-0 hidden h-36 w-auto -rotate-6 text-ocean-700 opacity-[0.08] dark:text-ocean-200 dark:opacity-[0.10] md:block"
-      />
-      <main className="relative z-10 mx-auto flex w-full max-w-2xl flex-col gap-8">
-        <header className="flex items-end justify-between gap-4">
-          <div className="flex flex-col gap-2">
-            <Link
-              href="/"
-              className="text-sm text-sand-600 hover:text-ocean-700 dark:text-sand-300 dark:hover:text-ocean-200"
-            >
-              ← Home
-            </Link>
-            <h1 className="text-3xl font-semibold tracking-tight text-sand-900 dark:text-sand-50">
-              Listings
-            </h1>
-          </div>
-          {user ? (
-            <Link
-              href="/listings/new"
-              className="rounded-full bg-ocean-700 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-ocean-800 dark:bg-ocean-500 dark:hover:bg-ocean-400"
-            >
-              + New listing
-            </Link>
-          ) : (
-            <Link
-              href="/login"
-              className="text-sm font-medium text-coral-700 underline hover:text-coral-800 dark:text-coral-300 dark:hover:text-coral-200"
-            >
-              Log in to post
-            </Link>
+    <div className="page" style={{ padding: "var(--s-9) var(--s-7)" }}>
+      <div className="browse-toolbar">
+        <div className="left">
+          <h3>Browse eBikes</h3>
+          {result.ok && (
+            <span className="count">
+              {count} {count === 1 ? "listing" : "listings"}
+            </span>
           )}
-        </header>
+        </div>
+        <div className="left">
+          {user ? (
+            <ButtonLink href="/listings/new" variant="primary" size="sm" icon="plus">
+              New listing
+            </ButtonLink>
+          ) : (
+            <ButtonLink href="/login" variant="dark" size="sm">
+              Log in to post
+            </ButtonLink>
+          )}
+        </div>
+      </div>
 
-        {!result.ok ? (
-          <div className="rounded-2xl border border-coral-200 bg-coral-50 p-6 text-sm text-coral-800 dark:border-coral-700/50 dark:bg-coral-900/30 dark:text-coral-200">
-            <p className="font-medium">Could not load listings.</p>
-            <p className="mt-1 font-mono">{result.error}</p>
+      {!result.ok ? (
+        <div className="form-error">
+          <strong>Could not load listings.</strong>
+          <div style={{ marginTop: 4, fontFamily: "var(--font-mono)" }}>
+            {result.error}
           </div>
-        ) : result.listings.length === 0 ? (
-          <p className="text-sand-700 dark:text-sand-300">
-            No listings yet.{" "}
-            {user ? (
-              <Link href="/listings/new" className="font-medium text-ocean-700 underline dark:text-ocean-300">
-                Be the first to post one.
-              </Link>
-            ) : (
-              <Link href="/register" className="font-medium text-ocean-700 underline dark:text-ocean-300">
-                Register
-              </Link>
-            )}
+        </div>
+      ) : result.listings.length === 0 ? (
+        <div className="empty-state">
+          <h3>No listings yet</h3>
+          <p style={{ margin: "0 0 var(--s-5)" }}>
+            {user
+              ? "Be the first to post one."
+              : "Register to post the first one."}
           </p>
-        ) : (
-          <ul className="flex flex-col gap-3">
-            {result.listings.map((listing) => (
-              <li
-                key={listing.id}
-                className="rounded-2xl border border-sand-200 bg-white/80 p-5 shadow-sm backdrop-blur transition-colors hover:border-ocean-300 dark:border-ocean-800 dark:bg-ocean-900/60 dark:hover:border-ocean-500"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <h2 className="text-base font-medium text-sand-900 dark:text-sand-50">
-                    {listing.title}
-                  </h2>
-                  <span className="shrink-0 rounded-full bg-ocean-100 px-2.5 py-0.5 font-mono text-sm font-medium text-ocean-800 dark:bg-ocean-900 dark:text-ocean-200">
-                    {priceFmt.format(listing.price_cents / 100)}
-                  </span>
-                </div>
-                {listing.description ? (
-                  <p className="mt-1 text-sm text-sand-700 dark:text-sand-300">
-                    {listing.description}
-                  </p>
-                ) : null}
-                {listing.seller_email ? (
-                  <p className="mt-2 text-xs text-sand-500 dark:text-sand-400">
-                    Posted by {listing.seller_email}
-                  </p>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        )}
-      </main>
+          <ButtonLink
+            href={user ? "/listings/new" : "/register"}
+            variant="primary"
+            iconRight="arrow"
+          >
+            {user ? "Create listing" : "Register"}
+          </ButtonLink>
+        </div>
+      ) : (
+        <div className="results-grid">
+          {result.listings.map((row) => (
+            <ListingCard
+              key={row.id}
+              data={listingFromRow(row)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

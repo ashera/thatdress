@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { register } from "@/lib/actions/auth";
 import { getCurrentUser } from "@/lib/auth";
-import { EbikeSketch } from "../_components/decor";
+import { Button, Field, Input } from "../_components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -12,9 +12,6 @@ const ERRORS: Record<string, string> = {
   "long-password": "Password must be 72 characters or fewer.",
   "email-taken": "An account with that email already exists.",
 };
-
-const inputClass =
-  "rounded-md border border-sand-300 bg-white/80 px-3 py-2 text-sm text-sand-900 outline-none transition-colors placeholder:text-sand-400 focus:border-ocean-500 focus:ring-2 focus:ring-ocean-200 dark:border-ocean-800 dark:bg-ocean-900/60 dark:text-sand-50 dark:placeholder:text-sand-500 dark:focus:border-ocean-400 dark:focus:ring-ocean-700/50";
 
 export default async function RegisterPage({
   searchParams,
@@ -29,73 +26,63 @@ export default async function RegisterPage({
   const errorMessage = error ? ERRORS[error] ?? "Something went wrong." : null;
 
   return (
-    <div className="relative flex flex-1 items-center justify-center overflow-hidden bg-gradient-to-b from-ocean-100 via-sand-50 to-sand-100 px-6 py-16 dark:from-ocean-950 dark:via-ocean-900 dark:to-ocean-950">
-      <EbikeSketch
-        className="pointer-events-none absolute -right-12 bottom-12 -z-0 h-44 w-auto rotate-6 text-coral-600 opacity-[0.10] dark:text-coral-300 dark:opacity-[0.14]"
-      />
-      <EbikeSketch
-        className="pointer-events-none absolute -left-10 top-10 -z-0 h-36 w-auto -rotate-6 text-ocean-700 opacity-[0.08] dark:text-ocean-200 dark:opacity-[0.10]"
-      />
-      <main className="relative z-10 w-full max-w-sm rounded-2xl border border-sand-200 bg-white/80 p-8 shadow-sm backdrop-blur dark:border-ocean-800 dark:bg-ocean-900/60">
-        <h1 className="text-2xl font-semibold tracking-tight text-sand-900 dark:text-sand-50">
-          Join the boardwalk
-        </h1>
-        <p className="mt-1 text-sm text-sand-700 dark:text-sand-300">
-          Already have an account?{" "}
-          <Link
-            href="/login"
-            className="font-medium text-ocean-700 underline dark:text-ocean-300"
-          >
-            Log in
-          </Link>
-          .
-        </p>
-
-        <form action={register} className="mt-6 flex flex-col gap-4">
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium text-sand-800 dark:text-sand-200">
-              Email
-            </span>
-            <input
-              type="email"
-              name="email"
-              required
-              autoComplete="email"
-              className={inputClass}
-            />
-          </label>
-
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium text-sand-800 dark:text-sand-200">
-              Password
-            </span>
-            <input
-              type="password"
-              name="password"
-              required
-              minLength={8}
-              maxLength={72}
-              autoComplete="new-password"
-              className={inputClass}
-            />
-            <span className="text-xs text-sand-500 dark:text-sand-400">
-              At least 8 characters.
-            </span>
-          </label>
-
-          {errorMessage ? (
-            <p className="rounded-md border border-coral-200 bg-coral-50 px-3 py-2 text-sm text-coral-800 dark:border-coral-700/50 dark:bg-coral-900/30 dark:text-coral-200">
-              {errorMessage}
+    <div
+      className="page"
+      style={{
+        display: "flex",
+        flex: 1,
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "var(--s-9) var(--s-7)",
+      }}
+    >
+      <main style={{ width: "100%", maxWidth: 400 }}>
+        <div className="form-card">
+          <div>
+            <p className="eyebrow">Join ebikeflip</p>
+            <h1>Create your account</h1>
+            <p className="sub" style={{ marginTop: 8 }}>
+              Already have one? <Link href="/login">Log in</Link>.
             </p>
-          ) : null}
+          </div>
 
-          <button
-            type="submit"
-            className="mt-1 rounded-full bg-ocean-700 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-ocean-800 dark:bg-ocean-500 dark:hover:bg-ocean-400"
+          <form
+            action={register}
+            style={{ display: "flex", flexDirection: "column", gap: "var(--s-4)" }}
           >
-            Create account
-          </button>
-        </form>
+            <Field label="Email" htmlFor="email">
+              <Input
+                id="email"
+                type="email"
+                name="email"
+                required
+                autoComplete="email"
+              />
+            </Field>
+
+            <Field
+              label="Password"
+              htmlFor="password"
+              help="At least 8 characters."
+            >
+              <Input
+                id="password"
+                type="password"
+                name="password"
+                required
+                minLength={8}
+                maxLength={72}
+                autoComplete="new-password"
+              />
+            </Field>
+
+            {errorMessage && <p className="form-error">{errorMessage}</p>}
+
+            <Button type="submit" variant="primary" size="lg" block iconRight="arrow">
+              Create account
+            </Button>
+          </form>
+        </div>
       </main>
     </div>
   );

@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Design-system reference prototypes (read-only, not production code)
+    "ebike/**",
   ]),
 ]);
 
