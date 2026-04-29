@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Badge } from "./ui";
+import { Badge, ButtonLink } from "./ui";
 
 export type ListingCardData = {
   id: string;
@@ -49,14 +49,9 @@ export function listingFromRow(row: {
   };
 }
 
-export function ListingCard({
-  href,
-  data,
-}: {
-  href?: string;
-  data: ListingCardData;
-}) {
-  const card = (
+export function ListingCard({ data }: { data: ListingCardData }) {
+  const detailHref = `/listings/${data.id}`;
+  return (
     <article className="listing">
       <div className="img-wrap">
         {data.photo ? (
@@ -84,21 +79,22 @@ export function ListingCard({
           </div>
           {data.loc && <span className="loc">{data.loc}</span>}
         </div>
-        <h3 className="title">{data.title}</h3>
+        <Link href={detailHref} className="title-link">
+          <h3 className="title">{data.title}</h3>
+        </Link>
         {data.description && <p className="desc">{data.description}</p>}
         <div className="price-row">
           <div className="price">{data.price}</div>
+          <ButtonLink
+            href={detailHref}
+            variant="dark"
+            size="sm"
+            iconRight="arrow"
+          >
+            View details
+          </ButtonLink>
         </div>
       </div>
     </article>
   );
-
-  if (href) {
-    return (
-      <Link href={href} className="listing-link" style={{ textDecoration: "none", color: "inherit" }}>
-        {card}
-      </Link>
-    );
-  }
-  return card;
 }
