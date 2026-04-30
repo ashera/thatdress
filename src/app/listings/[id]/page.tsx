@@ -18,6 +18,7 @@ type ListingRow = {
   created_at: string;
   seller_email: string | null;
   seller_id: string | null;
+  is_published: boolean;
   // detail fields
   make_name: string | null;
   model: string | null;
@@ -72,6 +73,7 @@ const LISTING_SELECT = `
   l.price_cents,
   l.created_at::text,
   l.seller_id::text,
+  l.is_published,
   u.email AS seller_email,
   mk.name AS make_name,
   l.model,
@@ -303,6 +305,7 @@ export default async function ListingDetailPage({
 
   const l = result.listing;
   const isOwner = currentUser != null && currentUser.id === l.seller_id;
+  if (!l.is_published && !isOwner) notFound();
   const price = new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
@@ -319,6 +322,16 @@ export default async function ListingDetailPage({
       <Link href="/listings" className="back-link">
         ← Back to browse
       </Link>
+
+      {!l.is_published && isOwner && (
+        <div className="hidden-banner">
+          <strong>Hidden from browse.</strong>
+          <span>
+            Only you can see this listing. Toggle visibility on the{" "}
+            <Link href={`/listings/${l.id}/edit`}>edit page</Link>.
+          </span>
+        </div>
+      )}
 
       <article className="detail">
         <ListingGallery images={result.images} />

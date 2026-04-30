@@ -5,6 +5,7 @@ import { getCurrentUser } from "@/lib/auth";
 import {
   addListingImages,
   deleteListingImage,
+  setListingVisibility,
   setPrimaryImage,
   updateListing,
 } from "@/lib/actions/listings";
@@ -46,6 +47,7 @@ type ListingRow = {
   description: string | null;
   price_cents: number;
   seller_id: string | null;
+  is_published: boolean;
   make_id: string | null;
   model: string | null;
   year: number | null;
@@ -105,10 +107,10 @@ export default async function EditListingPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ error?: string; saved?: string }>;
+  searchParams: Promise<{ error?: string; saved?: string; vis?: string }>;
 }) {
   const { id } = await params;
-  const { error, saved } = await searchParams;
+  const { error, saved, vis } = await searchParams;
   const errorMessage = error ? (ERRORS[error] ?? "Something went wrong.") : null;
 
   if (!/^\d+$/.test(id)) notFound();
@@ -119,6 +121,7 @@ export default async function EditListingPage({
   const [listingRes, imagesRes, refs] = await Promise.all([
     query<ListingRow>(
       `SELECT id::text, title, description, price_cents, seller_id::text,
+              is_published,
               make_id::text, model, year, condition_id::text,
               bike_class_id::text, bike_category_id::text, location_postal,
               frame_size, frame_style_id::text, frame_material_id::text,
@@ -231,6 +234,45 @@ export default async function EditListingPage({
             Saved.
           </p>
         )}
+        {vis && !errorMessage && (
+          <p className="form-success" style={{ marginBottom: "var(--s-5)" }}>
+            Visibility updated.
+          </p>
+        )}
+
+        <section className="form-card" style={{ marginBottom: "var(--s-7)" }}>
+          <h2 className="card-heading">Visibility</h2>
+          <p className="card-sub">
+            {listing.is_published
+              ? "Visible in browse and discoverable by other users."
+              : "Hidden from browse — only you can see this listing."}
+          </p>
+          <form action={setListingVisibility}>
+            <input type="hidden" name="listingId" value={id} />
+            <label className="visibility-toggle">
+              <input
+                type="checkbox"
+                name="is_published"
+                defaultChecked={listing.is_published}
+              />
+              <span className="visibility-track" aria-hidden />
+              <span className="visibility-label">
+                Show in public browse results
+              </span>
+            </label>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                marginTop: "var(--s-3)",
+              }}
+            >
+              <Button type="submit" variant="primary" size="sm">
+                Update visibility
+              </Button>
+            </div>
+          </form>
+        </section>
 
         <ListingForm
           action={updateListing}

@@ -438,6 +438,31 @@ export async function createListing(formData: FormData): Promise<void> {
   redirect(`/listings/${listingId}`);
 }
 
+export async function setListingVisibility(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const listingId = String(formData.get("listingId") ?? "");
+  if (!(await ensureListingOwner(listingId, user.id))) {
+    redirect("/listings");
+  }
+
+  const isPublished = formData.get("is_published") === "on";
+
+  await query(
+    `UPDATE listings
+        SET is_published = $1
+      WHERE id = $2::bigint AND seller_id = $3::bigint`,
+    [isPublished, listingId, user.id],
+  );
+
+  revalidatePath(`/listings/${listingId}`);
+  revalidatePath(`/listings/${listingId}/edit`);
+  revalidatePath(`/listings`);
+  revalidatePath(`/listings/mine`);
+  redirect(`/listings/${listingId}/edit?vis=1`);
+}
+
 async function ensureListingOwner(
   listingId: string,
   userId: string,

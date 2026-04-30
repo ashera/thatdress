@@ -61,6 +61,7 @@ export async function AuthNav() {
           <nav>
             <Link href="/listings">Browse</Link>
             <Link href="/listings/new">Sell</Link>
+            {user && <Link href="/listings/mine">My listings</Link>}
             <Link href="/status">Status</Link>
             {user?.isAdmin && (
               <Link href="/admin" className="nav-admin">

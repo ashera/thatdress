@@ -83,7 +83,8 @@ function buildFilters(raw: RawSearchParams): {
   where: string[];
   params: unknown[];
 } {
-  const where: string[] = [];
+  // Public browse only ever shows published listings.
+  const where: string[] = ["l.is_published = TRUE"];
   const params: unknown[] = [];
   const active: ActiveFilters = {};
 
@@ -250,7 +251,7 @@ export default async function ListingsPage({
 }) {
   const sp = await searchParams;
   const { active, where, params } = buildFilters(sp);
-  const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
+  const whereSql = `WHERE ${where.join(" AND ")}`;
 
   const view: ListingsView =
     (Array.isArray(sp.view) ? sp.view[0] : sp.view) === "grid" ? "grid" : "cards";

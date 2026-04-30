@@ -787,6 +787,97 @@ textarea.input {
   font-size: var(--t-body-s);
 }
 
+/* Visibility toggle (switch) */
+.visibility-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-3);
+  cursor: pointer;
+  user-select: none;
+}
+.visibility-toggle input { position: absolute; opacity: 0; pointer-events: none; }
+.visibility-track {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  border-radius: var(--r-pill);
+  background: var(--hairline-strong);
+  transition: background var(--dur);
+}
+.visibility-track::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: white;
+  transition: left var(--dur) var(--ease-out);
+  box-shadow: var(--e-1);
+}
+.visibility-toggle input:checked ~ .visibility-track {
+  background: var(--ok-500);
+}
+.visibility-toggle input:checked ~ .visibility-track::after {
+  left: 22px;
+}
+.visibility-toggle input:focus-visible ~ .visibility-track {
+  box-shadow: 0 0 0 3px oklch(20% 0.02 60 / 0.15);
+}
+.visibility-label {
+  font-size: var(--t-body-s);
+  color: var(--ink-2);
+}
+
+/* Hidden banner on detail page (owner-only) */
+.hidden-banner {
+  background: var(--warn-100);
+  border: 1px solid oklch(80% 0.13 85);
+  color: oklch(35% 0.1 70);
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-3);
+  font-size: var(--t-body-s);
+  margin-bottom: var(--s-5);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+.hidden-banner strong { color: oklch(30% 0.12 70); }
+.hidden-banner a { color: inherit; text-decoration: underline; }
+
+/* My listings */
+.my-listings-header { margin-bottom: var(--s-7); }
+.my-listings-header h1 {
+  font-family: var(--font-display);
+  font-size: var(--t-display-m);
+  letter-spacing: -0.03em;
+  line-height: 0.95;
+  color: var(--ink-1);
+  margin: var(--s-2) 0 var(--s-3);
+}
+.my-listings-header .sub {
+  color: var(--ink-3);
+  font-size: var(--t-body-l);
+  margin: 0;
+}
+.my-listing-wrap { position: relative; }
+.my-listing-wrap.is-hidden .listing-row { opacity: 0.6; border-style: dashed; }
+.my-listing-flag {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  background: oklch(35% 0.1 70);
+  color: white;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
+}
+
 .ip-suggest {
   display: flex;
   align-items: center;
