@@ -1,7 +1,9 @@
-import { ButtonLink, Icon } from "./ui";
+import { ButtonLink } from "./ui";
+
+export type StatIcon = "range" | "battery" | "speed" | "weight";
 
 export type ListingCardStat = {
-  icon: "range" | "battery" | "speed" | "weight";
+  icon: StatIcon;
   value: string;
   label: string;
 };
@@ -74,43 +76,32 @@ function buildChips(row: ListingCardRow): string[] {
   return chips.slice(0, 3);
 }
 
+const PLACEHOLDER = "-";
+
 function buildStats(row: ListingCardRow): ListingCardStat[] {
-  const stats: ListingCardStat[] = [];
   const range = fmtRange(row.range_miles_min, row.range_miles_max);
-  if (range) stats.push({ icon: "range", value: range, label: "Range" });
-  if (row.battery_wh != null)
-    stats.push({
-      icon: "battery",
-      value: `${row.battery_wh} Wh`,
-      label: "Battery",
-    });
-  if (row.top_speed_mph != null)
-    stats.push({
-      icon: "speed",
-      value: `${row.top_speed_mph} mph`,
-      label: "Top speed",
-    });
+
+  let weightValue = PLACEHOLDER;
   if (row.weight_lbs) {
     const n = Number(row.weight_lbs);
-    if (Number.isFinite(n))
-      stats.push({ icon: "weight", value: `${n} lb`, label: "Weight" });
+    if (Number.isFinite(n)) weightValue = `${n} lb`;
   }
-  // Fallbacks if we have fewer than 4 of the above
-  if (stats.length < 4 && row.motor_watts_nominal != null) {
-    stats.push({
+
+  return [
+    { icon: "range", value: range ?? PLACEHOLDER, label: "Range" },
+    {
+      icon: "battery",
+      value: row.battery_wh != null ? `${row.battery_wh} Wh` : PLACEHOLDER,
+      label: "Battery",
+    },
+    {
       icon: "speed",
-      value: `${row.motor_watts_nominal} W`,
-      label: "Motor",
-    });
-  }
-  if (stats.length < 4 && row.mileage != null) {
-    stats.push({
-      icon: "range",
-      value: `${row.mileage} mi`,
-      label: "Mileage",
-    });
-  }
-  return stats.slice(0, 4);
+      value:
+        row.top_speed_mph != null ? `${row.top_speed_mph} mph` : PLACEHOLDER,
+      label: "Top speed",
+    },
+    { icon: "weight", value: weightValue, label: "Weight" },
+  ];
 }
 
 function buildHighlights(row: ListingCardRow): string[] {
@@ -210,17 +201,23 @@ export function ListingCard({ data }: { data: ListingCardData }) {
         )}
       </div>
 
-      {data.stats.length > 0 && (
-        <div className="listing-stats">
-          {data.stats.map((s, i) => (
-            <div key={`${s.label}-${i}`} className="listing-stat">
-              <Icon name={s.icon} size="lg" />
-              <span className="v">{s.value}</span>
-              <span className="k">{s.label}</span>
-            </div>
-          ))}
-        </div>
-      )}
+      <div className="listing-stats">
+        {data.stats.map((s, i) => (
+          <div key={`${s.label}-${i}`} className="listing-stat">
+            <img
+              src={`/images/${s.icon}.png`}
+              alt=""
+              className="listing-stat-icon"
+              width={28}
+              height={28}
+            />
+            <span className={`v ${s.value === PLACEHOLDER ? "is-empty" : ""}`}>
+              {s.value}
+            </span>
+            <span className="k">{s.label}</span>
+          </div>
+        ))}
+      </div>
 
       {data.highlights.length > 0 && (
         <ul className="listing-highlights">

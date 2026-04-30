@@ -515,15 +515,6 @@ textarea.input {
   overflow: hidden;
   background: var(--surface);
 }
-.listing-stats:has(.listing-stat:nth-child(3):last-child) {
-  grid-template-columns: repeat(3, 1fr);
-}
-.listing-stats:has(.listing-stat:nth-child(2):last-child) {
-  grid-template-columns: repeat(2, 1fr);
-}
-.listing-stats:has(.listing-stat:nth-child(1):last-child) {
-  grid-template-columns: 1fr;
-}
 .listing-stat {
   display: flex;
   flex-direction: column;
@@ -535,8 +526,10 @@ textarea.input {
   min-width: 0;
 }
 .listing-stat:last-child { border-right: 0; }
-.listing-stat .ico {
-  color: var(--ink-3);
+.listing-stat-icon {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
   margin-bottom: 2px;
 }
 .listing-stat .v {
@@ -547,6 +540,7 @@ textarea.input {
   line-height: 1;
   white-space: nowrap;
 }
+.listing-stat .v.is-empty { color: var(--ink-4); }
 .listing-stat .k {
   font-family: var(--font-mono);
   font-size: 10px;
