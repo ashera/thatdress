@@ -1,4 +1,4 @@
-import { ButtonLink } from "./ui";
+import { ButtonLink, Icon } from "./ui";
 
 export type StatIcon = "range" | "battery" | "speed" | "weight";
 
