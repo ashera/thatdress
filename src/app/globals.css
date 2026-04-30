@@ -742,6 +742,28 @@ textarea.input {
   gap: var(--s-9);
   align-items: end;
 }
+.hero-region {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: var(--r-pill);
+  background: var(--volt-100);
+  border: 1px solid var(--volt-200);
+  color: var(--volt-800);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  font-weight: 500;
+  margin-bottom: var(--s-4);
+}
+.hero-region strong {
+  color: var(--volt-800);
+  font-weight: 700;
+  letter-spacing: 0;
+}
+.hero-region .ico { color: var(--volt-700); }
+
 .hero h1 {
   font-family: var(--font-display);
   color: var(--ink-1);

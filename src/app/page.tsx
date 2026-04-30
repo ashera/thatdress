@@ -1,7 +1,14 @@
 import Image from "next/image";
-import { ButtonLink, Spec } from "./_components/ui";
+import { resolveCurrentRegion } from "@/lib/regions";
+import { ButtonLink, Icon, Spec } from "./_components/ui";
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+
+export default async function Home() {
+  const r = await resolveCurrentRegion();
+  const region =
+    r.kind === "selected" || r.kind === "auto" ? r.region : null;
+
   return (
     <div className="page">
       <section className="hero">
@@ -16,6 +23,12 @@ export default function Home() {
         </div>
         <div className="hero-grid">
           <div>
+            {region && (
+              <span className="hero-region">
+                <Icon name="location" size="sm" />
+                Now serving <strong>{region.label}</strong>
+              </span>
+            )}
             <p className="eyebrow">Peer-to-peer eBike marketplace</p>
             <h1>
               Buy & sell <span className="accent">used eBikes</span> with people
