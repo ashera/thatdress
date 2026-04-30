@@ -1,13 +1,8 @@
 import { redirect } from "next/navigation";
 import { createListing } from "@/lib/actions/listings";
 import { getCurrentUser } from "@/lib/auth";
-import {
-  Button,
-  ButtonLink,
-  Field,
-  Input,
-  Textarea,
-} from "../../_components/ui";
+import { loadListingRefOptions } from "@/lib/ref-data";
+import { ListingForm } from "../../_components/listing-form";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +10,14 @@ const ERRORS: Record<string, string> = {
   "invalid-title": "Title is required (200 characters or fewer).",
   "long-description": "Description must be 5,000 characters or fewer.",
   "invalid-price": "Enter a valid price in dollars (e.g. 1899 or 1899.00).",
+  "invalid-make": "Pick a make.",
+  "invalid-model": "Model is required.",
+  "invalid-year": "Year must be between 2000 and next year.",
+  "invalid-condition": "Pick a condition.",
+  "invalid-class": "Pick a bike class.",
+  "invalid-category": "Pick a bike category.",
+  "invalid-location": "A postal code or location is required.",
+  "out-of-range": "One of the numeric values is outside the allowed range.",
   "too-many": "You can attach up to 10 photos.",
   "too-large": "Each photo must be 5 MB or smaller.",
   "bad-type": "Photos must be JPEG, PNG, or WebP.",
@@ -31,11 +34,13 @@ export default async function NewListingPage({
   }
 
   const { error } = await searchParams;
-  const errorMessage = error ? ERRORS[error] ?? "Something went wrong." : null;
+  const errorMessage = error ? (ERRORS[error] ?? "Something went wrong.") : null;
+
+  const refs = await loadListingRefOptions();
 
   return (
     <div className="page" style={{ padding: "var(--s-9) var(--s-7)" }}>
-      <main style={{ maxWidth: 640, margin: "0 auto" }}>
+      <main style={{ maxWidth: 720, margin: "0 auto" }}>
         <p className="eyebrow">Sell your eBike</p>
         <h1
           style={{
@@ -53,83 +58,13 @@ export default async function NewListingPage({
           Tell future riders what you&rsquo;re selling.
         </p>
 
-        <div className="form-card">
-          <form
-            action={createListing}
-            encType="multipart/form-data"
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "var(--s-5)",
-            }}
-          >
-            <Field label="Title" htmlFor="title">
-              <Input
-                id="title"
-                type="text"
-                name="title"
-                required
-                maxLength={200}
-                placeholder="Specialized Turbo Vado 4.0"
-              />
-            </Field>
-
-            <Field label="Price (USD)" htmlFor="price">
-              <Input
-                id="price"
-                type="text"
-                inputMode="decimal"
-                name="price"
-                required
-                placeholder="1899.00"
-                pattern="^\d+(\.\d{1,2})?$"
-              />
-            </Field>
-
-            <Field label="Description" htmlFor="description">
-              <Textarea
-                id="description"
-                name="description"
-                rows={5}
-                maxLength={5000}
-                placeholder="Year, mileage, condition, included accessories…"
-              />
-            </Field>
-
-            <Field
-              label="Photos"
-              htmlFor="images"
-              help="Up to 10 photos · JPEG, PNG, or WebP · 5 MB each. The first photo becomes the default."
-            >
-              <input
-                id="images"
-                type="file"
-                name="images"
-                accept="image/jpeg,image/png,image/webp"
-                multiple
-                className="file-input"
-              />
-            </Field>
-
-            {errorMessage && <p className="form-error">{errorMessage}</p>}
-
-            <div
-              style={{
-                display: "flex",
-                gap: "var(--s-3)",
-                justifyContent: "flex-end",
-                marginTop: "var(--s-2)",
-              }}
-            >
-              <ButtonLink href="/listings" variant="ghost">
-                Cancel
-              </ButtonLink>
-              <Button type="submit" variant="primary" iconRight="arrow">
-                Publish listing
-              </Button>
-            </div>
-          </form>
-        </div>
+        <ListingForm
+          action={createListing}
+          refs={refs}
+          submitLabel="Publish listing"
+          errorMessage={errorMessage}
+          showPhotos
+        />
       </main>
     </div>
   );

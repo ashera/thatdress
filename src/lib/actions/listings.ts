@@ -17,6 +17,26 @@ const ALLOWED_IMAGE_MIMES = new Set([
   "image/webp",
 ]);
 
+const CURRENT_YEAR = new Date().getUTCFullYear();
+const MIN_YEAR = 2000;
+const MAX_YEAR = CURRENT_YEAR + 1;
+
+type Range = { min: number; max: number };
+const RANGES: Record<string, Range> = {
+  motor_watts_nominal: { min: 50, max: 3000 },
+  motor_watts_peak: { min: 0, max: 5000 },
+  motor_torque_nm: { min: 0, max: 300 },
+  battery_wh: { min: 50, max: 5000 },
+  battery_voltage: { min: 0, max: 120 },
+  battery_amp_hours: { min: 0, max: 50 },
+  charge_time_hours: { min: 0, max: 24 },
+  top_speed_mph: { min: 0, max: 60 },
+  range_miles_min: { min: 0, max: 400 },
+  range_miles_max: { min: 0, max: 400 },
+  mileage: { min: 0, max: 100000 },
+  weight_lbs: { min: 0, max: 500 },
+};
+
 function parsePriceToCents(raw: string): number | null {
   const trimmed = raw.trim();
   if (!trimmed) return null;
@@ -26,6 +46,323 @@ function parsePriceToCents(raw: string): number | null {
   if (dollars > PRICE_MAX_DOLLARS) return null;
   return Math.round(dollars * 100);
 }
+
+function getString(formData: FormData, key: string, max?: number): string {
+  const raw = String(formData.get(key) ?? "").trim();
+  if (max && raw.length > max) return raw.slice(0, max);
+  return raw;
+}
+
+function nullableString(raw: string): string | null {
+  return raw.length === 0 ? null : raw;
+}
+
+function getOptionalId(formData: FormData, key: string): string | null {
+  const raw = String(formData.get(key) ?? "").trim();
+  if (!raw) return null;
+  if (!/^\d+$/.test(raw)) return null;
+  return raw;
+}
+
+function getRequiredId(formData: FormData, key: string): string | null {
+  const raw = String(formData.get(key) ?? "").trim();
+  if (!raw || !/^\d+$/.test(raw)) return null;
+  return raw;
+}
+
+function getOptionalInt(
+  formData: FormData,
+  key: string,
+): number | null | "out-of-range" {
+  const raw = String(formData.get(key) ?? "").trim();
+  if (!raw) return null;
+  const n = Number.parseInt(raw, 10);
+  if (!Number.isFinite(n)) return "out-of-range";
+  const r = RANGES[key];
+  if (r && (n < r.min || n > r.max)) return "out-of-range";
+  return n;
+}
+
+function getOptionalNumber(
+  formData: FormData,
+  key: string,
+): number | null | "out-of-range" {
+  const raw = String(formData.get(key) ?? "").trim();
+  if (!raw) return null;
+  const n = Number.parseFloat(raw);
+  if (!Number.isFinite(n)) return "out-of-range";
+  const r = RANGES[key];
+  if (r && (n < r.min || n > r.max)) return "out-of-range";
+  return n;
+}
+
+function getCheckbox(formData: FormData, key: string): boolean {
+  const v = formData.get(key);
+  return v === "on" || v === "true";
+}
+
+type ListingFields = {
+  title: string;
+  description: string | null;
+  price_cents: number;
+  make_id: string;
+  model: string;
+  year: number;
+  condition_id: string;
+  bike_class_id: string;
+  bike_category_id: string;
+  location_postal: string;
+  frame_size: string | null;
+  frame_style_id: string | null;
+  frame_material_id: string | null;
+  gender_fit_id: string | null;
+  wheel_size_id: string | null;
+  suspension_type_id: string | null;
+  brake_type_id: string | null;
+  motor_brand_id: string | null;
+  motor_type_id: string | null;
+  motor_watts_nominal: number | null;
+  motor_watts_peak: number | null;
+  motor_torque_nm: number | null;
+  battery_wh: number | null;
+  battery_voltage: number | null;
+  battery_amp_hours: number | null;
+  charge_time_hours: number | null;
+  top_speed_mph: number | null;
+  range_miles_min: number | null;
+  range_miles_max: number | null;
+  drive_mode_id: string | null;
+  mileage: number | null;
+  color: string | null;
+  weight_lbs: number | null;
+  display_type: string | null;
+  drivetrain: string | null;
+  accessories: string | null;
+  modifications: string | null;
+  has_warranty: boolean;
+  warranty_text: string | null;
+  has_original_receipt: boolean;
+  body_position_id: string | null;
+};
+
+type ParseResult =
+  | { ok: true; fields: ListingFields }
+  | { ok: false; error: string };
+
+function parseListingFields(formData: FormData): ParseResult {
+  const title = getString(formData, "title", TITLE_MAX);
+  if (!title) return { ok: false, error: "invalid-title" };
+
+  const description = getString(formData, "description", DESCRIPTION_MAX);
+  if (description.length > DESCRIPTION_MAX) {
+    return { ok: false, error: "long-description" };
+  }
+
+  const priceCents = parsePriceToCents(getString(formData, "price"));
+  if (priceCents === null) return { ok: false, error: "invalid-price" };
+
+  const make_id = getRequiredId(formData, "make_id");
+  if (!make_id) return { ok: false, error: "invalid-make" };
+
+  const model = getString(formData, "model", 100);
+  if (!model) return { ok: false, error: "invalid-model" };
+
+  const yearRaw = getString(formData, "year");
+  const year = Number.parseInt(yearRaw, 10);
+  if (!Number.isFinite(year) || year < MIN_YEAR || year > MAX_YEAR) {
+    return { ok: false, error: "invalid-year" };
+  }
+
+  const condition_id = getRequiredId(formData, "condition_id");
+  if (!condition_id) return { ok: false, error: "invalid-condition" };
+
+  const bike_class_id = getRequiredId(formData, "bike_class_id");
+  if (!bike_class_id) return { ok: false, error: "invalid-class" };
+
+  const bike_category_id = getRequiredId(formData, "bike_category_id");
+  if (!bike_category_id) return { ok: false, error: "invalid-category" };
+
+  const location_postal = getString(formData, "location_postal", 64);
+  if (!location_postal) return { ok: false, error: "invalid-location" };
+
+  // Optional integers with range validation.
+  const intFields = [
+    "motor_watts_nominal",
+    "motor_watts_peak",
+    "motor_torque_nm",
+    "battery_wh",
+    "battery_voltage",
+    "top_speed_mph",
+    "range_miles_min",
+    "range_miles_max",
+    "mileage",
+  ] as const;
+  const ints: Record<string, number | null> = {};
+  for (const f of intFields) {
+    const v = getOptionalInt(formData, f);
+    if (v === "out-of-range") return { ok: false, error: "out-of-range" };
+    ints[f] = v;
+  }
+
+  const numFields = ["battery_amp_hours", "charge_time_hours", "weight_lbs"] as const;
+  const nums: Record<string, number | null> = {};
+  for (const f of numFields) {
+    const v = getOptionalNumber(formData, f);
+    if (v === "out-of-range") return { ok: false, error: "out-of-range" };
+    nums[f] = v;
+  }
+
+  return {
+    ok: true,
+    fields: {
+      title,
+      description: nullableString(description),
+      price_cents: priceCents,
+      make_id,
+      model,
+      year,
+      condition_id,
+      bike_class_id,
+      bike_category_id,
+      location_postal,
+      frame_size: nullableString(getString(formData, "frame_size", 32)),
+      frame_style_id: getOptionalId(formData, "frame_style_id"),
+      frame_material_id: getOptionalId(formData, "frame_material_id"),
+      gender_fit_id: getOptionalId(formData, "gender_fit_id"),
+      wheel_size_id: getOptionalId(formData, "wheel_size_id"),
+      suspension_type_id: getOptionalId(formData, "suspension_type_id"),
+      brake_type_id: getOptionalId(formData, "brake_type_id"),
+      motor_brand_id: getOptionalId(formData, "motor_brand_id"),
+      motor_type_id: getOptionalId(formData, "motor_type_id"),
+      motor_watts_nominal: ints.motor_watts_nominal,
+      motor_watts_peak: ints.motor_watts_peak,
+      motor_torque_nm: ints.motor_torque_nm,
+      battery_wh: ints.battery_wh,
+      battery_voltage: ints.battery_voltage,
+      battery_amp_hours: nums.battery_amp_hours,
+      charge_time_hours: nums.charge_time_hours,
+      top_speed_mph: ints.top_speed_mph,
+      range_miles_min: ints.range_miles_min,
+      range_miles_max: ints.range_miles_max,
+      drive_mode_id: getOptionalId(formData, "drive_mode_id"),
+      mileage: ints.mileage,
+      color: nullableString(getString(formData, "color", 32)),
+      weight_lbs: nums.weight_lbs,
+      display_type: nullableString(getString(formData, "display_type", 64)),
+      drivetrain: nullableString(getString(formData, "drivetrain", 120)),
+      accessories: nullableString(getString(formData, "accessories", 2000)),
+      modifications: nullableString(getString(formData, "modifications", 2000)),
+      has_warranty: getCheckbox(formData, "has_warranty"),
+      warranty_text: nullableString(getString(formData, "warranty_text", 500)),
+      has_original_receipt: getCheckbox(formData, "has_original_receipt"),
+      body_position_id: getOptionalId(formData, "body_position_id"),
+    },
+  };
+}
+
+function listingValuesForInsert(f: ListingFields, sellerId: string) {
+  return [
+    f.title,
+    f.description,
+    f.price_cents,
+    sellerId,
+    f.make_id,
+    f.model,
+    f.year,
+    f.condition_id,
+    f.bike_class_id,
+    f.bike_category_id,
+    f.location_postal,
+    f.frame_size,
+    f.frame_style_id,
+    f.frame_material_id,
+    f.gender_fit_id,
+    f.wheel_size_id,
+    f.suspension_type_id,
+    f.brake_type_id,
+    f.motor_brand_id,
+    f.motor_type_id,
+    f.motor_watts_nominal,
+    f.motor_watts_peak,
+    f.motor_torque_nm,
+    f.battery_wh,
+    f.battery_voltage,
+    f.battery_amp_hours,
+    f.charge_time_hours,
+    f.top_speed_mph,
+    f.range_miles_min,
+    f.range_miles_max,
+    f.drive_mode_id,
+    f.mileage,
+    f.color,
+    f.weight_lbs,
+    f.display_type,
+    f.drivetrain,
+    f.accessories,
+    f.modifications,
+    f.has_warranty,
+    f.warranty_text,
+    f.has_original_receipt,
+    f.body_position_id,
+  ];
+}
+
+const INSERT_COLUMNS = `
+  title, description, price_cents, seller_id,
+  make_id, model, year, condition_id, bike_class_id, bike_category_id,
+  location_postal, frame_size, frame_style_id, frame_material_id,
+  gender_fit_id, wheel_size_id, suspension_type_id, brake_type_id,
+  motor_brand_id, motor_type_id, motor_watts_nominal, motor_watts_peak,
+  motor_torque_nm, battery_wh, battery_voltage, battery_amp_hours,
+  charge_time_hours, top_speed_mph, range_miles_min, range_miles_max,
+  drive_mode_id, mileage, color, weight_lbs, display_type, drivetrain,
+  accessories, modifications, has_warranty, warranty_text,
+  has_original_receipt, body_position_id
+`;
+
+const UPDATE_SET = `
+  title = $2,
+  description = $3,
+  price_cents = $4,
+  make_id = $5::bigint,
+  model = $6,
+  year = $7,
+  condition_id = $8::bigint,
+  bike_class_id = $9::bigint,
+  bike_category_id = $10::bigint,
+  location_postal = $11,
+  frame_size = $12,
+  frame_style_id = NULLIF($13, '')::bigint,
+  frame_material_id = NULLIF($14, '')::bigint,
+  gender_fit_id = NULLIF($15, '')::bigint,
+  wheel_size_id = NULLIF($16, '')::bigint,
+  suspension_type_id = NULLIF($17, '')::bigint,
+  brake_type_id = NULLIF($18, '')::bigint,
+  motor_brand_id = NULLIF($19, '')::bigint,
+  motor_type_id = NULLIF($20, '')::bigint,
+  motor_watts_nominal = $21,
+  motor_watts_peak = $22,
+  motor_torque_nm = $23,
+  battery_wh = $24,
+  battery_voltage = $25,
+  battery_amp_hours = $26,
+  charge_time_hours = $27,
+  top_speed_mph = $28,
+  range_miles_min = $29,
+  range_miles_max = $30,
+  drive_mode_id = NULLIF($31, '')::bigint,
+  mileage = $32,
+  color = $33,
+  weight_lbs = $34,
+  display_type = $35,
+  drivetrain = $36,
+  accessories = $37,
+  modifications = $38,
+  has_warranty = $39,
+  warranty_text = $40,
+  has_original_receipt = $41,
+  body_position_id = NULLIF($42, '')::bigint
+`;
 
 function collectImageFiles(formData: FormData): File[] {
   const files = formData
@@ -72,83 +409,33 @@ export async function createListing(formData: FormData): Promise<void> {
     redirect("/login?error=invalid-credentials");
   }
 
-  const title = String(formData.get("title") ?? "").trim();
-  const description = String(formData.get("description") ?? "").trim();
-  const priceRaw = String(formData.get("price") ?? "");
+  const parsed = parseListingFields(formData);
+  if (!parsed.ok) {
+    redirect(`/listings/new?error=${parsed.error}`);
+  }
+
   const files = collectImageFiles(formData);
-
-  if (!title || title.length > TITLE_MAX) {
-    redirect("/listings/new?error=invalid-title");
-  }
-  if (description.length > DESCRIPTION_MAX) {
-    redirect("/listings/new?error=long-description");
-  }
-
-  const priceCents = parsePriceToCents(priceRaw);
-  if (priceCents === null) {
-    redirect("/listings/new?error=invalid-price");
-  }
-
   const imageErr = validateImages(files);
   if (imageErr) redirect(`/listings/new?error=${imageErr}`);
 
+  const placeholders = Array.from({ length: 42 }, (_, i) => `$${i + 1}`).join(
+    ", ",
+  );
   const inserted = await query<{ id: string }>(
-    `INSERT INTO listings (title, description, price_cents, seller_id)
-     VALUES ($1, $2, $3, $4)
-     RETURNING id::text`,
-    [title, description || null, priceCents, user.id],
+    `INSERT INTO listings (${INSERT_COLUMNS}) VALUES (${placeholders}) RETURNING id::text`,
+    listingValuesForInsert(parsed.fields, user.id),
   );
   const listingId = inserted.rows[0]!.id;
 
   try {
     await insertImages(listingId, files, 0, false);
   } catch {
-    // Listing was created; surface this as a generic upload error
     revalidatePath("/listings");
     redirect(`/listings/${listingId}/edit?error=upload-failed`);
   }
 
   revalidatePath("/listings");
   redirect(`/listings/${listingId}`);
-}
-
-export async function updateListing(formData: FormData): Promise<void> {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
-
-  const listingId = String(formData.get("listingId") ?? "");
-  if (!(await ensureListingOwner(listingId, user.id))) {
-    redirect("/listings");
-  }
-
-  const title = String(formData.get("title") ?? "").trim();
-  const description = String(formData.get("description") ?? "").trim();
-  const priceRaw = String(formData.get("price") ?? "");
-
-  if (!title || title.length > TITLE_MAX) {
-    redirect(`/listings/${listingId}/edit?error=invalid-title`);
-  }
-  if (description.length > DESCRIPTION_MAX) {
-    redirect(`/listings/${listingId}/edit?error=long-description`);
-  }
-  const priceCents = parsePriceToCents(priceRaw);
-  if (priceCents === null) {
-    redirect(`/listings/${listingId}/edit?error=invalid-price`);
-  }
-
-  await query(
-    `UPDATE listings
-        SET title = $1,
-            description = $2,
-            price_cents = $3
-      WHERE id = $4::bigint AND seller_id = $5::bigint`,
-    [title, description || null, priceCents, listingId, user.id],
-  );
-
-  revalidatePath(`/listings/${listingId}`);
-  revalidatePath(`/listings/${listingId}/edit`);
-  revalidatePath(`/listings`);
-  redirect(`/listings/${listingId}/edit?saved=1`);
 }
 
 async function ensureListingOwner(
@@ -161,6 +448,76 @@ async function ensureListingOwner(
     [listingId],
   );
   return r.rows[0]?.seller_id === userId;
+}
+
+export async function updateListing(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const listingId = String(formData.get("listingId") ?? "");
+  if (!(await ensureListingOwner(listingId, user.id))) {
+    redirect("/listings");
+  }
+
+  const parsed = parseListingFields(formData);
+  if (!parsed.ok) {
+    redirect(`/listings/${listingId}/edit?error=${parsed.error}`);
+  }
+
+  const f = parsed.fields;
+  await query(
+    `UPDATE listings SET ${UPDATE_SET} WHERE id = $1::bigint AND seller_id = $43::bigint`,
+    [
+      listingId,
+      f.title,
+      f.description,
+      f.price_cents,
+      f.make_id,
+      f.model,
+      f.year,
+      f.condition_id,
+      f.bike_class_id,
+      f.bike_category_id,
+      f.location_postal,
+      f.frame_size,
+      f.frame_style_id ?? "",
+      f.frame_material_id ?? "",
+      f.gender_fit_id ?? "",
+      f.wheel_size_id ?? "",
+      f.suspension_type_id ?? "",
+      f.brake_type_id ?? "",
+      f.motor_brand_id ?? "",
+      f.motor_type_id ?? "",
+      f.motor_watts_nominal,
+      f.motor_watts_peak,
+      f.motor_torque_nm,
+      f.battery_wh,
+      f.battery_voltage,
+      f.battery_amp_hours,
+      f.charge_time_hours,
+      f.top_speed_mph,
+      f.range_miles_min,
+      f.range_miles_max,
+      f.drive_mode_id ?? "",
+      f.mileage,
+      f.color,
+      f.weight_lbs,
+      f.display_type,
+      f.drivetrain,
+      f.accessories,
+      f.modifications,
+      f.has_warranty,
+      f.warranty_text,
+      f.has_original_receipt,
+      f.body_position_id ?? "",
+      user.id,
+    ],
+  );
+
+  revalidatePath(`/listings/${listingId}`);
+  revalidatePath(`/listings/${listingId}/edit`);
+  revalidatePath(`/listings`);
+  redirect(`/listings/${listingId}/edit?saved=1`);
 }
 
 export async function addListingImages(formData: FormData): Promise<void> {

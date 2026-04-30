@@ -52,3 +52,260 @@ CREATE INDEX IF NOT EXISTS listing_images_listing_id_idx
 -- Only one primary image per listing.
 CREATE UNIQUE INDEX IF NOT EXISTS listing_images_one_primary_idx
   ON listing_images (listing_id) WHERE is_primary;
+
+-- =========================================================
+-- Reference data (admin-managed lookups)
+-- All tables share: id, sort_order, is_active. Slug+label
+-- everywhere except bike_makes which uses `name` directly.
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS bike_makes (
+  id          BIGSERIAL    PRIMARY KEY,
+  name        TEXT         UNIQUE NOT NULL,
+  sort_order  INTEGER      NOT NULL DEFAULT 0,
+  is_active   BOOLEAN      NOT NULL DEFAULT TRUE
+);
+
+CREATE TABLE IF NOT EXISTS bike_categories (
+  id          BIGSERIAL    PRIMARY KEY,
+  slug        TEXT         UNIQUE NOT NULL,
+  label       TEXT         NOT NULL,
+  sort_order  INTEGER      NOT NULL DEFAULT 0,
+  is_active   BOOLEAN      NOT NULL DEFAULT TRUE
+);
+
+CREATE TABLE IF NOT EXISTS bike_classes (
+  id          BIGSERIAL    PRIMARY KEY,
+  slug        TEXT         UNIQUE NOT NULL,
+  label       TEXT         NOT NULL,
+  sort_order  INTEGER      NOT NULL DEFAULT 0,
+  is_active   BOOLEAN      NOT NULL DEFAULT TRUE
+);
+
+CREATE TABLE IF NOT EXISTS frame_styles (
+  id          BIGSERIAL    PRIMARY KEY,
+  slug        TEXT         UNIQUE NOT NULL,
+  label       TEXT         NOT NULL,
+  sort_order  INTEGER      NOT NULL DEFAULT 0,
+  is_active   BOOLEAN      NOT NULL DEFAULT TRUE
+);
+
+CREATE TABLE IF NOT EXISTS frame_materials (
+  id          BIGSERIAL    PRIMARY KEY,
+  slug        TEXT         UNIQUE NOT NULL,
+  label       TEXT         NOT NULL,
+  sort_order  INTEGER      NOT NULL DEFAULT 0,
+  is_active   BOOLEAN      NOT NULL DEFAULT TRUE
+);
+
+CREATE TABLE IF NOT EXISTS wheel_sizes (
+  id          BIGSERIAL    PRIMARY KEY,
+  slug        TEXT         UNIQUE NOT NULL,
+  label       TEXT         NOT NULL,
+  sort_order  INTEGER      NOT NULL DEFAULT 0,
+  is_active   BOOLEAN      NOT NULL DEFAULT TRUE
+);
+
+CREATE TABLE IF NOT EXISTS gender_fits (
+  id          BIGSERIAL    PRIMARY KEY,
+  slug        TEXT         UNIQUE NOT NULL,
+  label       TEXT         NOT NULL,
+  sort_order  INTEGER      NOT NULL DEFAULT 0,
+  is_active   BOOLEAN      NOT NULL DEFAULT TRUE
+);
+
+CREATE TABLE IF NOT EXISTS motor_brands (
+  id          BIGSERIAL    PRIMARY KEY,
+  name        TEXT         UNIQUE NOT NULL,
+  sort_order  INTEGER      NOT NULL DEFAULT 0,
+  is_active   BOOLEAN      NOT NULL DEFAULT TRUE
+);
+
+CREATE TABLE IF NOT EXISTS motor_types (
+  id          BIGSERIAL    PRIMARY KEY,
+  slug        TEXT         UNIQUE NOT NULL,
+  label       TEXT         NOT NULL,
+  sort_order  INTEGER      NOT NULL DEFAULT 0,
+  is_active   BOOLEAN      NOT NULL DEFAULT TRUE
+);
+
+CREATE TABLE IF NOT EXISTS drive_modes (
+  id          BIGSERIAL    PRIMARY KEY,
+  slug        TEXT         UNIQUE NOT NULL,
+  label       TEXT         NOT NULL,
+  sort_order  INTEGER      NOT NULL DEFAULT 0,
+  is_active   BOOLEAN      NOT NULL DEFAULT TRUE
+);
+
+CREATE TABLE IF NOT EXISTS brake_types (
+  id          BIGSERIAL    PRIMARY KEY,
+  slug        TEXT         UNIQUE NOT NULL,
+  label       TEXT         NOT NULL,
+  sort_order  INTEGER      NOT NULL DEFAULT 0,
+  is_active   BOOLEAN      NOT NULL DEFAULT TRUE
+);
+
+CREATE TABLE IF NOT EXISTS suspension_types (
+  id          BIGSERIAL    PRIMARY KEY,
+  slug        TEXT         UNIQUE NOT NULL,
+  label       TEXT         NOT NULL,
+  sort_order  INTEGER      NOT NULL DEFAULT 0,
+  is_active   BOOLEAN      NOT NULL DEFAULT TRUE
+);
+
+CREATE TABLE IF NOT EXISTS condition_grades (
+  id          BIGSERIAL    PRIMARY KEY,
+  slug        TEXT         UNIQUE NOT NULL,
+  label       TEXT         NOT NULL,
+  sort_order  INTEGER      NOT NULL DEFAULT 0,
+  is_active   BOOLEAN      NOT NULL DEFAULT TRUE
+);
+
+CREATE TABLE IF NOT EXISTS body_positions (
+  id          BIGSERIAL    PRIMARY KEY,
+  slug        TEXT         UNIQUE NOT NULL,
+  label       TEXT         NOT NULL,
+  sort_order  INTEGER      NOT NULL DEFAULT 0,
+  is_active   BOOLEAN      NOT NULL DEFAULT TRUE
+);
+
+-- =========================================================
+-- Listing detail columns (all nullable; legacy rows survive)
+-- =========================================================
+
+ALTER TABLE listings
+  ADD COLUMN IF NOT EXISTS make_id            BIGINT  REFERENCES bike_makes(id)         ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS model              TEXT,
+  ADD COLUMN IF NOT EXISTS year               INTEGER,
+  ADD COLUMN IF NOT EXISTS condition_id       BIGINT  REFERENCES condition_grades(id)   ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS bike_class_id      BIGINT  REFERENCES bike_classes(id)       ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS bike_category_id   BIGINT  REFERENCES bike_categories(id)    ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS location_postal    TEXT,
+  ADD COLUMN IF NOT EXISTS frame_size         TEXT,
+  ADD COLUMN IF NOT EXISTS frame_style_id     BIGINT  REFERENCES frame_styles(id)       ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS frame_material_id  BIGINT  REFERENCES frame_materials(id)    ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS gender_fit_id      BIGINT  REFERENCES gender_fits(id)        ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS wheel_size_id      BIGINT  REFERENCES wheel_sizes(id)        ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS suspension_type_id BIGINT  REFERENCES suspension_types(id)   ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS brake_type_id      BIGINT  REFERENCES brake_types(id)        ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS motor_brand_id     BIGINT  REFERENCES motor_brands(id)       ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS motor_type_id      BIGINT  REFERENCES motor_types(id)        ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS motor_watts_nominal INTEGER,
+  ADD COLUMN IF NOT EXISTS motor_watts_peak    INTEGER,
+  ADD COLUMN IF NOT EXISTS motor_torque_nm     INTEGER,
+  ADD COLUMN IF NOT EXISTS battery_wh          INTEGER,
+  ADD COLUMN IF NOT EXISTS battery_voltage     INTEGER,
+  ADD COLUMN IF NOT EXISTS battery_amp_hours   NUMERIC(5,1),
+  ADD COLUMN IF NOT EXISTS charge_time_hours   NUMERIC(4,1),
+  ADD COLUMN IF NOT EXISTS top_speed_mph       INTEGER,
+  ADD COLUMN IF NOT EXISTS range_miles_min     INTEGER,
+  ADD COLUMN IF NOT EXISTS range_miles_max     INTEGER,
+  ADD COLUMN IF NOT EXISTS drive_mode_id       BIGINT  REFERENCES drive_modes(id)        ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS mileage             INTEGER,
+  ADD COLUMN IF NOT EXISTS color               TEXT,
+  ADD COLUMN IF NOT EXISTS weight_lbs          NUMERIC(5,1),
+  ADD COLUMN IF NOT EXISTS display_type        TEXT,
+  ADD COLUMN IF NOT EXISTS drivetrain          TEXT,
+  ADD COLUMN IF NOT EXISTS accessories         TEXT,
+  ADD COLUMN IF NOT EXISTS modifications       TEXT,
+  ADD COLUMN IF NOT EXISTS has_warranty        BOOLEAN DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS warranty_text       TEXT,
+  ADD COLUMN IF NOT EXISTS has_original_receipt BOOLEAN DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS body_position_id    BIGINT  REFERENCES body_positions(id)     ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS listings_make_id_idx       ON listings (make_id);
+CREATE INDEX IF NOT EXISTS listings_category_id_idx   ON listings (bike_category_id);
+CREATE INDEX IF NOT EXISTS listings_class_id_idx      ON listings (bike_class_id);
+
+-- =========================================================
+-- Reference data seed (idempotent)
+-- =========================================================
+
+INSERT INTO bike_makes (name, sort_order) VALUES
+  ('Trek', 10), ('Specialized', 20), ('Cannondale', 30), ('Giant', 40),
+  ('Aventon', 50), ('Rad Power', 60), ('Lectric', 70), ('Ride1Up', 80),
+  ('Velotric', 90), ('Heybike', 100), ('Juiced', 110), ('Pedego', 120),
+  ('Tern', 130), ('Riese & Müller', 140), ('Cube', 150), ('Orbea', 160),
+  ('Bulls', 170), ('Bianchi', 180), ('BMC', 190), ('Canyon', 200),
+  ('Other', 9999)
+ON CONFLICT (name) DO NOTHING;
+
+INSERT INTO bike_categories (slug, label, sort_order) VALUES
+  ('commuter', 'Commuter', 10), ('cargo', 'Cargo', 20), ('folding', 'Folding', 30),
+  ('cruiser', 'Cruiser', 40), ('mountain', 'Mountain', 50), ('road', 'Road', 60),
+  ('gravel', 'Gravel', 70), ('hybrid', 'Hybrid', 80), ('fat-tire', 'Fat-tire', 90),
+  ('step-through', 'Step-through', 100), ('trike', 'Trike', 110)
+ON CONFLICT (slug) DO NOTHING;
+
+INSERT INTO bike_classes (slug, label, sort_order) VALUES
+  ('class-1', 'Class 1 (pedal-assist, 20 mph)', 10),
+  ('class-2', 'Class 2 (throttle + pedal, 20 mph)', 20),
+  ('class-3', 'Class 3 (pedal-assist, 28 mph)', 30),
+  ('out-of-class', 'Out-of-class / unrestricted', 40)
+ON CONFLICT (slug) DO NOTHING;
+
+INSERT INTO frame_styles (slug, label, sort_order) VALUES
+  ('step-over', 'Step-over', 10), ('step-through', 'Step-through', 20),
+  ('mid-step', 'Mid-step', 30), ('folding', 'Folding', 40),
+  ('recumbent', 'Recumbent', 50)
+ON CONFLICT (slug) DO NOTHING;
+
+INSERT INTO frame_materials (slug, label, sort_order) VALUES
+  ('aluminum', 'Aluminum', 10), ('carbon', 'Carbon fiber', 20),
+  ('steel', 'Steel', 30), ('chromoly', 'Chromoly steel', 40),
+  ('titanium', 'Titanium', 50)
+ON CONFLICT (slug) DO NOTHING;
+
+INSERT INTO wheel_sizes (slug, label, sort_order) VALUES
+  ('20', '20"', 10), ('24', '24"', 20), ('26', '26"', 30),
+  ('27-5', '27.5"', 40), ('29', '29"', 50), ('700c', '700c', 60)
+ON CONFLICT (slug) DO NOTHING;
+
+INSERT INTO gender_fits (slug, label, sort_order) VALUES
+  ('mens', 'Men''s', 10), ('womens', 'Women''s', 20), ('unisex', 'Unisex', 30)
+ON CONFLICT (slug) DO NOTHING;
+
+INSERT INTO motor_brands (name, sort_order) VALUES
+  ('Bosch', 10), ('Shimano', 20), ('Yamaha', 30), ('Brose', 40),
+  ('Specialized', 50), ('Bafang', 60), ('MPF', 70),
+  ('Generic / unbranded', 9000), ('Other', 9999)
+ON CONFLICT (name) DO NOTHING;
+
+INSERT INTO motor_types (slug, label, sort_order) VALUES
+  ('mid-drive', 'Mid-drive', 10),
+  ('rear-hub', 'Rear hub', 20),
+  ('front-hub', 'Front hub', 30)
+ON CONFLICT (slug) DO NOTHING;
+
+INSERT INTO drive_modes (slug, label, sort_order) VALUES
+  ('pedal-assist', 'Pedal-assist only', 10),
+  ('throttle', 'Throttle only', 20),
+  ('both', 'Pedal-assist + throttle', 30)
+ON CONFLICT (slug) DO NOTHING;
+
+INSERT INTO brake_types (slug, label, sort_order) VALUES
+  ('hydraulic-disc', 'Hydraulic disc', 10),
+  ('mechanical-disc', 'Mechanical disc', 20),
+  ('rim', 'Rim', 30), ('drum', 'Drum', 40), ('coaster', 'Coaster', 50)
+ON CONFLICT (slug) DO NOTHING;
+
+INSERT INTO suspension_types (slug, label, sort_order) VALUES
+  ('rigid', 'None (rigid)', 10),
+  ('hardtail', 'Front (hardtail)', 20),
+  ('full', 'Full', 30),
+  ('rear-only', 'Rear only', 40)
+ON CONFLICT (slug) DO NOTHING;
+
+INSERT INTO condition_grades (slug, label, sort_order) VALUES
+  ('like-new', 'Like new', 10),
+  ('excellent', 'Excellent', 20),
+  ('good', 'Good', 30),
+  ('fair', 'Fair', 40),
+  ('for-parts', 'For parts', 50)
+ON CONFLICT (slug) DO NOTHING;
+
+INSERT INTO body_positions (slug, label, sort_order) VALUES
+  ('upright', 'Upright', 10),
+  ('forward', 'Forward', 20),
+  ('aggressive', 'Aggressive', 30)
+ON CONFLICT (slug) DO NOTHING;

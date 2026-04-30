@@ -8,13 +8,16 @@ import {
   setPrimaryImage,
   updateListing,
 } from "@/lib/actions/listings";
+import { loadListingRefOptions } from "@/lib/ref-data";
 import {
   Button,
   ButtonLink,
   Field,
-  Input,
-  Textarea,
 } from "../../../_components/ui";
+import {
+  ListingForm,
+  type ListingFormDefaults,
+} from "../../../_components/listing-form";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +30,14 @@ const ERRORS: Record<string, string> = {
   "invalid-title": "Title is required (200 characters or fewer).",
   "long-description": "Description must be 5,000 characters or fewer.",
   "invalid-price": "Enter a valid price in dollars (e.g. 1899 or 1899.00).",
+  "invalid-make": "Pick a make.",
+  "invalid-model": "Model is required.",
+  "invalid-year": "Year must be between 2000 and next year.",
+  "invalid-condition": "Pick a condition.",
+  "invalid-class": "Pick a bike class.",
+  "invalid-category": "Pick a bike category.",
+  "invalid-location": "A postal code or location is required.",
+  "out-of-range": "One of the numeric values is outside the allowed range.",
 };
 
 type ListingRow = {
@@ -35,6 +46,44 @@ type ListingRow = {
   description: string | null;
   price_cents: number;
   seller_id: string | null;
+  make_id: string | null;
+  model: string | null;
+  year: number | null;
+  condition_id: string | null;
+  bike_class_id: string | null;
+  bike_category_id: string | null;
+  location_postal: string | null;
+  frame_size: string | null;
+  frame_style_id: string | null;
+  frame_material_id: string | null;
+  gender_fit_id: string | null;
+  wheel_size_id: string | null;
+  suspension_type_id: string | null;
+  brake_type_id: string | null;
+  motor_brand_id: string | null;
+  motor_type_id: string | null;
+  motor_watts_nominal: number | null;
+  motor_watts_peak: number | null;
+  motor_torque_nm: number | null;
+  battery_wh: number | null;
+  battery_voltage: number | null;
+  battery_amp_hours: string | null;
+  charge_time_hours: string | null;
+  top_speed_mph: number | null;
+  range_miles_min: number | null;
+  range_miles_max: number | null;
+  drive_mode_id: string | null;
+  mileage: number | null;
+  color: string | null;
+  weight_lbs: string | null;
+  display_type: string | null;
+  drivetrain: string | null;
+  accessories: string | null;
+  modifications: string | null;
+  has_warranty: boolean | null;
+  warranty_text: string | null;
+  has_original_receipt: boolean | null;
+  body_position_id: string | null;
 };
 
 type ImageRow = {
@@ -45,8 +94,10 @@ type ImageRow = {
   mime_type: string;
 };
 
-function centsToDollarString(cents: number): string {
-  return (cents / 100).toFixed(2);
+function nullableNumber(s: string | null): number | null {
+  if (s === null || s === undefined) return null;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
 }
 
 export default async function EditListingPage({
@@ -65,25 +116,86 @@ export default async function EditListingPage({
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const listingRes = await query<ListingRow>(
-    `SELECT id::text, title, description, price_cents, seller_id::text
-       FROM listings
-      WHERE id = $1::bigint
-      LIMIT 1`,
-    [id],
-  );
+  const [listingRes, imagesRes, refs] = await Promise.all([
+    query<ListingRow>(
+      `SELECT id::text, title, description, price_cents, seller_id::text,
+              make_id::text, model, year, condition_id::text,
+              bike_class_id::text, bike_category_id::text, location_postal,
+              frame_size, frame_style_id::text, frame_material_id::text,
+              gender_fit_id::text, wheel_size_id::text,
+              suspension_type_id::text, brake_type_id::text,
+              motor_brand_id::text, motor_type_id::text,
+              motor_watts_nominal, motor_watts_peak, motor_torque_nm,
+              battery_wh, battery_voltage, battery_amp_hours::text,
+              charge_time_hours::text, top_speed_mph, range_miles_min,
+              range_miles_max, drive_mode_id::text, mileage, color,
+              weight_lbs::text, display_type, drivetrain, accessories,
+              modifications, has_warranty, warranty_text,
+              has_original_receipt, body_position_id::text
+         FROM listings
+        WHERE id = $1::bigint
+        LIMIT 1`,
+      [id],
+    ),
+    query<ImageRow>(
+      `SELECT id::text, is_primary, position, byte_size, mime_type
+         FROM listing_images
+        WHERE listing_id = $1::bigint
+        ORDER BY is_primary DESC, position, id`,
+      [id],
+    ),
+    loadListingRefOptions(),
+  ]);
+
   const listing = listingRes.rows[0];
   if (!listing) notFound();
   if (listing.seller_id !== user.id) redirect(`/listings/${id}`);
 
-  const imagesRes = await query<ImageRow>(
-    `SELECT id::text, is_primary, position, byte_size, mime_type
-       FROM listing_images
-      WHERE listing_id = $1::bigint
-      ORDER BY is_primary DESC, position, id`,
-    [id],
-  );
   const images = imagesRes.rows;
+
+  const defaults: ListingFormDefaults = {
+    title: listing.title,
+    description: listing.description,
+    price_dollars: (listing.price_cents / 100).toFixed(2),
+    make_id: listing.make_id,
+    model: listing.model,
+    year: listing.year,
+    condition_id: listing.condition_id,
+    bike_class_id: listing.bike_class_id,
+    bike_category_id: listing.bike_category_id,
+    location_postal: listing.location_postal,
+    frame_size: listing.frame_size,
+    frame_style_id: listing.frame_style_id,
+    frame_material_id: listing.frame_material_id,
+    gender_fit_id: listing.gender_fit_id,
+    wheel_size_id: listing.wheel_size_id,
+    suspension_type_id: listing.suspension_type_id,
+    brake_type_id: listing.brake_type_id,
+    motor_brand_id: listing.motor_brand_id,
+    motor_type_id: listing.motor_type_id,
+    motor_watts_nominal: listing.motor_watts_nominal,
+    motor_watts_peak: listing.motor_watts_peak,
+    motor_torque_nm: listing.motor_torque_nm,
+    battery_wh: listing.battery_wh,
+    battery_voltage: listing.battery_voltage,
+    battery_amp_hours: nullableNumber(listing.battery_amp_hours),
+    charge_time_hours: nullableNumber(listing.charge_time_hours),
+    top_speed_mph: listing.top_speed_mph,
+    range_miles_min: listing.range_miles_min,
+    range_miles_max: listing.range_miles_max,
+    drive_mode_id: listing.drive_mode_id,
+    mileage: listing.mileage,
+    color: listing.color,
+    weight_lbs: nullableNumber(listing.weight_lbs),
+    display_type: listing.display_type,
+    drivetrain: listing.drivetrain,
+    accessories: listing.accessories,
+    modifications: listing.modifications,
+    has_warranty: !!listing.has_warranty,
+    warranty_text: listing.warranty_text,
+    has_original_receipt: !!listing.has_original_receipt,
+    body_position_id: listing.body_position_id,
+  };
 
   return (
     <div className="page" style={{ padding: "var(--s-9) var(--s-7)" }}>
@@ -120,66 +232,15 @@ export default async function EditListingPage({
           </p>
         )}
 
-        <section className="form-card" style={{ marginBottom: "var(--s-7)" }}>
-          <h2 className="card-heading">Listing details</h2>
-          <form
-            action={updateListing}
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "var(--s-5)",
-            }}
-          >
-            <input type="hidden" name="listingId" value={id} />
+        <ListingForm
+          action={updateListing}
+          refs={refs}
+          defaults={defaults}
+          hiddenFields={[{ name: "listingId", value: id }]}
+          submitLabel="Save changes"
+        />
 
-            <Field label="Title" htmlFor="title">
-              <Input
-                id="title"
-                type="text"
-                name="title"
-                required
-                maxLength={200}
-                defaultValue={listing.title}
-              />
-            </Field>
-
-            <Field label="Price (USD)" htmlFor="price">
-              <Input
-                id="price"
-                type="text"
-                inputMode="decimal"
-                name="price"
-                required
-                pattern="^\d+(\.\d{1,2})?$"
-                defaultValue={centsToDollarString(listing.price_cents)}
-              />
-            </Field>
-
-            <Field label="Description" htmlFor="description">
-              <Textarea
-                id="description"
-                name="description"
-                rows={5}
-                maxLength={5000}
-                defaultValue={listing.description ?? ""}
-              />
-            </Field>
-
-            <div
-              style={{
-                display: "flex",
-                gap: "var(--s-3)",
-                justifyContent: "flex-end",
-              }}
-            >
-              <Button type="submit" variant="primary" iconRight="arrow">
-                Save changes
-              </Button>
-            </div>
-          </form>
-        </section>
-
-        <section className="form-card" style={{ marginBottom: "var(--s-7)" }}>
+        <section className="form-card" style={{ margin: "var(--s-7) 0" }}>
           <h2 className="card-heading">
             Photos{" "}
             <span style={{ color: "var(--ink-4)", fontWeight: 400 }}>
