@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { resolveCurrentRegion } from "@/lib/regions";
-import { ButtonLink, Icon, Spec } from "./_components/ui";
+import { ButtonLink, Spec } from "./_components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -23,16 +23,15 @@ export default async function Home() {
         </div>
         <div className="hero-grid">
           <div>
-            {region && (
-              <span className="hero-region">
-                <Icon name="location" size="sm" />
-                Now serving <strong>{region.label}</strong>
-              </span>
-            )}
             <p className="eyebrow">Peer-to-peer eBike marketplace</p>
             <h1>
-              Buy & sell <span className="accent">used eBikes</span> with people
-              you can trust.
+              Buy & sell <span className="accent">used eBikes</span>
+              {region ? (
+                <>
+                  {" "}in <span className="accent">{region.label}</span>
+                </>
+              ) : null}{" "}
+              with people you can trust.
             </h1>
             <p className="sub">
               Verified sellers. Real specs. Honest condition. ebikeflip is the
