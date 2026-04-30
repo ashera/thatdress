@@ -1,6 +1,7 @@
 import { query } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { findRefTable, listActiveRefOptions } from "@/lib/ref-data";
+import { getCurrentRegionId } from "@/lib/regions";
 import { ButtonLink } from "../_components/ui";
 import {
   ListingCard,
@@ -251,6 +252,15 @@ export default async function ListingsPage({
 }) {
   const sp = await searchParams;
   const { active, where, params } = buildFilters(sp);
+
+  // Apply current region filter. NULL-region (legacy) listings stay visible
+  // until they're backfilled by the seller.
+  const regionId = await getCurrentRegionId();
+  if (regionId) {
+    params.push(regionId);
+    where.push(`(l.region_id = $${params.length}::bigint OR l.region_id IS NULL)`);
+  }
+
   const whereSql = `WHERE ${where.join(" AND ")}`;
 
   const view: ListingsView =

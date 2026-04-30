@@ -3,6 +3,8 @@ import { logout } from "@/lib/actions/auth";
 import { getCurrentUser } from "@/lib/auth";
 import { query } from "@/lib/db";
 import { getAnonymousLocation } from "@/lib/geo";
+import { resolveCurrentRegion } from "@/lib/regions";
+import { clearRegion } from "@/lib/actions/regions";
 import { Button, ButtonLink } from "./ui";
 import { MobileMenu } from "./mobile-menu";
 
@@ -27,12 +29,15 @@ async function getListingCount(): Promise<number | null> {
 }
 
 export async function AuthNav() {
-  const [user, dbOk, listingCount, anonLocation] = await Promise.all([
+  const [user, dbOk, listingCount, anonLocation, region] = await Promise.all([
     getCurrentUser(),
     getDbOk(),
     getListingCount(),
     getAnonymousLocation(),
+    resolveCurrentRegion(),
   ]);
+  const currentRegion =
+    region.kind === "selected" || region.kind === "auto" ? region.region : null;
 
   return (
     <header className="topbar">
@@ -54,6 +59,20 @@ export async function AuthNav() {
           <span className="dot" aria-hidden />
           <span>{dbOk ? "Live" : "Down"}</span>
         </div>
+        {currentRegion && (
+          <form action={clearRegion} className="topbar-region-form">
+            <button
+              type="submit"
+              className="topbar-region"
+              title="Click to change region"
+            >
+              <span className="topbar-region-label">{currentRegion.label}</span>
+              <span className="topbar-region-x" aria-hidden>
+                ⌄
+              </span>
+            </button>
+          </form>
+        )}
       </div>
 
       <MobileMenu>

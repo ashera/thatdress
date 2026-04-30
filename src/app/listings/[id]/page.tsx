@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { query } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { getCurrentRegionId } from "@/lib/regions";
 import { ButtonLink } from "../../_components/ui";
 import {
   ListingGallery,
@@ -19,6 +20,7 @@ type ListingRow = {
   seller_email: string | null;
   seller_id: string | null;
   is_published: boolean;
+  region_id: string | null;
   // detail fields
   make_name: string | null;
   model: string | null;
@@ -74,6 +76,7 @@ const LISTING_SELECT = `
   l.created_at::text,
   l.seller_id::text,
   l.is_published,
+  l.region_id::text,
   u.email AS seller_email,
   mk.name AS make_name,
   l.model,
@@ -280,9 +283,10 @@ export default async function ListingDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [result, currentUser] = await Promise.all([
+  const [result, currentUser, regionId] = await Promise.all([
     fetchListing(id),
     getCurrentUser(),
+    getCurrentRegionId(),
   ]);
 
   if (!result.ok) {
@@ -305,7 +309,18 @@ export default async function ListingDetailPage({
 
   const l = result.listing;
   const isOwner = currentUser != null && currentUser.id === l.seller_id;
+  const isAdmin = currentUser?.isAdmin ?? false;
   if (!l.is_published && !isOwner) notFound();
+  // Hide listings outside the viewer's region (unless they own it or are admin).
+  if (
+    l.region_id &&
+    regionId &&
+    l.region_id !== regionId &&
+    !isOwner &&
+    !isAdmin
+  ) {
+    notFound();
+  }
   const price = new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",

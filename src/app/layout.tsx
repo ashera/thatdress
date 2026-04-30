@@ -3,6 +3,7 @@ import { Archivo_Black, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthNav } from "./_components/auth-nav";
 import { Footer } from "./_components/footer";
+import { RegionGate } from "./_components/region-gate";
 
 const archivoBlack = Archivo_Black({
   variable: "--font-display",
@@ -46,7 +47,9 @@ export default function RootLayout({
     >
       <body className="min-h-screen flex flex-col">
         <AuthNav />
-        <div className="flex flex-1 flex-col">{children}</div>
+        <div className="flex flex-1 flex-col">
+          <RegionGate>{children}</RegionGate>
+        </div>
         <Footer />
       </body>
     </html>

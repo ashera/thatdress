@@ -312,3 +312,32 @@ INSERT INTO body_positions (slug, label, sort_order) VALUES
   ('forward', 'Forward', 20),
   ('aggressive', 'Aggressive', 30)
 ON CONFLICT (slug) DO NOTHING;
+
+-- =========================================================
+-- Regions (geographical coverage)
+-- match_pattern is a comma-separated case-insensitive list of
+-- substrings checked against the IP-derived "City, ST" string.
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS regions (
+  id            BIGSERIAL    PRIMARY KEY,
+  slug          TEXT         UNIQUE NOT NULL,
+  label         TEXT         NOT NULL,
+  match_pattern TEXT,
+  sort_order    INTEGER      NOT NULL DEFAULT 0,
+  is_active     BOOLEAN      NOT NULL DEFAULT TRUE
+);
+
+ALTER TABLE listings
+  ADD COLUMN IF NOT EXISTS region_id BIGINT REFERENCES regions(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS listings_region_idx ON listings (region_id);
+
+INSERT INTO regions (slug, label, match_pattern, sort_order) VALUES
+  ('us-tx-austin',    'Austin Metro, TX',  'Austin, Round Rock, Pflugerville, Cedar Park', 10),
+  ('us-ca-bay-area',  'Bay Area, CA',      'San Francisco, Oakland, San Jose, Berkeley, Palo Alto', 20),
+  ('us-ny-nyc',       'New York City, NY', 'New York, Brooklyn, Queens, Manhattan, Bronx', 30),
+  ('us-wa-seattle',   'Seattle, WA',       'Seattle, Bellevue, Redmond', 40),
+  ('uk-london',       'London, UK',        'London', 50),
+  ('ca-toronto',      'Toronto, ON',       'Toronto, Mississauga', 60)
+ON CONFLICT (slug) DO NOTHING;

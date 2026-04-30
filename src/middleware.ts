@@ -33,18 +33,22 @@ function formatDisplay(d: IpapiResponse): string | null {
   return null;
 }
 
+function passthrough(req: NextRequest): NextResponse {
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set("x-pathname", req.nextUrl.pathname);
+  return NextResponse.next({ request: { headers: requestHeaders } });
+}
+
 export async function middleware(req: NextRequest) {
-  // Skip if we already have a session (logged in) or a cached anon location.
-  if (
-    req.cookies.has(SESSION_COOKIE) ||
-    req.cookies.has(ANON_LOC_COOKIE)
-  ) {
-    return NextResponse.next();
+  // Skip IP geo when we already have a session (logged in) or a cached anon
+  // location, but still forward x-pathname so RegionGate can read it.
+  if (req.cookies.has(SESSION_COOKIE) || req.cookies.has(ANON_LOC_COOKIE)) {
+    return passthrough(req);
   }
 
   const ip = clientIp(req);
   if (!ip || PRIVATE_IP_RE.test(ip)) {
-    return NextResponse.next();
+    return passthrough(req);
   }
 
   let display: string | null = null;
@@ -63,6 +67,7 @@ export async function middleware(req: NextRequest) {
 
   // Forward via request header so the *current* render can read it.
   const requestHeaders = new Headers(req.headers);
+  requestHeaders.set("x-pathname", req.nextUrl.pathname);
   if (display) requestHeaders.set("x-anon-location", display);
 
   const res = NextResponse.next({ request: { headers: requestHeaders } });

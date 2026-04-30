@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { query, withTransaction } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { getCurrentRegionId } from "@/lib/regions";
 
 const TITLE_MAX = 200;
 const DESCRIPTION_MAX = 5000;
@@ -418,12 +419,16 @@ export async function createListing(formData: FormData): Promise<void> {
   const imageErr = validateImages(files);
   if (imageErr) redirect(`/listings/new?error=${imageErr}`);
 
-  const placeholders = Array.from({ length: 42 }, (_, i) => `$${i + 1}`).join(
+  const regionId = await getCurrentRegionId();
+
+  const values = listingValuesForInsert(parsed.fields, user.id);
+  values.push(regionId);
+  const placeholders = Array.from({ length: values.length }, (_, i) => `$${i + 1}`).join(
     ", ",
   );
   const inserted = await query<{ id: string }>(
-    `INSERT INTO listings (${INSERT_COLUMNS}) VALUES (${placeholders}) RETURNING id::text`,
-    listingValuesForInsert(parsed.fields, user.id),
+    `INSERT INTO listings (${INSERT_COLUMNS}, region_id) VALUES (${placeholders}) RETURNING id::text`,
+    values,
   );
   const listingId = inserted.rows[0]!.id;
 

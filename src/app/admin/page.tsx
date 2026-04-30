@@ -9,6 +9,11 @@ const ADMIN_LINKS: Array<{ href: string; title: string; desc: string }> = [
     title: "Manage Reference Data",
     desc: "Edit shared lookup values used across the app.",
   },
+  {
+    href: "/admin/regions",
+    title: "Manage Regions",
+    desc: "Configure which geographical regions the site is available in.",
+  },
 ];
 
 export default async function AdminHomePage() {
