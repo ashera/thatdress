@@ -353,3 +353,39 @@ UPDATE regions SET short_name = 'New York City' WHERE slug = 'us-ny-nyc'      AN
 UPDATE regions SET short_name = 'Seattle'       WHERE slug = 'us-wa-seattle'  AND short_name IS NULL;
 UPDATE regions SET short_name = 'London'        WHERE slug = 'uk-london'      AND short_name IS NULL;
 UPDATE regions SET short_name = 'Toronto'       WHERE slug = 'ca-toronto'     AND short_name IS NULL;
+
+-- =========================================================
+-- Direct messaging
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS conversations (
+  id          BIGSERIAL    PRIMARY KEY,
+  listing_id  BIGINT       NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
+  buyer_id    BIGINT       NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  seller_id   BIGINT       NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+-- Each (listing, buyer) pair gets at most one conversation.
+CREATE UNIQUE INDEX IF NOT EXISTS conversations_listing_buyer_idx
+  ON conversations (listing_id, buyer_id);
+
+CREATE INDEX IF NOT EXISTS conversations_buyer_idx
+  ON conversations (buyer_id, updated_at DESC);
+CREATE INDEX IF NOT EXISTS conversations_seller_idx
+  ON conversations (seller_id, updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS messages (
+  id              BIGSERIAL    PRIMARY KEY,
+  conversation_id BIGINT       NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+  sender_id       BIGINT       NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  body            TEXT         NOT NULL,
+  created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  read_at         TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS messages_conversation_idx
+  ON messages (conversation_id, created_at);
+CREATE INDEX IF NOT EXISTS messages_unread_idx
+  ON messages (conversation_id, sender_id) WHERE read_at IS NULL;

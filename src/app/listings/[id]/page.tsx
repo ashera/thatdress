@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { query } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { getCurrentRegionId } from "@/lib/regions";
-import { ButtonLink } from "../../_components/ui";
+import { startConversation } from "@/lib/actions/messages";
+import { Button, ButtonLink } from "../../_components/ui";
 import {
   ListingGallery,
   type GalleryImage,
@@ -386,18 +387,28 @@ export default async function ListingDetailPage({
           )}
 
           <div className="detail-actions">
-            <ButtonLink
-              href={
-                l.seller_email
-                  ? `mailto:${l.seller_email}?subject=${encodeURIComponent(`Re: ${l.title}`)}`
-                  : "/listings"
-              }
-              variant="primary"
-              size="lg"
-              iconRight="arrow"
-            >
-              {l.seller_email ? "Contact seller" : "Back to browse"}
-            </ButtonLink>
+            {!isOwner && l.seller_id && currentUser ? (
+              <form action={startConversation}>
+                <input type="hidden" name="listingId" value={l.id} />
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="lg"
+                  iconRight="msg"
+                >
+                  Contact seller
+                </Button>
+              </form>
+            ) : !isOwner && l.seller_id ? (
+              <ButtonLink
+                href={`/login?next=${encodeURIComponent(`/listings/${l.id}`)}`}
+                variant="primary"
+                size="lg"
+                iconRight="arrow"
+              >
+                Log in to contact seller
+              </ButtonLink>
+            ) : null}
             <ButtonLink href="/listings" variant="ghost" size="lg">
               See more bikes
             </ButtonLink>

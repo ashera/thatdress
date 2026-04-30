@@ -5,6 +5,7 @@ import { query } from "@/lib/db";
 import { getAnonymousLocation } from "@/lib/geo";
 import { resolveCurrentRegion } from "@/lib/regions";
 import { clearRegion } from "@/lib/actions/regions";
+import { unreadMessageCount } from "@/lib/messages";
 import { Button, ButtonLink } from "./ui";
 import { MobileMenu } from "./mobile-menu";
 
@@ -38,6 +39,7 @@ export async function AuthNav() {
   ]);
   const currentRegion =
     region.kind === "selected" || region.kind === "auto" ? region.region : null;
+  const unread = user ? await unreadMessageCount(user.id) : 0;
 
   return (
     <header className="topbar">
@@ -81,6 +83,16 @@ export async function AuthNav() {
             <Link href="/listings">Browse</Link>
             <Link href="/listings/new">Sell</Link>
             {user && <Link href="/listings/mine">My listings</Link>}
+            {user && (
+              <Link href="/messages" className="nav-messages">
+                Messages
+                {unread > 0 && (
+                  <span className="nav-badge" aria-label={`${unread} unread`}>
+                    {unread > 99 ? "99+" : unread}
+                  </span>
+                )}
+              </Link>
+            )}
             <Link href="/status">Status</Link>
             {user?.isAdmin && (
               <Link href="/admin" className="nav-admin">
