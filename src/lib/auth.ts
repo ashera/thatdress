@@ -13,6 +13,7 @@ export type User = {
   id: string;
   email: string;
   isAdmin: boolean;
+  location: string | null;
 };
 
 export async function hashPassword(plain: string): Promise<string> {
@@ -70,8 +71,9 @@ export async function getCurrentUser(): Promise<User | null> {
       id: string;
       email: string;
       is_admin: boolean;
+      location: string | null;
     }>(
-      `SELECT u.id::text AS id, u.email AS email, u.is_admin
+      `SELECT u.id::text AS id, u.email AS email, u.is_admin, u.location
          FROM sessions s
          JOIN users u ON u.id = s.user_id
         WHERE s.id = $1 AND s.expires_at > NOW()
@@ -80,7 +82,12 @@ export async function getCurrentUser(): Promise<User | null> {
     );
     const row = result.rows[0];
     if (!row) return null;
-    return { id: row.id, email: row.email, isAdmin: row.is_admin };
+    return {
+      id: row.id,
+      email: row.email,
+      isAdmin: row.is_admin,
+      location: row.location,
+    };
   } catch {
     return null;
   }

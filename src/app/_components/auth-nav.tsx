@@ -70,7 +70,16 @@ export async function AuthNav() {
           <div className="actions">
             {user ? (
               <>
-                <span className="who">{user.email}</span>
+                <Link href="/profile" className="who-link">
+                  <span className="who">{user.email}</span>
+                  {user.location ? (
+                    <span className="who-loc">{user.location}</span>
+                  ) : (
+                    <span className="who-loc who-loc--empty">
+                      Set location
+                    </span>
+                  )}
+                </Link>
                 <form action={logout}>
                   <Button type="submit" variant="ghost" size="sm">
                     Log out

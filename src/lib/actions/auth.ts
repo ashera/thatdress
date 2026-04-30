@@ -1,10 +1,12 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { query } from "@/lib/db";
 import {
   createSession,
   destroySession,
+  getCurrentUser,
   hashPassword,
   verifyPassword,
 } from "@/lib/auth";
@@ -39,13 +41,18 @@ export async function register(formData: FormData): Promise<void> {
     redirect(`/register?error=${error}`);
   }
 
+  const location =
+    String(formData.get("location") ?? "")
+      .trim()
+      .slice(0, 64) || null;
+
   const password_hash = await hashPassword(password);
 
   let userId: string;
   try {
     const result = await query<{ id: string }>(
-      "INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING id::text",
-      [email, password_hash],
+      "INSERT INTO users (email, password_hash, location) VALUES ($1, $2, $3) RETURNING id::text",
+      [email, password_hash, location],
     );
     userId = result.rows[0]!.id;
   } catch (err) {
@@ -58,6 +65,25 @@ export async function register(formData: FormData): Promise<void> {
 
   await createSession(userId);
   redirect("/");
+}
+
+export async function updateLocation(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const location =
+    String(formData.get("location") ?? "")
+      .trim()
+      .slice(0, 64) || null;
+
+  await query(`UPDATE users SET location = $1 WHERE id = $2::bigint`, [
+    location,
+    user.id,
+  ]);
+
+  revalidatePath("/profile");
+  revalidatePath("/", "layout");
+  redirect("/profile?saved=1");
 }
 
 export async function login(formData: FormData): Promise<void> {

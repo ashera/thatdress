@@ -252,6 +252,28 @@ input, select, textarea { font: inherit; color: inherit; }
   font-size: var(--t-body-s);
   color: var(--ink-3);
 }
+.topbar .who-link {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  text-decoration: none;
+  line-height: 1.2;
+  transition: opacity var(--dur);
+}
+.topbar .who-link:hover { opacity: 0.7; }
+.topbar .who-loc {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  white-space: nowrap;
+}
+.topbar .who-loc--empty {
+  color: var(--volt-700);
+  font-weight: 600;
+}
 
 /* =========================================================
    BUTTONS

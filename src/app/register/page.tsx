@@ -68,6 +68,21 @@ export default async function RegisterPage({
               />
             </Field>
 
+            <Field
+              label="Location"
+              htmlFor="location"
+              help="City or postal code. Optional — buyers see it on your listings."
+            >
+              <Input
+                id="location"
+                type="text"
+                name="location"
+                maxLength={64}
+                autoComplete="address-level2"
+                placeholder="e.g. Austin, TX or 78701"
+              />
+            </Field>
+
             {errorMessage && <p className="form-error">{errorMessage}</p>}
 
             <Button type="submit" variant="primary" size="lg" block iconRight="arrow">
