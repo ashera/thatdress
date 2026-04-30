@@ -274,6 +274,31 @@ input, select, textarea { font: inherit; color: inherit; }
   color: var(--volt-700);
   font-weight: 600;
 }
+.topbar .anon-loc {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-pill);
+  background: var(--surface-sunken);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+.topbar .anon-loc::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ink-4);
+}
+@media (max-width: 640px) {
+  .topbar .anon-loc { display: none; }
+}
 
 /* =========================================================
    BUTTONS

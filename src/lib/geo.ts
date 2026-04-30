@@ -1,5 +1,19 @@
 import "server-only";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
+
+const ANON_LOC_COOKIE = "anon_loc";
+
+export async function getAnonymousLocation(): Promise<string | null> {
+  // Middleware forwards a fresh value via this header on the very first
+  // visit, before the response cookie has reached the browser.
+  const h = await headers();
+  const fromHeader = h.get("x-anon-location");
+  if (fromHeader) return fromHeader;
+
+  const jar = await cookies();
+  const v = jar.get(ANON_LOC_COOKIE)?.value;
+  return v && v.length > 0 ? v : null;
+}
 
 export type IpLocation = {
   city: string | null;

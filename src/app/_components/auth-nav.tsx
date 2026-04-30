@@ -2,6 +2,7 @@ import Link from "next/link";
 import { logout } from "@/lib/actions/auth";
 import { getCurrentUser } from "@/lib/auth";
 import { query } from "@/lib/db";
+import { getAnonymousLocation } from "@/lib/geo";
 import { Button, ButtonLink } from "./ui";
 import { MobileMenu } from "./mobile-menu";
 
@@ -26,10 +27,11 @@ async function getListingCount(): Promise<number | null> {
 }
 
 export async function AuthNav() {
-  const [user, dbOk, listingCount] = await Promise.all([
+  const [user, dbOk, listingCount, anonLocation] = await Promise.all([
     getCurrentUser(),
     getDbOk(),
     getListingCount(),
+    getAnonymousLocation(),
   ]);
 
   return (
@@ -88,6 +90,14 @@ export async function AuthNav() {
               </>
             ) : (
               <>
+                {anonLocation && (
+                  <span
+                    className="anon-loc"
+                    title="Detected from your IP. Sign in or register to set your own."
+                  >
+                    {anonLocation}
+                  </span>
+                )}
                 <ButtonLink href="/login" variant="ghost" size="sm">
                   Log in
                 </ButtonLink>
