@@ -12,6 +12,7 @@ type Listing = {
   price_cents: number;
   created_at: string;
   seller_email: string | null;
+  primary_image_id: string | null;
 };
 
 async function fetchListings(): Promise<
@@ -25,7 +26,13 @@ async function fetchListings(): Promise<
               l.description,
               l.price_cents,
               l.created_at::text,
-              u.email AS seller_email
+              u.email AS seller_email,
+              (
+                SELECT li.id::text FROM listing_images li
+                  WHERE li.listing_id = l.id
+                  ORDER BY li.is_primary DESC, li.position, li.id
+                  LIMIT 1
+              ) AS primary_image_id
          FROM listings l
          LEFT JOIN users u ON u.id = l.seller_id
          ORDER BY l.created_at DESC

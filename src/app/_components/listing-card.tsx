@@ -30,6 +30,7 @@ export function listingFromRow(row: {
   description: string | null;
   price_cents: number;
   seller_email: string | null;
+  primary_image_id?: string | null;
 }): ListingCardData {
   const priceFmt = new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -46,6 +47,9 @@ export function listingFromRow(row: {
     price: priceFmt.format(row.price_cents / 100),
     sellerInitials: initials(row.seller_email),
     sellerName,
+    photo: row.primary_image_id
+      ? `/api/listings/${row.id}/images/${row.primary_image_id}`
+      : undefined,
   };
 }
 

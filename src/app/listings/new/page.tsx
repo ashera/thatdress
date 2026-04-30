@@ -15,6 +15,9 @@ const ERRORS: Record<string, string> = {
   "invalid-title": "Title is required (200 characters or fewer).",
   "long-description": "Description must be 5,000 characters or fewer.",
   "invalid-price": "Enter a valid price in dollars (e.g. 1899 or 1899.00).",
+  "too-many": "You can attach up to 10 photos.",
+  "too-large": "Each photo must be 5 MB or smaller.",
+  "bad-type": "Photos must be JPEG, PNG, or WebP.",
 };
 
 export default async function NewListingPage({
@@ -53,6 +56,7 @@ export default async function NewListingPage({
         <div className="form-card">
           <form
             action={createListing}
+            encType="multipart/form-data"
             style={{
               display: "flex",
               flexDirection: "column",
@@ -89,6 +93,21 @@ export default async function NewListingPage({
                 rows={5}
                 maxLength={5000}
                 placeholder="Year, mileage, condition, included accessories…"
+              />
+            </Field>
+
+            <Field
+              label="Photos"
+              htmlFor="images"
+              help="Up to 10 photos · JPEG, PNG, or WebP · 5 MB each. The first photo becomes the default."
+            >
+              <input
+                id="images"
+                type="file"
+                name="images"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
+                className="file-input"
               />
             </Field>
 

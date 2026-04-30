@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { query } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth";
 import { ButtonLink } from "../../_components/ui";
+import {
+  ListingGallery,
+  type GalleryImage,
+} from "../../_components/listing-gallery";
 
 export const dynamic = "force-dynamic";
 
@@ -12,13 +17,21 @@ type ListingRow = {
   price_cents: number;
   created_at: string;
   seller_email: string | null;
+  seller_id: string | null;
+};
+
+type ImageRow = {
+  id: string;
+  is_primary: boolean;
+  position: number;
 };
 
 async function fetchListing(id: string): Promise<
-  | { ok: true; listing: ListingRow | null }
+  | { ok: true; listing: ListingRow | null; images: GalleryImage[] }
   | { ok: false; error: string }
 > {
-  if (!/^\d+$/.test(id)) return { ok: true, listing: null };
+  if (!/^\d+$/.test(id))
+    return { ok: true, listing: null, images: [] };
   try {
     const result = await query<ListingRow>(
       `SELECT l.id::text,
@@ -26,6 +39,7 @@ async function fetchListing(id: string): Promise<
               l.description,
               l.price_cents,
               l.created_at::text,
+              l.seller_id::text,
               u.email AS seller_email
          FROM listings l
          LEFT JOIN users u ON u.id = l.seller_id
@@ -33,7 +47,22 @@ async function fetchListing(id: string): Promise<
         LIMIT 1`,
       [id],
     );
-    return { ok: true, listing: result.rows[0] ?? null };
+    const listing = result.rows[0] ?? null;
+    if (!listing) return { ok: true, listing: null, images: [] };
+
+    const imgRes = await query<ImageRow>(
+      `SELECT id::text, is_primary, position
+         FROM listing_images
+        WHERE listing_id = $1::bigint
+        ORDER BY is_primary DESC, position, id`,
+      [id],
+    );
+    const images: GalleryImage[] = imgRes.rows.map((r) => ({
+      id: r.id,
+      src: `/api/listings/${id}/images/${r.id}`,
+      isPrimary: r.is_primary,
+    }));
+    return { ok: true, listing, images };
   } catch (error) {
     return {
       ok: false,
@@ -68,7 +97,10 @@ export default async function ListingDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const result = await fetchListing(id);
+  const [result, currentUser] = await Promise.all([
+    fetchListing(id),
+    getCurrentUser(),
+  ]);
 
   if (!result.ok) {
     return (
@@ -89,6 +121,7 @@ export default async function ListingDetailPage({
   if (!result.listing) notFound();
 
   const l = result.listing;
+  const isOwner = currentUser != null && currentUser.id === l.seller_id;
   const price = new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
@@ -105,9 +138,7 @@ export default async function ListingDetailPage({
       </Link>
 
       <article className="detail">
-        <div className="detail-photo">
-          <span>eBike photo</span>
-        </div>
+        <ListingGallery images={result.images} />
 
         <div className="detail-body">
           <p className="eyebrow">Used eBike</p>
@@ -146,6 +177,15 @@ export default async function ListingDetailPage({
             <ButtonLink href="/listings" variant="ghost" size="lg">
               See more bikes
             </ButtonLink>
+            {isOwner && (
+              <ButtonLink
+                href={`/listings/${l.id}/edit`}
+                variant="quiet"
+                size="lg"
+              >
+                Manage photos
+              </ButtonLink>
+            )}
           </div>
         </div>
       </article>
