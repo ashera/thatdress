@@ -11,11 +11,11 @@ export type ListingCardStat = {
 export type ListingCardData = {
   id: string;
   title: string;
-  tagline?: string | null;
+  tagline: { year: string; make: string; model: string };
   price: string;
-  chips: string[];
+  chips: [string, string, string];
   stats: ListingCardStat[];
-  highlights: string[];
+  highlights: [string | null, string | null, string | null];
   photo?: string;
 };
 
@@ -65,15 +65,12 @@ function fmtRange(min: number | null, max: number | null): string | null {
   return `${min ?? max} mi`;
 }
 
-function buildChips(row: ListingCardRow): string[] {
-  const chips: string[] = [];
-  const cls = compactClass(row.bike_class_label);
-  if (cls) chips.push(cls);
-  if (row.top_speed_mph != null) chips.push(`${row.top_speed_mph} mph`);
-  if (row.drive_mode_label) chips.push(row.drive_mode_label);
-  else if (row.bike_category_label) chips.push(row.bike_category_label);
-  if (row.condition_label && chips.length < 3) chips.push(row.condition_label);
-  return chips.slice(0, 3);
+function buildChips(row: ListingCardRow): [string, string, string] {
+  return [
+    compactClass(row.bike_class_label) ?? PLACEHOLDER,
+    row.top_speed_mph != null ? `${row.top_speed_mph} mph` : PLACEHOLDER,
+    row.drive_mode_label ?? row.bike_category_label ?? PLACEHOLDER,
+  ];
 }
 
 const PLACEHOLDER = "-";
@@ -104,17 +101,11 @@ function buildStats(row: ListingCardRow): ListingCardStat[] {
   ];
 }
 
-function buildHighlights(row: ListingCardRow): string[] {
+function buildHighlights(row: ListingCardRow): [string | null, string | null, string | null] {
   const out: string[] = [];
 
-  const brake = row.brake_type_label;
-  if (brake) {
-    if (/disc/i.test(brake)) out.push(`${brake} brakes`);
-    else out.push(`${brake} brakes`);
-  }
-
+  if (row.brake_type_label) out.push(`${row.brake_type_label} brakes`);
   if (row.has_warranty) out.push("Comprehensive warranty included");
-
   if (
     row.motor_brand_name &&
     row.motor_type_label &&
@@ -122,7 +113,6 @@ function buildHighlights(row: ListingCardRow): string[] {
   ) {
     out.push(`${row.motor_brand_name} ${row.motor_type_label} motor`);
   }
-
   if (
     row.suspension_type_label &&
     !/none|rigid/i.test(row.suspension_type_label) &&
@@ -130,29 +120,29 @@ function buildHighlights(row: ListingCardRow): string[] {
   ) {
     out.push(`${row.suspension_type_label} suspension`);
   }
-
   if (row.frame_material_label && out.length < 3) {
     out.push(`${row.frame_material_label} frame`);
   }
-
   if (row.frame_style_label && out.length < 3) {
     out.push(`${row.frame_style_label} frame design`);
   }
-
   if (row.wheel_size_label && out.length < 3) {
     out.push(`${row.wheel_size_label} wheels`);
   }
 
-  return out.slice(0, 3);
+  return [out[0] ?? null, out[1] ?? null, out[2] ?? null];
 }
 
-function buildTagline(row: ListingCardRow): string | null {
-  const parts: string[] = [];
-  if (row.year) parts.push(String(row.year));
-  if (row.make_name) parts.push(row.make_name);
-  if (row.model) parts.push(row.model);
-  if (parts.length === 0) return null;
-  return parts.join(" · ");
+function buildTagline(row: ListingCardRow): {
+  year: string;
+  make: string;
+  model: string;
+} {
+  return {
+    year: row.year ? String(row.year) : PLACEHOLDER,
+    make: row.make_name ?? PLACEHOLDER,
+    model: row.model ?? PLACEHOLDER,
+  };
 }
 
 export function listingFromRow(row: ListingCardRow): ListingCardData {
@@ -180,17 +170,30 @@ export function ListingCard({ data }: { data: ListingCardData }) {
   return (
     <article className="listing">
       <div className="listing-head">
-        {data.chips.length > 0 && (
-          <div className="listing-chips">
-            {data.chips.map((c, i) => (
-              <span key={`${c}-${i}`} className="listing-chip">
-                {c}
-              </span>
-            ))}
-          </div>
-        )}
+        <div className="listing-chips">
+          {data.chips.map((c, i) => (
+            <span
+              key={i}
+              className={`listing-chip ${c === PLACEHOLDER ? "is-empty" : ""}`}
+            >
+              {c}
+            </span>
+          ))}
+        </div>
         <h3 className="listing-title">{data.title}</h3>
-        {data.tagline && <p className="listing-tagline">{data.tagline}</p>}
+        <p className="listing-tagline">
+          <span className={data.tagline.year === PLACEHOLDER ? "is-empty" : ""}>
+            {data.tagline.year}
+          </span>
+          <span className="sep" aria-hidden> · </span>
+          <span className={data.tagline.make === PLACEHOLDER ? "is-empty" : ""}>
+            {data.tagline.make}
+          </span>
+          <span className="sep" aria-hidden> · </span>
+          <span className={data.tagline.model === PLACEHOLDER ? "is-empty" : ""}>
+            {data.tagline.model}
+          </span>
+        </p>
       </div>
 
       <div className="listing-photo">
@@ -219,16 +222,14 @@ export function ListingCard({ data }: { data: ListingCardData }) {
         ))}
       </div>
 
-      {data.highlights.length > 0 && (
-        <ul className="listing-highlights">
-          {data.highlights.map((h, i) => (
-            <li key={`${h}-${i}`}>
-              <Icon name="check" size="sm" />
-              <span>{h}</span>
-            </li>
-          ))}
-        </ul>
-      )}
+      <ul className="listing-highlights">
+        {data.highlights.map((h, i) => (
+          <li key={i} className={h ? "" : "is-empty"} aria-hidden={!h}>
+            <Icon name="check" size="sm" />
+            <span>{h ?? "—"}</span>
+          </li>
+        ))}
+      </ul>
 
       <div className="listing-foot">
         <div className="listing-price">{data.price}</div>
