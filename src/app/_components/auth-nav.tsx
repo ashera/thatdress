@@ -53,38 +53,55 @@ export async function AuthNav() {
         </div>
       </div>
 
-      <nav>
-        <Link href="/listings">Browse</Link>
-        <Link href="/listings/new">Sell</Link>
-        <Link href="/status">Status</Link>
-        {user?.isAdmin && (
-          <Link href="/admin" className="nav-admin">
-            Admin
-          </Link>
-        )}
-      </nav>
+      <details className="topbar-menu">
+        <summary className="topbar-toggle" aria-label="Open menu">
+          <span className="hamburger" aria-hidden>
+            <span />
+            <span />
+            <span />
+          </span>
+        </summary>
 
-      <div className="actions">
-        {user ? (
-          <>
-            <span className="who">{user.email}</span>
-            <form action={logout}>
-              <Button type="submit" variant="ghost" size="sm">
-                Log out
-              </Button>
-            </form>
-          </>
-        ) : (
-          <>
-            <ButtonLink href="/login" variant="ghost" size="sm">
-              Log in
-            </ButtonLink>
-            <ButtonLink href="/register" variant="dark" size="sm" icon="plus">
-              Register
-            </ButtonLink>
-          </>
-        )}
-      </div>
+        <div className="topbar-menu-panel">
+          <nav>
+            <Link href="/listings">Browse</Link>
+            <Link href="/listings/new">Sell</Link>
+            <Link href="/status">Status</Link>
+            {user?.isAdmin && (
+              <Link href="/admin" className="nav-admin">
+                Admin
+              </Link>
+            )}
+          </nav>
+
+          <div className="actions">
+            {user ? (
+              <>
+                <span className="who">{user.email}</span>
+                <form action={logout}>
+                  <Button type="submit" variant="ghost" size="sm">
+                    Log out
+                  </Button>
+                </form>
+              </>
+            ) : (
+              <>
+                <ButtonLink href="/login" variant="ghost" size="sm">
+                  Log in
+                </ButtonLink>
+                <ButtonLink
+                  href="/register"
+                  variant="dark"
+                  size="sm"
+                  icon="plus"
+                >
+                  Register
+                </ButtonLink>
+              </>
+            )}
+          </div>
+        </div>
+      </details>
     </header>
   );
 }

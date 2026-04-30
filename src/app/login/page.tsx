@@ -23,16 +23,8 @@ export default async function LoginPage({
   const errorMessage = error ? ERRORS[error] ?? "Something went wrong." : null;
 
   return (
-    <div
-      className="page"
-      style={{
-        display: "flex",
-        flex: 1,
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "var(--s-9) var(--s-7)",
-      }}
-    >
+    <div className="page auth-page">
+
       <main style={{ width: "100%", maxWidth: 400 }}>
         <div className="form-card">
           <div>

@@ -198,7 +198,7 @@ export default async function EditListingPage({
   };
 
   return (
-    <div className="page" style={{ padding: "var(--s-9) var(--s-7)" }}>
+    <div className="page page--pad">
       <main style={{ maxWidth: 880, margin: "0 auto" }}>
         <Link href={`/listings/${id}`} className="back-link">
           ← Back to listing

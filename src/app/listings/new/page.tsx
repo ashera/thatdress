@@ -39,7 +39,7 @@ export default async function NewListingPage({
   const refs = await loadListingRefOptions();
 
   return (
-    <div className="page" style={{ padding: "var(--s-9) var(--s-7)" }}>
+    <div className="page page--pad">
       <main style={{ maxWidth: 720, margin: "0 auto" }}>
         <p className="eyebrow">Sell your eBike</p>
         <h1

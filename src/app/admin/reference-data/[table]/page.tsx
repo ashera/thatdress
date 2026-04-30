@@ -58,12 +58,7 @@ export default async function ReferenceDataTablePage({
         <h2 className="card-heading">Add a {t.singular}</h2>
         <form
           action={createRefRow}
-          style={{
-            display: "grid",
-            gridTemplateColumns: t.schema === "slug-label" ? "1fr 1fr 120px auto" : "1fr 120px auto",
-            gap: "var(--s-3)",
-            alignItems: "end",
-          }}
+          className={`ref-add ${t.schema === "slug-label" ? "ref-add--3" : "ref-add--2"}`}
         >
           <input type="hidden" name="tableKey" value={t.key} />
           <Field label={fieldLabel} htmlFor="display">

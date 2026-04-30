@@ -125,6 +125,16 @@ input, select, textarea { font: inherit; color: inherit; }
   padding: 0 var(--s-7);
   width: 100%;
 }
+.page--pad {
+  padding-top: var(--s-9);
+  padding-bottom: var(--s-9);
+}
+@media (max-width: 760px) {
+  .page--pad {
+    padding-top: var(--s-6);
+    padding-bottom: var(--s-7);
+  }
+}
 
 .section {
   padding: var(--s-11) 0;
@@ -146,6 +156,7 @@ input, select, textarea { font: inherit; color: inherit; }
    TOPBAR
    ========================================================= */
 .topbar {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -157,6 +168,9 @@ input, select, textarea { font: inherit; color: inherit; }
   width: 100%;
   gap: var(--s-5);
 }
+.topbar-menu { display: contents; }
+.topbar-menu-panel { display: contents; }
+.topbar-toggle { display: none; }
 .topbar .brand-row {
   display: flex;
   align-items: center;
@@ -618,6 +632,21 @@ textarea.input {
 }
 
 /* =========================================================
+   AUTH PAGE LAYOUT (login / register)
+   ========================================================= */
+.auth-page {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  padding-top: var(--s-9);
+  padding-bottom: var(--s-9);
+}
+@media (max-width: 760px) {
+  .auth-page { padding-top: var(--s-6); padding-bottom: var(--s-6); }
+}
+
+/* =========================================================
    FORM CARD (auth, new listing)
    ========================================================= */
 .form-card {
@@ -807,6 +836,18 @@ textarea.input {
   color: var(--ink-3);
 }
 .admin-tile:hover .admin-tile-arrow { color: var(--volt-700); }
+
+/* ref-data add-row form */
+.ref-add {
+  display: grid;
+  gap: var(--s-3);
+  align-items: end;
+}
+.ref-add--2 { grid-template-columns: 1fr 120px auto; }
+.ref-add--3 { grid-template-columns: 1fr 1fr 120px auto; }
+@media (max-width: 720px) {
+  .ref-add, .ref-add--2, .ref-add--3 { grid-template-columns: 1fr; }
+}
 
 /* ref-data table editor */
 .ref-table {
@@ -1580,4 +1621,144 @@ textarea.input {
   color: var(--ink-1);
   letter-spacing: -0.015em;
   margin: 0 0 var(--s-2);
+}
+
+/* =========================================================
+   MOBILE OVERRIDES (≤ 760px)
+   ========================================================= */
+@media (max-width: 760px) {
+  .page {
+    padding: 0 var(--s-4);
+  }
+
+  /* --- Topbar collapses to hamburger --- */
+  .topbar {
+    padding: var(--s-4) var(--s-4);
+    gap: var(--s-3);
+    flex-wrap: wrap;
+  }
+  .topbar-menu {
+    display: block;
+    margin-left: auto;
+  }
+  .topbar-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--hairline-strong);
+    border-radius: var(--r-3);
+    background: var(--surface);
+    cursor: pointer;
+    list-style: none;
+  }
+  .topbar-toggle::-webkit-details-marker { display: none; }
+  .topbar-toggle::marker { content: ""; }
+  .topbar-menu[open] .topbar-toggle { background: var(--ink-1); }
+  .topbar-menu[open] .hamburger span { background: white; }
+  .hamburger {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 18px;
+  }
+  .hamburger span {
+    display: block;
+    height: 2px;
+    background: var(--ink-1);
+    border-radius: 2px;
+  }
+  .topbar-menu-panel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-4);
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--paper);
+    border-bottom: 1px solid var(--hairline);
+    padding: var(--s-4);
+    box-shadow: var(--e-2);
+    z-index: 50;
+  }
+  .topbar-menu:not([open]) .topbar-menu-panel { display: none; }
+  .topbar nav {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+  }
+  .topbar nav a {
+    padding: 12px 4px;
+    border-bottom: 1px solid var(--hairline);
+    font-size: var(--t-body);
+  }
+  .topbar nav a:last-child { border-bottom: 0; }
+  .topbar .actions {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+  .topbar .who {
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .topbar .brand {
+    font-size: 18px;
+  }
+  .topbar-stats { display: none; }
+
+  /* --- Hero / homepage --- */
+  .hero { padding: var(--s-8) 0 var(--s-7); }
+  .hero h1 { font-size: clamp(36px, 9vw, 56px); }
+  .hero .sub { font-size: var(--t-body); }
+  .section { padding: var(--s-8) 0; }
+
+  /* --- Browse toolbar --- */
+  .browse-toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .browse-toolbar .left { width: 100%; }
+  .browse-toolbar h3 { font-size: 24px; }
+
+  /* --- Browse cards stack to a single column --- */
+  .results-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* --- Detail page --- */
+  .detail { padding: var(--s-4); }
+  .detail-actions { flex-direction: column; align-items: stretch; }
+  .detail-actions .btn { width: 100%; }
+  .detail-specs { padding: var(--s-5); }
+  .detail-specs-heading { font-size: 22px; }
+
+  /* --- Status / admin / forms --- */
+  .status-page { padding-top: var(--s-7); padding-bottom: var(--s-9); }
+  .status-header h1 { font-size: 32px; }
+  .admin-page { padding-top: var(--s-7); padding-bottom: var(--s-9); }
+  .admin-header h1 { font-size: 32px; }
+  .form-card { padding: var(--s-5); }
+
+  /* --- Filters --- */
+  .filters-form { padding: 0 var(--s-4) var(--s-4); padding-top: var(--s-4); }
+  .filters-summary { padding: var(--s-3) var(--s-4); }
+  .filters-actions { flex-direction: column-reverse; align-items: stretch; }
+  .filters-actions .btn { width: 100%; }
+
+  /* --- Footer --- */
+  .footer { padding: var(--s-4); }
+  .footer .row { gap: var(--s-2); }
+
+  /* --- Tables (ref-data already collapses at 720) --- */
+  .ref-table { border-radius: var(--r-2); }
+}
+
+/* Extra-narrow phones */
+@media (max-width: 380px) {
+  .topbar .brand-mark { width: 24px; height: 24px; font-size: 12px; }
+  .listing .body { padding: var(--s-4); }
+  .hero h1 { font-size: clamp(30px, 10vw, 44px); }
 }

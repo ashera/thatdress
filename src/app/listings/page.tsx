@@ -244,7 +244,7 @@ export default async function ListingsPage({
   const filterCount = activeFilterCount(active);
 
   return (
-    <div className="page" style={{ padding: "var(--s-9) var(--s-7)" }}>
+    <div className="page page--pad">
       <div className="browse-toolbar">
         <div className="left">
           <h3>Browse eBikes</h3>
