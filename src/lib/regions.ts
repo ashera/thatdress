@@ -1,6 +1,7 @@
 import "server-only";
 import { cookies } from "next/headers";
 import { query } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth";
 import { getAnonymousLocation } from "@/lib/geo";
 
 export const REGION_COOKIE = "region_id";
@@ -73,6 +74,8 @@ export async function resolveCurrentRegion(): Promise<ResolvedRegion> {
     return { kind: "needs-pick", ipLocation: null, regions: [] };
   }
 
+  // 1. Explicit pick wins. The picker stamps a region_id cookie that
+  //    overrides everything else, including profile location.
   const jar = await cookies();
   const cookieId = jar.get(REGION_COOKIE)?.value;
   if (cookieId && /^\d+$/.test(cookieId)) {
@@ -80,6 +83,22 @@ export async function resolveCurrentRegion(): Promise<ResolvedRegion> {
     if (selected) return { kind: "selected", region: selected };
   }
 
+  // 2. Profile location (logged-in users). When set, it overrides the
+  //    IP-derived session location: the user has told us where they are.
+  //    If the profile location doesn't match any region, fall through to
+  //    the picker — don't silently drop back to IP geo, since profile is
+  //    authoritative.
+  const user = await getCurrentUser();
+  if (user?.location) {
+    const matched = matchRegion(regions, user.location);
+    if (matched) {
+      return { kind: "auto", region: matched, ipLocation: user.location };
+    }
+    return { kind: "needs-pick", ipLocation: user.location, regions };
+  }
+
+  // 3. IP-derived location (anonymous, or logged-in user with no profile
+  //    location set yet).
   const ipLoc = await getAnonymousLocation();
   if (ipLoc) {
     const matched = matchRegion(regions, ipLoc);
