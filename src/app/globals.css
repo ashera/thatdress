@@ -1865,10 +1865,8 @@ textarea.input {
     cursor: pointer;
     list-style: none;
   }
-  .topbar-toggle::-webkit-details-marker { display: none; }
-  .topbar-toggle::marker { content: ""; }
-  .topbar-menu[open] .topbar-toggle { background: var(--ink-1); }
-  .topbar-menu[open] .hamburger span { background: white; }
+  .topbar-menu.is-open .topbar-toggle { background: var(--ink-1); }
+  .topbar-menu.is-open .hamburger span { background: white; }
   .hamburger {
     display: inline-flex;
     flex-direction: column;
@@ -1895,7 +1893,7 @@ textarea.input {
     box-shadow: var(--e-2);
     z-index: 50;
   }
-  .topbar-menu:not([open]) .topbar-menu-panel { display: none; }
+  .topbar-menu:not(.is-open) .topbar-menu-panel { display: none; }
   .topbar nav {
     flex-direction: column;
     align-items: stretch;

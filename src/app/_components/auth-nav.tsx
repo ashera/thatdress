@@ -55,14 +55,6 @@ export async function AuthNav() {
       </div>
 
       <MobileMenu>
-        <summary className="topbar-toggle" aria-label="Open menu">
-          <span className="hamburger" aria-hidden>
-            <span />
-            <span />
-            <span />
-          </span>
-        </summary>
-
         <div className="topbar-menu-panel">
           <nav>
             <Link href="/listings">Browse</Link>
