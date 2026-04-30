@@ -582,6 +582,7 @@ textarea.input {
   gap: var(--s-3);
   padding-top: var(--s-3);
   border-top: 1px solid var(--hairline);
+  flex-wrap: wrap;
 }
 .listing-price {
   font-family: var(--font-display);
@@ -590,11 +591,13 @@ textarea.input {
   letter-spacing: -0.02em;
   line-height: 1;
 }
-.listing-cta { white-space: nowrap; }
+.listing-cta {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
 
 @media (max-width: 760px) {
   .listing-stat .v { font-size: 16px; }
-  .listing-foot { flex-wrap: wrap; }
   .listing-cta { width: 100%; }
 }
 
@@ -1514,7 +1517,7 @@ textarea.input {
 
 .results-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
   gap: var(--s-5);
 }
 
