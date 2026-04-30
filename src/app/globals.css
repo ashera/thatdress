@@ -757,6 +757,10 @@ textarea.input {
   color: var(--ink-3);
   font-size: var(--t-body-l);
 }
+.hero .sub strong {
+  color: var(--ink-1);
+  font-weight: 600;
+}
 @media (max-width: 768px) {
   .hero-grid { gap: var(--s-7); }
 }

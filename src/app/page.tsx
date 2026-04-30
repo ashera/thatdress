@@ -32,9 +32,9 @@ export default async function Home() {
                   marketplace.
                 </h1>
                 <p className="sub">
-                  Buy &amp; sell with riders nearby. Verified specs, honest
-                  condition, real bikes — no shipping headaches, no out-of-town
-                  surprises.
+                  <strong>Always free</strong> to list and buy. Connect with
+                  riders nearby — verified specs, honest condition, no listing
+                  fees, no commission.
                 </p>
               </>
             ) : (
@@ -44,9 +44,9 @@ export default async function Home() {
                   with people you can trust.
                 </h1>
                 <p className="sub">
-                  Verified sellers. Real specs. Honest condition. ebikeflip is
-                  the place to find your next ride — whether you commute,
-                  cargo, or cruise.
+                  <strong>Always free</strong> to list and buy. Verified
+                  sellers, real specs, honest condition — built for commuters,
+                  cargo riders, and weekend cruisers.
                 </p>
               </>
             )}
