@@ -2,7 +2,7 @@ import Link from "next/link";
 import { logout } from "@/lib/actions/auth";
 import { getCurrentUser } from "@/lib/auth";
 import { query } from "@/lib/db";
-import { resolveCurrentRegion } from "@/lib/regions";
+import { resolveCurrentRegion, getCurrentRegionId } from "@/lib/regions";
 import { unreadMessageCount } from "@/lib/messages";
 import { Button, ButtonLink } from "./ui";
 import { MobileMenu } from "./mobile-menu";
@@ -16,27 +16,61 @@ async function getDbOk(): Promise<boolean> {
   }
 }
 
-async function getListingCount(): Promise<number | null> {
+/**
+ * For admins: total count of every listing, no filters.
+ * For everyone else: count of listings the viewer would see on the
+ * browse page — published, in their current region, plus their own
+ * listings regardless of region.
+ */
+async function getListingCount(
+  user: { id: string; isAdmin: boolean } | null,
+  regionId: string | null,
+): Promise<number | null> {
   try {
-    const result = await query<{ n: string }>(
-      "SELECT COUNT(*)::text AS n FROM listings",
+    if (user?.isAdmin) {
+      const r = await query<{ n: string }>(
+        "SELECT COUNT(*)::text AS n FROM listings",
+      );
+      return Number(r.rows[0]?.n ?? 0);
+    }
+    if (!regionId) {
+      // No region resolved — match the empty browse state.
+      return 0;
+    }
+    if (user) {
+      const r = await query<{ n: string }>(
+        `SELECT COUNT(*)::text AS n FROM listings l
+          WHERE l.is_published = TRUE
+            AND (l.region_id = $1::bigint OR l.seller_id = $2::bigint)`,
+        [regionId, user.id],
+      );
+      return Number(r.rows[0]?.n ?? 0);
+    }
+    const r = await query<{ n: string }>(
+      `SELECT COUNT(*)::text AS n FROM listings l
+        WHERE l.is_published = TRUE
+          AND l.region_id = $1::bigint`,
+      [regionId],
     );
-    return Number(result.rows[0]?.n ?? 0);
+    return Number(r.rows[0]?.n ?? 0);
   } catch {
     return null;
   }
 }
 
 export async function AuthNav() {
-  const [user, dbOk, listingCount, region] = await Promise.all([
+  const [user, dbOk, region, regionId] = await Promise.all([
     getCurrentUser(),
     getDbOk(),
-    getListingCount(),
     resolveCurrentRegion(),
+    getCurrentRegionId(),
   ]);
   const currentRegion =
     region.kind === "selected" || region.kind === "auto" ? region.region : null;
-  const unread = user ? await unreadMessageCount(user.id) : 0;
+  const [listingCount, unread] = await Promise.all([
+    getListingCount(user, regionId),
+    user ? unreadMessageCount(user.id) : Promise.resolve(0),
+  ]);
 
   return (
     <header className="topbar">
