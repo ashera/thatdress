@@ -1,14 +1,82 @@
 import Image from "next/image";
+import { query } from "@/lib/db";
 import { regionShortName, resolveCurrentRegion } from "@/lib/regions";
 import { ButtonLink, Spec } from "./_components/ui";
 
 export const dynamic = "force-dynamic";
+
+type SpecStats = {
+  range_min: number | null;
+  range_max: number | null;
+  battery_min: number | null;
+  battery_max: number | null;
+  speed_min: number | null;
+  speed_max: number | null;
+  conditions: number;
+};
+
+async function getSpecStats(regionId: string | null): Promise<SpecStats> {
+  try {
+    const r = await query<{
+      range_min: string | null;
+      range_max: string | null;
+      battery_min: string | null;
+      battery_max: string | null;
+      speed_min: string | null;
+      speed_max: string | null;
+      conditions: string;
+    }>(
+      `SELECT MIN(NULLIF(range_miles_min, 0))::text AS range_min,
+              MAX(NULLIF(range_miles_max, 0))::text AS range_max,
+              MIN(NULLIF(battery_wh,      0))::text AS battery_min,
+              MAX(NULLIF(battery_wh,      0))::text AS battery_max,
+              MIN(NULLIF(top_speed_mph,   0))::text AS speed_min,
+              MAX(NULLIF(top_speed_mph,   0))::text AS speed_max,
+              COUNT(DISTINCT condition_id)::text     AS conditions
+         FROM listings
+        WHERE is_published = TRUE
+          AND sold_at IS NULL
+          ${regionId ? "AND region_id = $1::bigint" : ""}`,
+      regionId ? [regionId] : [],
+    );
+    const row = r.rows[0];
+    const num = (s: string | null | undefined) =>
+      s == null ? null : Number(s);
+    return {
+      range_min: num(row?.range_min),
+      range_max: num(row?.range_max),
+      battery_min: num(row?.battery_min),
+      battery_max: num(row?.battery_max),
+      speed_min: num(row?.speed_min),
+      speed_max: num(row?.speed_max),
+      conditions: Number(row?.conditions ?? 0),
+    };
+  } catch {
+    return {
+      range_min: null,
+      range_max: null,
+      battery_min: null,
+      battery_max: null,
+      speed_min: null,
+      speed_max: null,
+      conditions: 0,
+    };
+  }
+}
+
+function specRange(min: number | null, max: number | null): string {
+  if (min == null && max == null) return "—";
+  if (min == null) return String(max);
+  if (max == null || max === min) return String(min);
+  return `${min}–${max}`;
+}
 
 export default async function Home() {
   const r = await resolveCurrentRegion();
   const region =
     r.kind === "selected" || r.kind === "auto" ? r.region : null;
   const regionShort = region ? regionShortName(region) : null;
+  const stats = await getSpecStats(region ? region.id : null);
 
   return (
     <div className="page">
@@ -91,10 +159,25 @@ export default async function Home() {
             gap: "var(--s-3)",
           }}
         >
-          <Spec k="Range" v="30–160" unit="km" />
-          <Spec k="Battery" v="300–800" unit="wh" />
-          <Spec k="Top speed" v="32–45" unit="km/h" />
-          <Spec k="Conditions" v="4" />
+          <Spec
+            k="Range"
+            v={specRange(stats.range_min, stats.range_max)}
+            unit="km"
+          />
+          <Spec
+            k="Battery"
+            v={specRange(stats.battery_min, stats.battery_max)}
+            unit="wh"
+          />
+          <Spec
+            k="Top speed"
+            v={specRange(stats.speed_min, stats.speed_max)}
+            unit="km/h"
+          />
+          <Spec
+            k="Conditions"
+            v={stats.conditions > 0 ? String(stats.conditions) : "—"}
+          />
         </div>
       </section>
     </div>
