@@ -272,10 +272,20 @@ export function ListingRow({ data }: { data: ListingCardData }) {
       <div className="listing-row-foot">
         <div className="listing-price">{data.price}</div>
         {data.interestedCount && data.interestedCount > 0 ? (
-          <span className="listing-row-interest" title={`${data.interestedCount} interested`}>
+          <span
+            className="listing-row-interest"
+            title={`${data.interestedCount} interested`}
+          >
             💬 {data.interestedCount}
           </span>
-        ) : null}
+        ) : (
+          <span
+            className="listing-row-interest is-empty"
+            title="No buyer comments yet"
+          >
+            💬 No buyer comments yet
+          </span>
+        )}
         <ButtonLink
           href={detailHref}
           variant="primary"
@@ -364,7 +374,12 @@ export function ListingCard({ data }: { data: ListingCardData }) {
             {data.interestedCount === 1 ? "buyer" : "buyers"} interested
           </span>
         </div>
-      ) : null}
+      ) : (
+        <div className="listing-interest is-empty">
+          <Icon name="msg" size="sm" />
+          <span>No buyer comments yet</span>
+        </div>
+      )}
 
       <div className="listing-foot">
         <div className="listing-price">{data.price}</div>

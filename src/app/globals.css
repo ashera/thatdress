@@ -1208,6 +1208,13 @@ textarea.input {
 .listing-interest strong { color: var(--volt-800); font-weight: 700; }
 .listing-interest .ico { color: var(--volt-700); }
 
+.listing-interest.is-empty {
+  background: var(--surface-2, #f7f6f3);
+  border-color: var(--line, #e9e5df);
+  color: var(--ink-3);
+}
+.listing-interest.is-empty .ico { color: var(--ink-4, #a39d96); }
+
 .listing-row-interest {
   font-family: var(--font-mono);
   font-size: 11px;
@@ -1217,6 +1224,11 @@ textarea.input {
   border: 1px solid var(--volt-200);
   padding: 4px 8px;
   border-radius: var(--r-pill);
+}
+.listing-row-interest.is-empty {
+  color: var(--ink-3);
+  background: var(--surface-2, #f7f6f3);
+  border-color: var(--line, #e9e5df);
 }
 
 .listing-foot {
