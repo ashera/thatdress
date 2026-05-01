@@ -562,7 +562,7 @@ export default async function ListingDetailPage({
                 </Button>
               </form>
             )}
-            {!isOwner && currentUser && (
+            {!l.sold_at && !isOwner && currentUser && (
               <form action={toggleShortlist}>
                 <input type="hidden" name="listingId" value={l.id} />
                 <input

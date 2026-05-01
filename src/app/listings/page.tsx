@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { query } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { findRefTable, listActiveRefOptions } from "@/lib/ref-data";
@@ -34,7 +35,25 @@ type RawSearchParams = {
   max_year?: string | string[];
   view?: string | string[];
   visibility?: string | string[];
+  mode?: string | string[];
 };
+
+type BrowseMode = "for-sale" | "sold";
+
+function buildModeHref(mode: BrowseMode, sp: RawSearchParams): string {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(sp)) {
+    if (key === "mode" || value === undefined) continue;
+    if (Array.isArray(value)) {
+      for (const v of value) if (v) params.append(key, v);
+    } else if (value) {
+      params.set(key, value);
+    }
+  }
+  if (mode === "sold") params.set("mode", "sold");
+  const qs = params.toString();
+  return qs ? `/listings?${qs}` : "/listings";
+}
 
 function buildViewHref(view: ListingsView, sp: RawSearchParams): string {
   const params = new URLSearchParams();
@@ -84,6 +103,7 @@ function escapeLike(s: string): string {
 function buildFilters(
   raw: RawSearchParams,
   isAdmin: boolean,
+  mode: BrowseMode,
 ): {
   active: ActiveFilters;
   where: string[];
@@ -95,6 +115,13 @@ function buildFilters(
   const where: string[] = [];
   const params: unknown[] = [];
   const active: ActiveFilters = {};
+
+  // For-sale vs sold split. Default = for-sale (sold_at IS NULL).
+  if (mode === "sold") {
+    where.push("l.sold_at IS NOT NULL");
+  } else {
+    where.push("l.sold_at IS NULL");
+  }
 
   if (isAdmin) {
     const v = asScalar(raw.visibility);
@@ -285,7 +312,12 @@ export default async function ListingsPage({
   const user = await getCurrentUser();
   const isAdmin = user?.isAdmin ?? false;
 
-  const { active, where, params } = buildFilters(sp, isAdmin);
+  const mode: BrowseMode =
+    (Array.isArray(sp.mode) ? sp.mode[0] : sp.mode) === "sold"
+      ? "sold"
+      : "for-sale";
+
+  const { active, where, params } = buildFilters(sp, isAdmin, mode);
 
   // Apply current region filter for non-admins. Strict — only listings in
   // the current region — but always include the viewer's own listings
@@ -322,9 +354,26 @@ export default async function ListingsPage({
 
   return (
     <div className="page page--pad">
+      <div className="mode-toggle" role="group" aria-label="Browse mode">
+        <Link
+          href={buildModeHref("for-sale", sp)}
+          className={`mode-toggle-btn ${mode === "for-sale" ? "is-active" : ""}`}
+          aria-current={mode === "for-sale" ? "page" : undefined}
+        >
+          For sale
+        </Link>
+        <Link
+          href={buildModeHref("sold", sp)}
+          className={`mode-toggle-btn ${mode === "sold" ? "is-active" : ""}`}
+          aria-current={mode === "sold" ? "page" : undefined}
+        >
+          Sold
+        </Link>
+      </div>
+
       <div className="browse-toolbar">
         <div className="left">
-          <h3>Browse eBikes</h3>
+          <h3>{mode === "sold" ? "Recently sold" : "Browse eBikes"}</h3>
           {result.ok && (
             <span className="count">
               {count} {count === 1 ? "listing" : "listings"}

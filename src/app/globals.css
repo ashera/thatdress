@@ -2593,6 +2593,32 @@ textarea.input {
   color: white;
 }
 
+/* Browse mode toggle (For sale / Sold) — larger and full-width-friendly */
+.mode-toggle {
+  display: inline-flex;
+  background: var(--surface-sunken);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-pill);
+  padding: 4px;
+  gap: 2px;
+  margin-bottom: var(--s-4);
+}
+.mode-toggle-btn {
+  padding: 8px 20px;
+  border-radius: var(--r-pill);
+  font-family: var(--font-display);
+  font-size: 14px;
+  letter-spacing: -0.01em;
+  color: var(--ink-3);
+  text-decoration: none;
+  transition: background var(--dur), color var(--dur);
+}
+.mode-toggle-btn:hover { color: var(--ink-1); }
+.mode-toggle-btn.is-active {
+  background: var(--ink-1);
+  color: white;
+}
+
 /* =========================================================
    BROWSE FILTERS
    ========================================================= */
