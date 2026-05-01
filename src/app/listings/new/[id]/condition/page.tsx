@@ -1,7 +1,14 @@
 import { loadListingRefOptions } from "@/lib/ref-data";
 import { saveDraftCondition } from "@/lib/actions/listing-wizard";
 import { Field, Input, Textarea } from "../../../../_components/ui";
-import { loadDraft, StepNav, STEP_ERRORS, WizardShell } from "../_wizard";
+import {
+  loadDraft,
+  StepNav,
+  STEP_ERRORS,
+  WizardHero,
+  WizardShell,
+  WizardTip,
+} from "../_wizard";
 
 export const dynamic = "force-dynamic";
 
@@ -27,10 +34,11 @@ export default async function WizardConditionPage({
       draftId={draft.id}
       errorMessage={errorMessage}
     >
-      <p style={{ color: "var(--ink-3)", margin: "calc(-1 * var(--s-5)) 0 var(--s-5)" }}>
-        Buyers want an honest read on wear and history. Be candid — it
-        builds trust and surfaces serious leads.
-      </p>
+      <WizardHero
+        icon="shield"
+        headline="Honest beats glossy"
+        body='&ldquo;Good, with a small chainstay scuff&rdquo; outsells &ldquo;Like new&rdquo; every time. Serious buyers reward candour, and they can usually spot what a listing is hiding within ten seconds.'
+      />
 
       <form
         action={saveDraftCondition}
@@ -100,6 +108,10 @@ export default async function WizardConditionPage({
         <section className="form-card">
           <h2 className="card-heading">What&rsquo;s included &amp; what&rsquo;s changed</h2>
           <p className="card-sub">Optional.</p>
+          <WizardTip>
+            List the panniers, the spare battery, the lock, the second key.
+            Bundles often beat the headline price for serious buyers.
+          </WizardTip>
 
           <Field label="Accessories" htmlFor="accessories">
             <Textarea

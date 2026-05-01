@@ -1,7 +1,14 @@
 import { loadListingRefOptions } from "@/lib/ref-data";
 import { saveDraftPhotos } from "@/lib/actions/listing-wizard";
 import { Field, Input } from "../../../../_components/ui";
-import { loadDraft, StepNav, STEP_ERRORS, WizardShell } from "../_wizard";
+import {
+  loadDraft,
+  StepNav,
+  STEP_ERRORS,
+  WizardHero,
+  WizardShell,
+  WizardTip,
+} from "../_wizard";
 
 export const dynamic = "force-dynamic";
 
@@ -25,10 +32,11 @@ export default async function WizardPhotosPage({
 
   return (
     <WizardShell step="photos" draftId={draft.id} errorMessage={errorMessage}>
-      <p style={{ color: "var(--ink-3)", margin: "calc(-1 * var(--s-5)) 0 var(--s-5)" }}>
-        Show buyers what they&rsquo;re getting. A clear hero photo and the
-        make, model, and year set the tone.
-      </p>
+      <WizardHero
+        icon="camera"
+        headline="Lead with a great photo"
+        body="Listings with a clean hero shot get roughly twice the inquiries. Shoot the drive side in daylight, against a plain wall — no clutter, no garage door."
+      />
 
       <form
         action={saveDraftPhotos}
@@ -45,7 +53,7 @@ export default async function WizardPhotosPage({
           <h2 className="card-heading">Photos</h2>
           <p className="card-sub">
             Up to 10 · JPEG, PNG, WebP · 5 MB each. The first one becomes
-            the default.
+            the default — pick the one you&rsquo;d want a buyer to see first.
           </p>
           <Field label="Add photos" htmlFor="images">
             <input
@@ -57,13 +65,17 @@ export default async function WizardPhotosPage({
               className="file-input"
             />
           </Field>
+          <WizardTip>
+            Five photos beats ten blurry ones. A drive-side hero, the cockpit,
+            the motor, the battery, and any wear is plenty.
+          </WizardTip>
         </section>
 
         <section className="form-card">
           <h2 className="card-heading">Bike basics</h2>
           <p className="card-sub">
-            All three are required to continue. Your listing title is built
-            automatically from these — e.g. &ldquo;2024 Trek Allant+ 7&rdquo;.
+            All three are required. Your listing title is built automatically
+            from these — e.g. &ldquo;2024 Trek Allant+ 7&rdquo;.
           </p>
 
           <Field label="Make" htmlFor="make_id">

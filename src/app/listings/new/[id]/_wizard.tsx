@@ -4,7 +4,10 @@ import type { ReactNode } from "react";
 import { query } from "@/lib/db";
 import { getCurrentUser, type User } from "@/lib/auth";
 import { abandonDraftListing } from "@/lib/actions/listing-wizard";
-import { Button } from "../../../_components/ui";
+import { Button, Icon } from "../../../_components/ui";
+import type { ComponentProps } from "react";
+
+type IconName = ComponentProps<typeof Icon>["name"];
 
 export type WizardStep = "photos" | "build" | "condition" | "publish";
 
@@ -270,6 +273,96 @@ export function StepNav({
         {submitLabel}
       </Button>
     </div>
+  );
+}
+
+export function WizardHero({
+  icon,
+  headline,
+  body,
+}: {
+  icon: IconName;
+  headline: string;
+  body: ReactNode;
+}) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        gap: "var(--s-4)",
+        alignItems: "flex-start",
+        padding: "var(--s-5)",
+        marginBottom: "var(--s-7)",
+        borderRadius: 16,
+        background:
+          "linear-gradient(135deg, var(--volt-100, #f4f1ea) 0%, var(--surface-2, #f7f6f3) 100%)",
+        border: "1px solid var(--line, #e9e5df)",
+      }}
+    >
+      <div
+        style={{
+          flex: "0 0 auto",
+          width: 56,
+          height: 56,
+          borderRadius: 14,
+          background: "var(--ink-1)",
+          color: "#fff",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Icon name={icon} size="lg" />
+      </div>
+      <div style={{ flex: "1 1 auto", minWidth: 0 }}>
+        <h2
+          style={{
+            fontFamily: "var(--font-display)",
+            fontSize: 22,
+            color: "var(--ink-1)",
+            margin: 0,
+            letterSpacing: "-0.01em",
+            lineHeight: 1.15,
+          }}
+        >
+          {headline}
+        </h2>
+        <p
+          style={{
+            color: "var(--ink-2)",
+            fontSize: "var(--t-body-s)",
+            margin: "var(--s-2) 0 0",
+            lineHeight: 1.5,
+          }}
+        >
+          {body}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+export function WizardTip({ children }: { children: ReactNode }) {
+  return (
+    <p
+      style={{
+        display: "flex",
+        gap: 8,
+        alignItems: "flex-start",
+        margin: "var(--s-3) 0 0",
+        padding: "var(--s-3)",
+        background: "var(--surface-2, #f7f6f3)",
+        borderRadius: 10,
+        fontSize: "var(--t-body-s)",
+        color: "var(--ink-2)",
+        lineHeight: 1.5,
+      }}
+    >
+      <span aria-hidden style={{ color: "var(--volt-500, #d4a017)", flex: "0 0 auto" }}>
+        ★
+      </span>
+      <span>{children}</span>
+    </p>
   );
 }
 

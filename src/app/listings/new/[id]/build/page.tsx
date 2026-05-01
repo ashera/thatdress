@@ -5,7 +5,9 @@ import {
   loadDraft,
   StepNav,
   STEP_ERRORS,
+  WizardHero,
   WizardShell,
+  WizardTip,
   type DraftRow,
 } from "../_wizard";
 import type { RefOption } from "@/lib/ref-data";
@@ -67,10 +69,11 @@ export default async function WizardBuildPage({
 
   return (
     <WizardShell step="build" draftId={draft.id} errorMessage={errorMessage}>
-      <p style={{ color: "var(--ink-3)", margin: "calc(-1 * var(--s-5)) 0 var(--s-5)" }}>
-        The hardware buyers care about. Class and category are required;
-        the rest help them filter.
-      </p>
+      <WizardHero
+        icon="bolt"
+        headline="The hardware that sells"
+        body="Buyers filter by motor, battery, class, and brakes. Every field you fill in here is another way your bike shows up in their results — so it pays to be specific."
+      />
 
       <form
         action={saveDraftBuild}
@@ -174,6 +177,11 @@ export default async function WizardBuildPage({
         <section className="form-card">
           <h2 className="card-heading">Motor &amp; battery</h2>
           <p className="card-sub">All optional, but buyers filter on these.</p>
+          <WizardTip>
+            Spec sheet not handy? Pop the battery — most have a sticker
+            with Wh, voltage, and amp hours. Five minutes here saves you a
+            week of &ldquo;what&rsquo;s the range?&rdquo; messages later.
+          </WizardTip>
 
           <div className="grid-2">
             <Field label="Motor brand" htmlFor="motor_brand_id">

@@ -1,7 +1,14 @@
 import { loadListingRefOptions } from "@/lib/ref-data";
 import { publishDraftListing } from "@/lib/actions/listing-wizard";
 import { Field, Input, Textarea } from "../../../../_components/ui";
-import { loadDraft, StepNav, STEP_ERRORS, WizardShell } from "../_wizard";
+import {
+  loadDraft,
+  StepNav,
+  STEP_ERRORS,
+  WizardHero,
+  WizardShell,
+  WizardTip,
+} from "../_wizard";
 
 export const dynamic = "force-dynamic";
 
@@ -33,10 +40,11 @@ export default async function WizardPublishPage({
       draftId={draft.id}
       errorMessage={errorMessage}
     >
-      <p style={{ color: "var(--ink-3)", margin: "calc(-1 * var(--s-5)) 0 var(--s-5)" }}>
-        Final stretch. Set a price, tell buyers where the bike lives, and
-        write a few sentences that bring the listing to life.
-      </p>
+      <WizardHero
+        icon="send"
+        headline="Time to go live"
+        body="Set a price that reflects similar bikes you&rsquo;ve seen here, drop a few sentences in the description, and you&rsquo;re live to every buyer in the region."
+      />
 
       <form
         action={publishDraftListing}
@@ -104,6 +112,10 @@ export default async function WizardPublishPage({
         <section className="form-card">
           <h2 className="card-heading">Description</h2>
           <p className="card-sub">Optional but recommended.</p>
+          <WizardTip>
+            Two short paragraphs is the sweet spot: why you&rsquo;re selling,
+            and how it rides. Skip the spec dump — you already filled that in.
+          </WizardTip>
 
           <Field label="Description" htmlFor="description">
             <Textarea

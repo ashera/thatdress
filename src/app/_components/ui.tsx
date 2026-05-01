@@ -25,7 +25,9 @@ type IconName =
   | "arrow"
   | "verified"
   | "moon"
-  | "weight";
+  | "weight"
+  | "camera"
+  | "send";
 
 const ICON_PATHS: Record<IconName, ReactNode> = {
   search: (
@@ -95,6 +97,13 @@ const ICON_PATHS: Record<IconName, ReactNode> = {
       <path d="M9 8a3 3 0 0 1 6 0" />
     </>
   ),
+  camera: (
+    <>
+      <path d="M3 8h3l2-2h8l2 2h3v11H3z" />
+      <circle cx="12" cy="13" r="3.5" />
+    </>
+  ),
+  send: <path d="M3 11 21 3l-8 18-2-8-8-2z" />,
 };
 
 export function Icon({
