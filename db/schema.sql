@@ -518,6 +518,23 @@ CREATE TABLE IF NOT EXISTS saved_searches (
 CREATE INDEX IF NOT EXISTS saved_searches_user_idx
   ON saved_searches (user_id, created_at DESC);
 
+-- =========================================================
+-- Listing analytics (per-view rows)
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS listing_views (
+  id          BIGSERIAL    PRIMARY KEY,
+  listing_id  BIGINT       NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
+  viewer_id   BIGINT       REFERENCES users(id) ON DELETE SET NULL,
+  ip_hash     TEXT,
+  viewed_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS listing_views_listing_idx
+  ON listing_views (listing_id, viewed_at DESC);
+CREATE INDEX IF NOT EXISTS listing_views_viewer_idx
+  ON listing_views (viewer_id, listing_id, viewed_at DESC);
+
 -- Backfill existing accounts as verified — pre-rollout users shouldn't be
 -- nagged after the fact.
 UPDATE users SET email_verified_at = COALESCE(email_verified_at, created_at);

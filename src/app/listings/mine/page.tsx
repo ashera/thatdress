@@ -11,7 +11,11 @@ import {
 
 export const dynamic = "force-dynamic";
 
-type Row = ListingCardRow & { is_published: boolean };
+type Row = ListingCardRow & {
+  is_published: boolean;
+  view_count: string;
+  view_count_7d: string;
+};
 
 async function fetchOwnListings(
   userId: string,
@@ -51,7 +55,16 @@ async function fetchOwnListings(
               (
                 SELECT COUNT(DISTINCT buyer_id)::text FROM conversations
                   WHERE listing_id = l.id
-              ) AS conversation_count
+              ) AS conversation_count,
+              (
+                SELECT COUNT(*)::text FROM listing_views
+                  WHERE listing_id = l.id
+              ) AS view_count,
+              (
+                SELECT COUNT(*)::text FROM listing_views
+                  WHERE listing_id = l.id
+                    AND viewed_at > NOW() - INTERVAL '7 days'
+              ) AS view_count_7d
          FROM listings l
          LEFT JOIN users            u    ON u.id    = l.seller_id
          LEFT JOIN bike_makes       mk   ON mk.id   = l.make_id
@@ -135,6 +148,19 @@ export default async function MyListingsPage() {
                 <span className="my-listing-flag">Hidden</span>
               )}
               <ListingRow data={listingFromRow(row)} />
+              <div className="my-listing-stats">
+                <span>
+                  <strong>{row.view_count}</strong> view
+                  {row.view_count === "1" ? "" : "s"}
+                </span>
+                <span>
+                  <strong>{row.view_count_7d}</strong> in 7 days
+                </span>
+                <span>
+                  <strong>{row.conversation_count ?? 0}</strong> conversation
+                  {row.conversation_count === "1" ? "" : "s"}
+                </span>
+              </div>
             </div>
           ))}
         </div>

@@ -7,6 +7,10 @@ import { startConversation } from "@/lib/actions/messages";
 import { toggleListingSold } from "@/lib/actions/listings";
 import { toggleShortlist } from "@/lib/actions/shortlist";
 import { getShortlistIds } from "@/lib/shortlist";
+import {
+  getListingStats,
+  trackListingView,
+} from "@/lib/listing-views";
 import { Button, ButtonLink, Icon } from "../../_components/ui";
 import {
   ListingGallery,
@@ -428,6 +432,18 @@ export default async function ListingDetailPage({
     ? await fetchOffersForListing(l.id)
     : [];
 
+  // Side effect: count this view (skipped for the seller). Failures are
+  // swallowed inside the helper so they never block render.
+  await trackListingView({
+    listingId: l.id,
+    viewerId: currentUser?.id ?? null,
+    sellerId: l.seller_id,
+  });
+
+  const stats = (isOwner || isAdmin)
+    ? await getListingStats(l.id)
+    : null;
+
   return (
     <div className="page detail-page">
       <Link href="/listings" className="back-link">
@@ -630,6 +646,32 @@ export default async function ListingDetailPage({
               )}
             </div>
           )}
+        </section>
+      )}
+
+      {stats && (
+        <section className="listing-stats-panel">
+          <h2 className="detail-specs-heading">Stats</h2>
+          <div className="listing-stats-grid">
+            <div>
+              <div className="listing-stats-value">{stats.total}</div>
+              <div className="listing-stats-label">Total views</div>
+            </div>
+            <div>
+              <div className="listing-stats-value">{stats.last7}</div>
+              <div className="listing-stats-label">Last 7 days</div>
+            </div>
+            <div>
+              <div className="listing-stats-value">{stats.uniqueViewers}</div>
+              <div className="listing-stats-label">Unique viewers</div>
+            </div>
+            <div>
+              <div className="listing-stats-value">
+                {Number(l.conversation_count ?? 0)}
+              </div>
+              <div className="listing-stats-label">Buyer conversations</div>
+            </div>
+          </div>
         </section>
       )}
 

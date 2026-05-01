@@ -1545,6 +1545,52 @@ textarea.input {
   padding: 4px 10px;
   border-radius: var(--r-pill);
 }
+.my-listing-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3) var(--s-5);
+  padding: 8px 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--ink-3);
+  background: var(--surface-sunken);
+  border: 1px solid var(--hairline);
+  border-top: 0;
+  border-radius: 0 0 var(--r-3) var(--r-3);
+  margin-top: -1px;
+}
+.my-listing-stats strong { color: var(--ink-1); font-weight: 700; }
+
+/* Listing stats panel (detail page, owner/admin) */
+.listing-stats-panel {
+  margin-top: var(--s-7);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-5);
+  padding: var(--s-7);
+}
+.listing-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--s-5);
+  margin-top: var(--s-3);
+}
+.listing-stats-value {
+  font-family: var(--font-display);
+  font-size: 32px;
+  letter-spacing: -0.02em;
+  color: var(--ink-1);
+  line-height: 1;
+}
+.listing-stats-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  margin-top: 6px;
+}
 
 .ip-suggest {
   display: flex;
