@@ -436,13 +436,13 @@ export default async function ListingDetailPage({
             <ButtonLink href="/listings" variant="ghost" size="lg">
               See more bikes
             </ButtonLink>
-            {isOwner && (
+            {(isOwner || isAdmin) && (
               <ButtonLink
                 href={`/listings/${l.id}/edit`}
                 variant="quiet"
                 size="lg"
               >
-                Edit listing
+                {isOwner ? "Edit listing" : "Edit (admin)"}
               </ButtonLink>
             )}
           </div>

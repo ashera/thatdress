@@ -153,7 +153,9 @@ export default async function EditListingPage({
 
   const listing = listingRes.rows[0];
   if (!listing) notFound();
-  if (listing.seller_id !== user.id) redirect(`/listings/${id}`);
+  if (listing.seller_id !== user.id && !user.isAdmin) {
+    redirect(`/listings/${id}`);
+  }
 
   const images = imagesRes.rows;
 

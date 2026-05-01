@@ -455,7 +455,7 @@ export async function setListingVisibility(formData: FormData): Promise<void> {
   if (!user) redirect("/login");
 
   const listingId = String(formData.get("listingId") ?? "");
-  if (!(await ensureListingOwner(listingId, user.id))) {
+  if (!(await canEditListing(listingId, user))) {
     redirect("/listings");
   }
 
@@ -464,8 +464,9 @@ export async function setListingVisibility(formData: FormData): Promise<void> {
   await query(
     `UPDATE listings
         SET is_published = $1
-      WHERE id = $2::bigint AND seller_id = $3::bigint`,
-    [isPublished, listingId, user.id],
+      WHERE id = $2::bigint
+        AND (seller_id = $3::bigint OR $4::boolean)`,
+    [isPublished, listingId, user.id, user.isAdmin],
   );
 
   revalidatePath(`/listings/${listingId}`);
@@ -487,12 +488,27 @@ async function ensureListingOwner(
   return r.rows[0]?.seller_id === userId;
 }
 
+async function canEditListing(
+  listingId: string,
+  user: { id: string; isAdmin: boolean },
+): Promise<boolean> {
+  if (!/^\d+$/.test(listingId)) return false;
+  if (user.isAdmin) {
+    const r = await query<{ id: string }>(
+      `SELECT id::text FROM listings WHERE id = $1::bigint LIMIT 1`,
+      [listingId],
+    );
+    return r.rows.length > 0;
+  }
+  return ensureListingOwner(listingId, user.id);
+}
+
 export async function updateListing(formData: FormData): Promise<void> {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
   const listingId = String(formData.get("listingId") ?? "");
-  if (!(await ensureListingOwner(listingId, user.id))) {
+  if (!(await canEditListing(listingId, user))) {
     redirect("/listings");
   }
 
@@ -507,8 +523,13 @@ export async function updateListing(formData: FormData): Promise<void> {
     ? formRegionId
     : ((await getCurrentRegionId()) ?? "");
 
+  // Admins can edit any listing; sellers can only edit their own. The
+  // OR clause makes admin a no-op gate while preserving the seller_id
+  // constraint for non-admin updates.
   await query(
-    `UPDATE listings SET ${UPDATE_SET} WHERE id = $1::bigint AND seller_id = $44::bigint`,
+    `UPDATE listings SET ${UPDATE_SET}
+      WHERE id = $1::bigint
+        AND (seller_id = $44::bigint OR $45::boolean)`,
     [
       listingId,
       f.title,
@@ -554,6 +575,7 @@ export async function updateListing(formData: FormData): Promise<void> {
       f.body_position_id ?? "",
       regionId,
       user.id,
+      user.isAdmin,
     ],
   );
 
@@ -568,7 +590,7 @@ export async function addListingImages(formData: FormData): Promise<void> {
   if (!user) redirect("/login");
 
   const listingId = String(formData.get("listingId") ?? "");
-  if (!(await ensureListingOwner(listingId, user.id))) {
+  if (!(await canEditListing(listingId, user))) {
     redirect("/listings");
   }
 
@@ -609,7 +631,7 @@ export async function setPrimaryImage(formData: FormData): Promise<void> {
   const listingId = String(formData.get("listingId") ?? "");
   const imageId = String(formData.get("imageId") ?? "");
   if (!/^\d+$/.test(imageId)) redirect("/listings");
-  if (!(await ensureListingOwner(listingId, user.id))) redirect("/listings");
+  if (!(await canEditListing(listingId, user))) redirect("/listings");
 
   await withTransaction(async (client) => {
     await client.query(
@@ -637,7 +659,7 @@ export async function deleteListingImage(formData: FormData): Promise<void> {
   const listingId = String(formData.get("listingId") ?? "");
   const imageId = String(formData.get("imageId") ?? "");
   if (!/^\d+$/.test(imageId)) redirect("/listings");
-  if (!(await ensureListingOwner(listingId, user.id))) redirect("/listings");
+  if (!(await canEditListing(listingId, user))) redirect("/listings");
 
   const r = await query<{ was_primary: boolean }>(
     `DELETE FROM listing_images
