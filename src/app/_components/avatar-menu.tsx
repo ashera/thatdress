@@ -1,13 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-
-function initials(email: string): string {
-  const local = email.split("@")[0] ?? email;
-  const parts = local.split(/[._-]/).filter(Boolean);
-  if (parts.length >= 2) return (parts[0][0]! + parts[1][0]!).toUpperCase();
-  return local.slice(0, 2).toUpperCase();
-}
+import { Icon } from "./ui";
 
 export function AvatarMenu({
   email,
@@ -63,7 +57,7 @@ export function AvatarMenu({
         aria-expanded={open}
         title={email}
       >
-        {initials(email)}
+        <Icon name="user" />
       </button>
       <div className="avatar-menu-panel">{children}</div>
     </div>

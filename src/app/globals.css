@@ -591,15 +591,19 @@ input, select, textarea { font: inherit; color: inherit; }
   background: var(--ink-1);
   color: white;
   border: 0;
-  font-family: var(--font-display);
-  font-size: 13px;
-  letter-spacing: 0.02em;
   cursor: pointer;
   display: grid;
   place-items: center;
   transition: transform var(--dur) var(--ease-out), background var(--dur);
 }
 .avatar-toggle:hover { transform: scale(1.05); background: var(--jet); }
+.avatar-toggle .ico {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.8;
+}
 .avatar-menu-panel {
   position: absolute;
   top: calc(100% + 8px);
