@@ -4,7 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { findRefTable, listActiveRefOptions } from "@/lib/ref-data";
 import { getCurrentRegionId } from "@/lib/regions";
 import { getShortlistIds } from "@/lib/shortlist";
-import { ButtonLink } from "../_components/ui";
+import { Button, ButtonLink, Input } from "../_components/ui";
 import {
   ListingCard,
   ListingRow,
@@ -17,6 +17,7 @@ import {
   type ActiveFilters,
 } from "../_components/listings-filters";
 import { ViewToggle, type ListingsView } from "../_components/view-toggle";
+import { saveSearch } from "@/lib/actions/saved-searches";
 
 export const dynamic = "force-dynamic";
 
@@ -493,6 +494,33 @@ export default async function ListingsPage({
       </div>
 
       <ListingsFilters active={active} options={options} isAdmin={isAdmin} />
+
+      {user && filterCount > 0 && (
+        <form action={saveSearch} className="save-search">
+          <input
+            type="hidden"
+            name="params_json"
+            value={JSON.stringify({ ...active, mode })}
+          />
+          <span className="save-search-label">
+            Save this search to get email alerts when matching listings
+            appear:
+          </span>
+          <Input
+            type="text"
+            name="name"
+            maxLength={80}
+            placeholder="e.g. Trek under £3000"
+            required
+          />
+          <Button type="submit" variant="primary" size="sm" iconRight="check">
+            Save
+          </Button>
+          <Link href="/alerts" className="save-search-link">
+            Manage alerts
+          </Link>
+        </form>
+      )}
 
       {!result.ok ? (
         <div className="form-error">

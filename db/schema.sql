@@ -502,6 +502,22 @@ CREATE TABLE IF NOT EXISTS email_verification_tokens (
 CREATE INDEX IF NOT EXISTS email_verification_tokens_user_idx
   ON email_verification_tokens (user_id, expires_at DESC);
 
+-- =========================================================
+-- Saved searches (buyer alerts)
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS saved_searches (
+  id              BIGSERIAL    PRIMARY KEY,
+  user_id         BIGINT       NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name            TEXT         NOT NULL,
+  params_json     JSONB        NOT NULL,
+  last_emailed_at TIMESTAMPTZ,
+  created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS saved_searches_user_idx
+  ON saved_searches (user_id, created_at DESC);
+
 -- Backfill existing accounts as verified — pre-rollout users shouldn't be
 -- nagged after the fact.
 UPDATE users SET email_verified_at = COALESCE(email_verified_at, created_at);
