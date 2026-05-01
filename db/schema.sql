@@ -416,6 +416,9 @@ CREATE TABLE IF NOT EXISTS shortlists (
   PRIMARY KEY (user_id, listing_id)
 );
 
+ALTER TABLE shortlists
+  ADD COLUMN IF NOT EXISTS ignored_at TIMESTAMPTZ;
+
 CREATE INDEX IF NOT EXISTS shortlists_user_idx
   ON shortlists (user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS shortlists_listing_idx ON shortlists (listing_id);

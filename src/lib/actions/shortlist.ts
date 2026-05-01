@@ -38,3 +38,59 @@ export async function toggleShortlist(formData: FormData): Promise<void> {
   revalidatePath(`/listings/${listingId}`);
   revalidatePath("/shortlist");
 }
+
+export async function ignoreFromShortlist(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const listingId = String(formData.get("listingId") ?? "");
+  if (!/^\d+$/.test(listingId)) return;
+
+  await query(
+    `UPDATE shortlists
+        SET ignored_at = NOW()
+      WHERE user_id = $1::bigint AND listing_id = $2::bigint`,
+    [user.id, listingId],
+  );
+
+  revalidatePath("/shortlist");
+  revalidatePath("/listings");
+  revalidatePath(`/listings/${listingId}`);
+}
+
+export async function reinstateShortlist(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const listingId = String(formData.get("listingId") ?? "");
+  if (!/^\d+$/.test(listingId)) return;
+
+  await query(
+    `UPDATE shortlists
+        SET ignored_at = NULL
+      WHERE user_id = $1::bigint AND listing_id = $2::bigint`,
+    [user.id, listingId],
+  );
+
+  revalidatePath("/shortlist");
+  revalidatePath("/listings");
+  revalidatePath(`/listings/${listingId}`);
+}
+
+export async function removeFromShortlist(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const listingId = String(formData.get("listingId") ?? "");
+  if (!/^\d+$/.test(listingId)) return;
+
+  await query(
+    `DELETE FROM shortlists
+      WHERE user_id = $1::bigint AND listing_id = $2::bigint`,
+    [user.id, listingId],
+  );
+
+  revalidatePath("/shortlist");
+  revalidatePath("/listings");
+  revalidatePath(`/listings/${listingId}`);
+}

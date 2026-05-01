@@ -988,6 +988,43 @@ textarea.input {
   bottom: 4px;
   right: 4px;
 }
+
+/* Shortlist page — manage strip + ignored state */
+.shortlist-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.shortlist-item.is-ignored .listing {
+  opacity: 0.55;
+  filter: grayscale(0.8);
+  border-style: dashed;
+}
+.shortlist-item.is-ignored:hover .listing {
+  opacity: 0.75;
+}
+.shortlist-flag {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  background: var(--ink-3);
+  color: white;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
+  font-weight: 700;
+}
+.shortlist-manage {
+  display: flex;
+  gap: var(--s-2);
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
 .listing-row-photo { position: relative; }
 
 .listing-stats {

@@ -2,7 +2,12 @@ import { redirect } from "next/navigation";
 import { query } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { getShortlistIds } from "@/lib/shortlist";
-import { ButtonLink } from "../_components/ui";
+import {
+  ignoreFromShortlist,
+  reinstateShortlist,
+  removeFromShortlist,
+} from "@/lib/actions/shortlist";
+import { Button, ButtonLink } from "../_components/ui";
 import {
   ListingCard,
   listingFromRow,
@@ -11,9 +16,14 @@ import {
 
 export const dynamic = "force-dynamic";
 
+type Row = ListingCardRow & {
+  shortlisted_at: string;
+  ignored_at: string | null;
+};
+
 async function fetchShortlistedListings(userId: string) {
   try {
-    const result = await query<ListingCardRow>(
+    const result = await query<Row>(
       `SELECT l.id::text,
               l.title,
               l.price_cents,
@@ -52,7 +62,8 @@ async function fetchShortlistedListings(userId: string) {
               l.weight_lbs::text,
               l.has_warranty,
               l.is_published,
-              s.created_at::text AS shortlisted_at
+              s.created_at::text AS shortlisted_at,
+              s.ignored_at::text AS ignored_at
          FROM shortlists s
          JOIN listings l ON l.id = s.listing_id
          LEFT JOIN users            u    ON u.id    = l.seller_id
@@ -70,7 +81,7 @@ async function fetchShortlistedListings(userId: string) {
          LEFT JOIN motor_types      mt   ON mt.id   = l.motor_type_id
          LEFT JOIN drive_modes      dm   ON dm.id   = l.drive_mode_id
         WHERE s.user_id = $1::bigint
-        ORDER BY s.created_at DESC`,
+        ORDER BY (s.ignored_at IS NOT NULL), s.created_at DESC`,
       [userId],
     );
     return { ok: true as const, rows: result.rows };
@@ -82,6 +93,46 @@ async function fetchShortlistedListings(userId: string) {
   }
 }
 
+function ManageControls({
+  listingId,
+  ignored,
+}: {
+  listingId: string;
+  ignored: boolean;
+}) {
+  if (!ignored) {
+    return (
+      <form action={ignoreFromShortlist} className="shortlist-manage">
+        <input type="hidden" name="listingId" value={listingId} />
+        <Button
+          type="submit"
+          variant="ghost"
+          size="sm"
+          title="Move to ignored"
+        >
+          Ignore
+        </Button>
+      </form>
+    );
+  }
+  return (
+    <div className="shortlist-manage">
+      <form action={reinstateShortlist}>
+        <input type="hidden" name="listingId" value={listingId} />
+        <Button type="submit" variant="primary" size="sm">
+          Reinstate
+        </Button>
+      </form>
+      <form action={removeFromShortlist}>
+        <input type="hidden" name="listingId" value={listingId} />
+        <Button type="submit" variant="ghost" size="sm">
+          Remove
+        </Button>
+      </form>
+    </div>
+  );
+}
+
 export default async function ShortlistPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login?next=/shortlist");
@@ -91,15 +142,21 @@ export default async function ShortlistPage() {
     getShortlistIds(user.id),
   ]);
 
+  const total = result.ok ? result.rows.length : 0;
+  const activeCount = result.ok
+    ? result.rows.filter((r) => !r.ignored_at).length
+    : 0;
+  const ignoredCount = total - activeCount;
+
   return (
     <div className="page page--pad">
       <header className="messages-header">
         <p className="eyebrow">Saved</p>
         <h1>Your shortlist</h1>
         <p className="sub">
-          {result.ok && result.rows.length > 0
-            ? `${result.rows.length} listing${result.rows.length === 1 ? "" : "s"} saved.`
-            : "Nothing saved yet."}
+          {total === 0
+            ? "Nothing saved yet."
+            : `${activeCount} saved${ignoredCount > 0 ? ` · ${ignoredCount} ignored` : ""}.`}
         </p>
       </header>
 
@@ -122,12 +179,23 @@ export default async function ShortlistPage() {
         </div>
       ) : (
         <div className="results-grid">
-          {result.rows.map((row) => (
-            <ListingCard
-              key={row.id}
-              data={listingFromRow(row, user.id, ids)}
-            />
-          ))}
+          {result.rows.map((row) => {
+            const data = listingFromRow(row, user.id, ids);
+            // Hide the photo heart toggle on /shortlist — explicit
+            // controls below the card handle ignore / reinstate / remove.
+            data.showShortlist = false;
+            const ignored = !!row.ignored_at;
+            return (
+              <div
+                key={row.id}
+                className={`shortlist-item ${ignored ? "is-ignored" : ""}`}
+              >
+                {ignored && <span className="shortlist-flag">Ignored</span>}
+                <ListingCard data={data} />
+                <ManageControls listingId={row.id} ignored={ignored} />
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
