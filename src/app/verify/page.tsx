@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { verifyEmailByToken } from "@/lib/email-verify";
-import { ButtonLink } from "../../_components/ui";
+import { ButtonLink } from "../_components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -10,19 +9,20 @@ const REASONS: Record<string, string> = {
   used: "This link has already been used. Your email is already verified.",
 };
 
-export default async function VerifyPage({
-  params,
+export default async function VerifyResultPage({
+  searchParams,
 }: {
-  params: Promise<{ token: string }>;
+  searchParams: Promise<{ status?: string }>;
 }) {
-  const { token } = await params;
-  const result = await verifyEmailByToken(token);
+  const { status } = await searchParams;
+  const ok = status === "ok";
+  const reason = !ok && status ? REASONS[status] : null;
 
   return (
     <div className="page auth-page">
       <main style={{ width: "100%", maxWidth: 440 }}>
         <div className="form-card">
-          {result.ok ? (
+          {ok ? (
             <>
               <p className="eyebrow">All set</p>
               <h1>Email verified</h1>
@@ -45,12 +45,12 @@ export default async function VerifyPage({
                 className="sub"
                 style={{ marginTop: 8, marginBottom: "var(--s-5)" }}
               >
-                {REASONS[result.reason]}
+                {reason ?? "Something went wrong with the verification link."}
               </p>
               <ButtonLink href="/" variant="primary" iconRight="arrow">
                 Back home
               </ButtonLink>
-              {result.reason === "expired" && (
+              {status === "expired" && (
                 <p
                   className="sub"
                   style={{ marginTop: "var(--s-4)", fontSize: 13 }}

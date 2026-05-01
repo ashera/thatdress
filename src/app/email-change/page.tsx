@@ -1,5 +1,4 @@
-import { confirmEmailChangeByToken } from "@/lib/email-change";
-import { ButtonLink } from "../../_components/ui";
+import { ButtonLink } from "../_components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -10,19 +9,20 @@ const REASONS: Record<string, string> = {
   taken: "That email is now in use on another account. Try a different address.",
 };
 
-export default async function EmailChangeConfirmPage({
-  params,
+export default async function EmailChangeResultPage({
+  searchParams,
 }: {
-  params: Promise<{ token: string }>;
+  searchParams: Promise<{ status?: string; email?: string }>;
 }) {
-  const { token } = await params;
-  const result = await confirmEmailChangeByToken(token);
+  const { status, email } = await searchParams;
+  const ok = status === "ok";
+  const reason = !ok && status ? REASONS[status] : null;
 
   return (
     <div className="page auth-page">
       <main style={{ width: "100%", maxWidth: 440 }}>
         <div className="form-card">
-          {result.ok ? (
+          {ok ? (
             <>
               <p className="eyebrow">All set</p>
               <h1>Email updated</h1>
@@ -30,8 +30,8 @@ export default async function EmailChangeConfirmPage({
                 className="sub"
                 style={{ marginTop: 8, marginBottom: "var(--s-5)" }}
               >
-                Your login email is now <strong>{result.newEmail}</strong>.
-                Use it next time you sign in.
+                Your login email is now <strong>{email}</strong>. Use it
+                next time you sign in.
               </p>
               <ButtonLink href="/profile" variant="primary" iconRight="arrow">
                 Back to profile
@@ -45,7 +45,7 @@ export default async function EmailChangeConfirmPage({
                 className="sub"
                 style={{ marginTop: 8, marginBottom: "var(--s-5)" }}
               >
-                {REASONS[result.reason]}
+                {reason ?? "Something went wrong with the confirmation link."}
               </p>
               <ButtonLink href="/profile" variant="primary" iconRight="arrow">
                 Back to profile
