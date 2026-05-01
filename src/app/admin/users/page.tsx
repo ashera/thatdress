@@ -8,6 +8,7 @@ type Row = {
   id: string;
   email: string;
   is_admin: boolean;
+  email_verified_at: string | null;
   first_name: string | null;
   surname: string | null;
   town: string | null;
@@ -41,6 +42,7 @@ export default async function AdminUsersPage() {
     `SELECT u.id::text,
             u.email,
             u.is_admin,
+            u.email_verified_at::text,
             u.first_name,
             u.surname,
             u.town,
@@ -93,6 +95,9 @@ export default async function AdminUsersPage() {
               <div className="users-email">
                 {u.email}
                 {u.is_admin && <span className="users-tag --admin">Admin</span>}
+                {!u.email_verified_at && (
+                  <span className="users-tag --susp">Unverified</span>
+                )}
               </div>
               <div>{fullName(u)}</div>
               <div className="users-loc">{u.town ?? "—"}</div>

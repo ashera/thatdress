@@ -33,9 +33,31 @@ export default async function ProfilePage({
         >
           Profile
         </h1>
-        <p style={{ color: "var(--ink-3)", margin: "0 0 var(--s-7)" }}>
-          Signed in as <strong>{user.email}</strong>.
+        <p style={{ color: "var(--ink-3)", margin: "0 0 var(--s-3)" }}>
+          Signed in as <strong>{user.email}</strong>.{" "}
+          {user.emailVerified ? (
+            <span className="users-tag --ok" style={{ marginLeft: 4 }}>
+              Verified
+            </span>
+          ) : (
+            <span className="users-tag --susp" style={{ marginLeft: 4 }}>
+              Not verified
+            </span>
+          )}
         </p>
+        {!user.emailVerified && (
+          <p
+            style={{
+              color: "var(--ink-3)",
+              fontSize: "var(--t-body-s)",
+              margin: "0 0 var(--s-7)",
+            }}
+          >
+            We sent a confirmation link when you signed up. Check your
+            inbox, or use the Resend button in the banner above.
+          </p>
+        )}
+        {user.emailVerified && <div style={{ marginBottom: "var(--s-7)" }} />}
 
         {saved && (
           <p className="form-success" style={{ marginBottom: "var(--s-5)" }}>

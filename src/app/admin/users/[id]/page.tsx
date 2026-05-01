@@ -24,6 +24,7 @@ type UserRow = {
   id: string;
   email: string;
   is_admin: boolean;
+  email_verified_at: string | null;
   suspended_at: string | null;
   created_at: string;
   title: string | null;
@@ -68,6 +69,7 @@ export default async function AdminUserDetailPage({
     `SELECT u.id::text,
             u.email,
             u.is_admin,
+            u.email_verified_at::text,
             u.suspended_at::text,
             u.created_at::text,
             u.title,
@@ -97,9 +99,19 @@ export default async function AdminUserDetailPage({
 
       <header className="admin-header">
         <p className="eyebrow">Admin · User</p>
-        <h1>{user.email}</h1>
+        <h1>
+          {user.email}{" "}
+          {user.email_verified_at ? (
+            <span className="users-tag --ok">Verified</span>
+          ) : (
+            <span className="users-tag --susp">Unverified</span>
+          )}
+        </h1>
         <p className="sub">
           Joined {formatDate(user.created_at)}
+          {user.email_verified_at
+            ? ` · Verified ${formatDate(user.email_verified_at)}`
+            : ""}
           {isSuspended ? ` · Suspended ${formatDate(user.suspended_at)}` : ""}
           {user.is_admin ? " · Admin" : ""}
           {isMe ? " · This is you" : ""}
