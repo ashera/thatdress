@@ -412,17 +412,33 @@ export default async function ListingsPage({
         </div>
       ) : result.listings.length === 0 ? (
         <div className="empty-state">
-          <h3>{filterCount > 0 ? "No matches" : "No listings yet"}</h3>
+          <h3>
+            {filterCount > 0
+              ? "No matches"
+              : mode === "sold"
+                ? "Nothing sold yet"
+                : "No listings yet"}
+          </h3>
           <p style={{ margin: "0 0 var(--s-5)" }}>
             {filterCount > 0
               ? "Try widening your filters or clearing the search."
-              : user
-                ? "Be the first to post one."
-                : "Register to post the first one."}
+              : mode === "sold"
+                ? "When sellers mark their listings as sold, they'll show up here."
+                : user
+                  ? "Be the first to post one."
+                  : "Register to post the first one."}
           </p>
           {filterCount > 0 ? (
-            <ButtonLink href="/listings" variant="primary" iconRight="arrow">
+            <ButtonLink
+              href={buildModeHref(mode, {})}
+              variant="primary"
+              iconRight="arrow"
+            >
               Clear filters
+            </ButtonLink>
+          ) : mode === "sold" ? (
+            <ButtonLink href="/listings" variant="primary" iconRight="arrow">
+              Browse for-sale listings
             </ButtonLink>
           ) : (
             <ButtonLink
