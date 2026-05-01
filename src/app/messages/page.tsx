@@ -88,11 +88,102 @@ function shortName(email: string | null): string {
   return email.split("@")[0] ?? email;
 }
 
+function ConversationItem({
+  c,
+  userId,
+}: {
+  c: ConversationRow;
+  userId: string;
+}) {
+  const unread = Number(c.unread_count);
+  const otherLabel = c.buyer_id === userId ? "Seller" : "Buyer";
+  return (
+    <li>
+      <Link
+        href={`/messages/${c.id}`}
+        className={`conversation-item ${unread > 0 ? "is-unread" : ""}`}
+      >
+        <div className="conversation-thumb">
+          {c.primary_image_id ? (
+            <img
+              src={`/api/listings/${c.listing_id}/images/${c.primary_image_id}`}
+              alt=""
+            />
+          ) : (
+            <span aria-hidden>🚲</span>
+          )}
+        </div>
+        <div className="conversation-body">
+          <div className="conversation-top">
+            <span className="conversation-listing">{c.listing_title}</span>
+            <span className="conversation-time">
+              {formatRelative(c.last_at)}
+            </span>
+          </div>
+          <div className="conversation-meta">
+            <span className="conversation-role">{otherLabel}</span>
+            <span> · </span>
+            <span>{shortName(c.other_email)}</span>
+          </div>
+          <div className="conversation-preview">
+            {c.last_body ? (
+              c.last_body.length > 120 ? (
+                `${c.last_body.slice(0, 120)}…`
+              ) : (
+                c.last_body
+              )
+            ) : (
+              <em>No messages yet.</em>
+            )}
+          </div>
+        </div>
+        {unread > 0 && (
+          <span
+            className="conversation-unread"
+            aria-label={`${unread} unread`}
+          >
+            {unread}
+          </span>
+        )}
+      </Link>
+    </li>
+  );
+}
+
 export default async function MessagesIndexPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login?next=/messages");
 
   const result = await fetchConversations(user.id);
+
+  if (!result.ok) {
+    return (
+      <div className="page page--pad">
+        <AutoRefresh intervalMs={10000} />
+        <header className="messages-header">
+          <p className="eyebrow">Inbox</p>
+          <h1>Messages</h1>
+        </header>
+        <div className="form-error">
+          <strong>Could not load messages.</strong>
+          <div style={{ marginTop: 4, fontFamily: "var(--font-mono)" }}>
+            {result.error}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const sellingRows = result.rows.filter((c) => c.seller_id === user.id);
+  const buyingRows = result.rows.filter((c) => c.buyer_id === user.id);
+  const sellingUnread = sellingRows.reduce(
+    (n, c) => n + Number(c.unread_count),
+    0,
+  );
+  const buyingUnread = buyingRows.reduce(
+    (n, c) => n + Number(c.unread_count),
+    0,
+  );
 
   return (
     <div className="page page--pad">
@@ -102,20 +193,13 @@ export default async function MessagesIndexPage() {
         <p className="eyebrow">Inbox</p>
         <h1>Messages</h1>
         <p className="sub">
-          {result.ok && result.rows.length > 0
-            ? `${result.rows.length} conversation${result.rows.length === 1 ? "" : "s"}.`
-            : "No conversations yet."}
+          {result.rows.length === 0
+            ? "No conversations yet."
+            : `${result.rows.length} conversation${result.rows.length === 1 ? "" : "s"}.`}
         </p>
       </header>
 
-      {!result.ok ? (
-        <div className="form-error">
-          <strong>Could not load messages.</strong>
-          <div style={{ marginTop: 4, fontFamily: "var(--font-mono)" }}>
-            {result.error}
-          </div>
-        </div>
-      ) : result.rows.length === 0 ? (
+      {result.rows.length === 0 ? (
         <div className="empty-state">
           <h3>No conversations yet</h3>
           <p style={{ margin: "0 0 var(--s-5)" }}>
@@ -127,60 +211,61 @@ export default async function MessagesIndexPage() {
           </ButtonLink>
         </div>
       ) : (
-        <ul className="conversation-list">
-          {result.rows.map((c) => {
-            // Label describes the OTHER party so the row reads as
-            // "[Seller] · ashera" = "the seller is ashera".
-            const role = c.buyer_id === user.id ? "Seller" : "Buyer";
-            const unread = Number(c.unread_count);
-            return (
-              <li key={c.id}>
-                <Link
-                  href={`/messages/${c.id}`}
-                  className={`conversation-item ${unread > 0 ? "is-unread" : ""}`}
-                >
-                  <div className="conversation-thumb">
-                    {c.primary_image_id ? (
-                      <img
-                        src={`/api/listings/${c.listing_id}/images/${c.primary_image_id}`}
-                        alt=""
-                      />
-                    ) : (
-                      <span aria-hidden>🚲</span>
-                    )}
-                  </div>
-                  <div className="conversation-body">
-                    <div className="conversation-top">
-                      <span className="conversation-listing">
-                        {c.listing_title}
-                      </span>
-                      <span className="conversation-time">
-                        {formatRelative(c.last_at)}
-                      </span>
-                    </div>
-                    <div className="conversation-meta">
-                      <span className="conversation-role">{role}</span>
-                      <span> · </span>
-                      <span>{shortName(c.other_email)}</span>
-                    </div>
-                    <div className="conversation-preview">
-                      {c.last_body
-                        ? c.last_body.length > 120
-                          ? `${c.last_body.slice(0, 120)}…`
-                          : c.last_body
-                        : <em>No messages yet.</em>}
-                    </div>
-                  </div>
-                  {unread > 0 && (
-                    <span className="conversation-unread" aria-label={`${unread} unread`}>
-                      {unread}
-                    </span>
-                  )}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+        <>
+          <section className="inbox-section">
+            <div className="inbox-section-head">
+              <h2>Buyers asking about your listings</h2>
+              <span className="inbox-section-count">
+                {sellingRows.length}
+                {sellingUnread > 0 && (
+                  <span className="inbox-section-unread">
+                    · {sellingUnread} unread
+                  </span>
+                )}
+              </span>
+            </div>
+            {sellingRows.length === 0 ? (
+              <p className="inbox-section-empty">
+                No buyer enquiries yet. They&rsquo;ll show up here when
+                someone clicks <strong>Contact seller</strong> on one of
+                your listings.
+              </p>
+            ) : (
+              <ul className="conversation-list">
+                {sellingRows.map((c) => (
+                  <ConversationItem key={c.id} c={c} userId={user.id} />
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section className="inbox-section">
+            <div className="inbox-section-head">
+              <h2>Your conversations with sellers</h2>
+              <span className="inbox-section-count">
+                {buyingRows.length}
+                {buyingUnread > 0 && (
+                  <span className="inbox-section-unread">
+                    · {buyingUnread} unread
+                  </span>
+                )}
+              </span>
+            </div>
+            {buyingRows.length === 0 ? (
+              <p className="inbox-section-empty">
+                You haven&rsquo;t reached out to any sellers yet. Start by
+                clicking <strong>Contact seller</strong> on a listing
+                you&rsquo;re interested in.
+              </p>
+            ) : (
+              <ul className="conversation-list">
+                {buyingRows.map((c) => (
+                  <ConversationItem key={c.id} c={c} userId={user.id} />
+                ))}
+              </ul>
+            )}
+          </section>
+        </>
       )}
     </div>
   );
