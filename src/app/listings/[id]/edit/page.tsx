@@ -48,6 +48,7 @@ type ListingRow = {
   price_cents: number;
   seller_id: string | null;
   is_published: boolean;
+  region_id: string | null;
   make_id: string | null;
   model: string | null;
   year: number | null;
@@ -121,7 +122,7 @@ export default async function EditListingPage({
   const [listingRes, imagesRes, refs] = await Promise.all([
     query<ListingRow>(
       `SELECT id::text, title, description, price_cents, seller_id::text,
-              is_published,
+              is_published, region_id::text,
               make_id::text, model, year, condition_id::text,
               bike_class_id::text, bike_category_id::text, location_postal,
               frame_size, frame_style_id::text, frame_material_id::text,
@@ -160,6 +161,7 @@ export default async function EditListingPage({
     title: listing.title,
     description: listing.description,
     price_dollars: (listing.price_cents / 100).toFixed(2),
+    region_id: listing.region_id,
     make_id: listing.make_id,
     model: listing.model,
     year: listing.year,

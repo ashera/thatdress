@@ -284,16 +284,22 @@ export default async function ListingsPage({
 
   const { active, where, params } = buildFilters(sp, isAdmin);
 
-  // Apply current region filter for non-admins. NULL-region (legacy) listings
-  // stay visible until they're backfilled. Admins see across regions so they
-  // can audit listings sitewide.
+  // Apply current region filter for non-admins. Strict — only listings in
+  // the current region — but always include the viewer's own listings
+  // regardless of region so a seller can manage stock across regions from
+  // the main browse page. Admins see everything sitewide.
   if (!isAdmin) {
     const regionId = await getCurrentRegionId();
     if (regionId) {
       params.push(regionId);
-      where.push(
-        `(l.region_id = $${params.length}::bigint OR l.region_id IS NULL)`,
-      );
+      const regionParam = `$${params.length}::bigint`;
+      if (user) {
+        params.push(user.id);
+        const userParam = `$${params.length}::bigint`;
+        where.push(`(l.region_id = ${regionParam} OR l.seller_id = ${userParam})`);
+      } else {
+        where.push(`l.region_id = ${regionParam}`);
+      }
     }
   }
 

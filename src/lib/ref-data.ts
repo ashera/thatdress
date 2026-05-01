@@ -161,6 +161,7 @@ export type ListingRefOptions = {
   motorTypes: RefOption[];
   driveModes: RefOption[];
   bodyPositions: RefOption[];
+  regions: RefOption[];
 };
 
 export async function loadListingRefOptions(): Promise<ListingRefOptions> {
@@ -169,6 +170,8 @@ export async function loadListingRefOptions(): Promise<ListingRefOptions> {
     if (!t) return Promise.resolve([] as RefOption[]);
     return listActiveRefOptions(t);
   };
+  // Lazy import to avoid a circular dependency between ref-data and regions.
+  const { listActiveRegions } = await import("@/lib/regions");
   const [
     makes,
     categories,
@@ -184,6 +187,7 @@ export async function loadListingRefOptions(): Promise<ListingRefOptions> {
     motorTypes,
     driveModes,
     bodyPositions,
+    regionRows,
   ] = await Promise.all([
     get("bike-makes"),
     get("bike-categories"),
@@ -199,6 +203,7 @@ export async function loadListingRefOptions(): Promise<ListingRefOptions> {
     get("motor-types"),
     get("drive-modes"),
     get("body-positions"),
+    listActiveRegions(),
   ]);
   return {
     makes,
@@ -215,5 +220,6 @@ export async function loadListingRefOptions(): Promise<ListingRefOptions> {
     motorTypes,
     driveModes,
     bodyPositions,
+    regions: regionRows.map((r) => ({ id: r.id, label: r.label })),
   };
 }

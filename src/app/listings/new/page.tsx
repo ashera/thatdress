@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createListing } from "@/lib/actions/listings";
 import { getCurrentUser } from "@/lib/auth";
 import { loadListingRefOptions } from "@/lib/ref-data";
+import { getCurrentRegionId } from "@/lib/regions";
 import { ListingForm } from "../../_components/listing-form";
 
 export const dynamic = "force-dynamic";
@@ -36,7 +37,10 @@ export default async function NewListingPage({
   const { error } = await searchParams;
   const errorMessage = error ? (ERRORS[error] ?? "Something went wrong.") : null;
 
-  const refs = await loadListingRefOptions();
+  const [refs, currentRegionId] = await Promise.all([
+    loadListingRefOptions(),
+    getCurrentRegionId(),
+  ]);
 
   return (
     <div className="page page--pad">
@@ -61,6 +65,7 @@ export default async function NewListingPage({
         <ListingForm
           action={createListing}
           refs={refs}
+          defaults={{ region_id: currentRegionId ?? undefined }}
           submitLabel="Publish listing"
           errorMessage={errorMessage}
           showPhotos

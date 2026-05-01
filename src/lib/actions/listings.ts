@@ -318,7 +318,7 @@ const INSERT_COLUMNS = `
   charge_time_hours, top_speed_mph, range_miles_min, range_miles_max,
   drive_mode_id, mileage, color, weight_lbs, display_type, drivetrain,
   accessories, modifications, has_warranty, warranty_text,
-  has_original_receipt, body_position_id
+  has_original_receipt, body_position_id, region_id
 `;
 
 const UPDATE_SET = `
@@ -362,7 +362,8 @@ const UPDATE_SET = `
   has_warranty = $39,
   warranty_text = $40,
   has_original_receipt = $41,
-  body_position_id = NULLIF($42, '')::bigint
+  body_position_id = NULLIF($42, '')::bigint,
+  region_id = NULLIF($43, '')::bigint
 `;
 
 function collectImageFiles(formData: FormData): File[] {
@@ -419,7 +420,13 @@ export async function createListing(formData: FormData): Promise<void> {
   const imageErr = validateImages(files);
   if (imageErr) redirect(`/listings/new?error=${imageErr}`);
 
-  const regionId = await getCurrentRegionId();
+  // Region: form value wins; fall back to the seller's current session
+  // region for safety (the form makes it required, but admins can submit
+  // without one if no region is configured).
+  const formRegionId = String(formData.get("region_id") ?? "").trim();
+  const regionId = /^\d+$/.test(formRegionId)
+    ? formRegionId
+    : await getCurrentRegionId();
 
   const values = listingValuesForInsert(parsed.fields, user.id);
   values.push(regionId);
@@ -427,7 +434,7 @@ export async function createListing(formData: FormData): Promise<void> {
     ", ",
   );
   const inserted = await query<{ id: string }>(
-    `INSERT INTO listings (${INSERT_COLUMNS}, region_id) VALUES (${placeholders}) RETURNING id::text`,
+    `INSERT INTO listings (${INSERT_COLUMNS}) VALUES (${placeholders}) RETURNING id::text`,
     values,
   );
   const listingId = inserted.rows[0]!.id;
@@ -495,8 +502,13 @@ export async function updateListing(formData: FormData): Promise<void> {
   }
 
   const f = parsed.fields;
+  const formRegionId = String(formData.get("region_id") ?? "").trim();
+  const regionId = /^\d+$/.test(formRegionId)
+    ? formRegionId
+    : ((await getCurrentRegionId()) ?? "");
+
   await query(
-    `UPDATE listings SET ${UPDATE_SET} WHERE id = $1::bigint AND seller_id = $43::bigint`,
+    `UPDATE listings SET ${UPDATE_SET} WHERE id = $1::bigint AND seller_id = $44::bigint`,
     [
       listingId,
       f.title,
@@ -540,6 +552,7 @@ export async function updateListing(formData: FormData): Promise<void> {
       f.warranty_text,
       f.has_original_receipt,
       f.body_position_id ?? "",
+      regionId,
       user.id,
     ],
   );

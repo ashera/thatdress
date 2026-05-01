@@ -5,6 +5,7 @@ export type ListingFormDefaults = {
   title?: string | null;
   description?: string | null;
   price_dollars?: string;
+  region_id?: string | null;
   make_id?: string | null;
   model?: string | null;
   year?: number | null;
@@ -118,6 +119,24 @@ export function ListingForm({
       <section className="form-card">
         <h2 className="card-heading">Basics</h2>
         <p className="card-sub">Required to publish a listing.</p>
+
+        <Field
+          label="Region"
+          htmlFor="region_id"
+          help="Defaults to your current region. Buyers in this region will see the listing."
+        >
+          <Select
+            name="region_id"
+            options={refs.regions}
+            defaultValue={defaults.region_id}
+            required
+            placeholder={
+              refs.regions.length === 0
+                ? "No regions configured"
+                : "Select a region"
+            }
+          />
+        </Field>
 
         <Field label="Make" htmlFor="make_id">
           <Select
