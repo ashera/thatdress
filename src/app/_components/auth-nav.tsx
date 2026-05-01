@@ -4,8 +4,9 @@ import { getCurrentUser } from "@/lib/auth";
 import { query } from "@/lib/db";
 import { resolveCurrentRegion, getCurrentRegionId } from "@/lib/regions";
 import { unreadMessageCount } from "@/lib/messages";
-import { Button, ButtonLink } from "./ui";
+import { ButtonLink } from "./ui";
 import { MobileMenu } from "./mobile-menu";
+import { AvatarMenu } from "./avatar-menu";
 
 async function getDbOk(): Promise<boolean> {
   try {
@@ -117,8 +118,6 @@ export async function AuthNav() {
           <nav>
             <Link href="/listings">Browse</Link>
             <Link href="/listings/new">Sell</Link>
-            {user && <Link href="/shortlist">Saved</Link>}
-            {user && <Link href="/listings/mine">My listings</Link>}
             {user && (
               <Link href="/messages" className="nav-messages">
                 Messages
@@ -150,14 +149,13 @@ export async function AuthNav() {
 
             {user ? (
               <>
-                <Link href="/profile" className="who">
-                  {user.email}
-                </Link>
-                <form action={logout}>
-                  <Button type="submit" variant="ghost" size="sm">
-                    Log out
-                  </Button>
-                </form>
+                <AvatarMenu email={user.email}>
+                  <Link href="/listings/mine">My listings</Link>
+                  <Link href="/profile">Profile</Link>
+                  <form action={logout}>
+                    <button type="submit">Log out</button>
+                  </form>
+                </AvatarMenu>
                 <ButtonLink href="/support" variant="ghost" size="sm">
                   Help
                 </ButtonLink>

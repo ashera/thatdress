@@ -38,7 +38,7 @@ type RawSearchParams = {
   mode?: string | string[];
 };
 
-type BrowseMode = "for-sale" | "sold";
+type BrowseMode = "for-sale" | "sold" | "shortlist";
 
 function buildModeHref(mode: BrowseMode, sp: RawSearchParams): string {
   const params = new URLSearchParams();
@@ -50,7 +50,7 @@ function buildModeHref(mode: BrowseMode, sp: RawSearchParams): string {
       params.set(key, value);
     }
   }
-  if (mode === "sold") params.set("mode", "sold");
+  if (mode !== "for-sale") params.set("mode", mode);
   const qs = params.toString();
   return qs ? `/listings?${qs}` : "/listings";
 }
@@ -104,21 +104,32 @@ function buildFilters(
   raw: RawSearchParams,
   isAdmin: boolean,
   mode: BrowseMode,
+  userId: string | null,
 ): {
   active: ActiveFilters;
   where: string[];
   params: unknown[];
 } {
-  // Non-admins only ever see published listings. Admins can request a
-  // visibility filter explicitly via ?visibility=published|hidden, or
-  // omit it (default "all") to see everything.
   const where: string[] = [];
   const params: unknown[] = [];
   const active: ActiveFilters = {};
 
-  // For-sale vs sold split. Default = for-sale (sold_at IS NULL).
+  // Mode: for-sale (default), sold, or shortlist (user's saved bikes).
   if (mode === "sold") {
     where.push("l.sold_at IS NOT NULL");
+  } else if (mode === "shortlist") {
+    if (userId) {
+      params.push(userId);
+      where.push(
+        `EXISTS (SELECT 1 FROM shortlists s
+          WHERE s.user_id = $${params.length}::bigint
+            AND s.listing_id = l.id
+            AND s.ignored_at IS NULL)`,
+      );
+    } else {
+      // Anonymous viewer: no shortlist exists, force empty result set.
+      where.push("FALSE");
+    }
   } else {
     where.push("l.sold_at IS NULL");
   }
@@ -312,12 +323,20 @@ export default async function ListingsPage({
   const user = await getCurrentUser();
   const isAdmin = user?.isAdmin ?? false;
 
+  const rawMode = Array.isArray(sp.mode) ? sp.mode[0] : sp.mode;
   const mode: BrowseMode =
-    (Array.isArray(sp.mode) ? sp.mode[0] : sp.mode) === "sold"
+    rawMode === "sold"
       ? "sold"
-      : "for-sale";
+      : rawMode === "shortlist"
+        ? "shortlist"
+        : "for-sale";
 
-  const { active, where, params } = buildFilters(sp, isAdmin, mode);
+  const { active, where, params } = buildFilters(
+    sp,
+    isAdmin,
+    mode,
+    user?.id ?? null,
+  );
 
   // Apply current region filter for non-admins. Strict — only listings in
   // the current region — but always include the viewer's own listings
@@ -369,11 +388,24 @@ export default async function ListingsPage({
         >
           Sold
         </Link>
+        <Link
+          href={buildModeHref("shortlist", sp)}
+          className={`mode-toggle-btn ${mode === "shortlist" ? "is-active" : ""}`}
+          aria-current={mode === "shortlist" ? "page" : undefined}
+        >
+          Shortlist
+        </Link>
       </div>
 
       <div className="browse-toolbar">
         <div className="left">
-          <h3>{mode === "sold" ? "Recently sold" : "Browse eBikes"}</h3>
+          <h3>
+            {mode === "sold"
+              ? "Recently sold"
+              : mode === "shortlist"
+                ? "Your shortlist"
+                : "Browse eBikes"}
+          </h3>
           {result.ok && (
             <span className="count">
               {count} {count === 1 ? "listing" : "listings"}
@@ -417,16 +449,24 @@ export default async function ListingsPage({
               ? "No matches"
               : mode === "sold"
                 ? "Nothing sold yet"
-                : "No listings yet"}
+                : mode === "shortlist"
+                  ? user
+                    ? "Your shortlist is empty"
+                    : "Sign in to see your shortlist"
+                  : "No listings yet"}
           </h3>
           <p style={{ margin: "0 0 var(--s-5)" }}>
             {filterCount > 0
               ? "Try widening your filters or clearing the search."
               : mode === "sold"
                 ? "When sellers mark their listings as sold, they'll show up here."
-                : user
-                  ? "Be the first to post one."
-                  : "Register to post the first one."}
+                : mode === "shortlist"
+                  ? user
+                    ? "Tap the heart on any listing to save it for later."
+                    : "Sign in to save listings and pick up where you left off."
+                  : user
+                    ? "Be the first to post one."
+                    : "Register to post the first one."}
           </p>
           {filterCount > 0 ? (
             <ButtonLink
@@ -439,6 +479,14 @@ export default async function ListingsPage({
           ) : mode === "sold" ? (
             <ButtonLink href="/listings" variant="primary" iconRight="arrow">
               Browse for-sale listings
+            </ButtonLink>
+          ) : mode === "shortlist" ? (
+            <ButtonLink
+              href={user ? "/listings" : "/login?next=/listings?mode=shortlist"}
+              variant="primary"
+              iconRight="arrow"
+            >
+              {user ? "Browse listings" : "Log in"}
             </ButtonLink>
           ) : (
             <ButtonLink
