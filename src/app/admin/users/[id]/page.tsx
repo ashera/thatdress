@@ -26,7 +26,6 @@ type UserRow = {
   is_admin: boolean;
   suspended_at: string | null;
   created_at: string;
-  location: string | null;
   title: string | null;
   first_name: string | null;
   surname: string | null;
@@ -71,7 +70,6 @@ export default async function AdminUserDetailPage({
             u.is_admin,
             u.suspended_at::text,
             u.created_at::text,
-            u.location,
             u.title,
             u.first_name,
             u.surname,
@@ -201,15 +199,6 @@ export default async function AdminUserDetailPage({
               />
             </Field>
           </div>
-
-          <Field label="Region (label)" htmlFor="location">
-            <Input
-              id="location"
-              name="location"
-              maxLength={64}
-              defaultValue={user.location ?? ""}
-            />
-          </Field>
 
           <div style={{ display: "flex", justifyContent: "flex-end" }}>
             <Button type="submit" variant="primary" iconRight="arrow">

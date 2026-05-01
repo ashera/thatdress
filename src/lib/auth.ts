@@ -13,7 +13,6 @@ export type User = {
   id: string;
   email: string;
   isAdmin: boolean;
-  location: string | null;
   title: string | null;
   firstName: string | null;
   surname: string | null;
@@ -76,7 +75,6 @@ export async function getCurrentUser(): Promise<User | null> {
       id: string;
       email: string;
       is_admin: boolean;
-      location: string | null;
       title: string | null;
       first_name: string | null;
       surname: string | null;
@@ -86,7 +84,6 @@ export async function getCurrentUser(): Promise<User | null> {
       `SELECT u.id::text AS id,
               u.email,
               u.is_admin,
-              u.location,
               u.title,
               u.first_name,
               u.surname,
@@ -106,7 +103,6 @@ export async function getCurrentUser(): Promise<User | null> {
       id: row.id,
       email: row.email,
       isAdmin: row.is_admin,
-      location: row.location,
       title: row.title,
       firstName: row.first_name,
       surname: row.surname,

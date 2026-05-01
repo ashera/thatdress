@@ -31,7 +31,6 @@ export async function updateUserAsAdmin(formData: FormData): Promise<void> {
   const surname = clean(formData, "surname", 64);
   const town = clean(formData, "town", 64);
   const postcode = clean(formData, "postcode", 16);
-  const location = clean(formData, "location", 64);
 
   await query(
     `UPDATE users
@@ -39,10 +38,9 @@ export async function updateUserAsAdmin(formData: FormData): Promise<void> {
             first_name = $2,
             surname = $3,
             town = $4,
-            postcode = $5,
-            location = $6
-      WHERE id = $7::bigint`,
-    [title, firstName, surname, town, postcode, location, id],
+            postcode = $5
+      WHERE id = $6::bigint`,
+    [title, firstName, surname, town, postcode, id],
   );
 
   revalidatePath(`/admin/users/${id}`);

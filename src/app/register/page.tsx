@@ -2,8 +2,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { register } from "@/lib/actions/auth";
 import { getCurrentUser } from "@/lib/auth";
-import { getAnonymousLocation } from "@/lib/geo";
-import { listActiveRegions, matchRegion } from "@/lib/regions";
 import { Button, Field, Input } from "../_components/ui";
 
 export const dynamic = "force-dynamic";
@@ -27,14 +25,8 @@ export default async function RegisterPage({
   const { error } = await searchParams;
   const errorMessage = error ? ERRORS[error] ?? "Something went wrong." : null;
 
-  const regions = await listActiveRegions();
-  const ipLoc = await getAnonymousLocation();
-  const detectedRegion =
-    ipLoc && regions.length > 0 ? matchRegion(regions, ipLoc) : null;
-
   return (
     <div className="page auth-page">
-
       <main style={{ width: "100%", maxWidth: 400 }}>
         <div className="form-card">
           <div>
@@ -47,7 +39,11 @@ export default async function RegisterPage({
 
           <form
             action={register}
-            style={{ display: "flex", flexDirection: "column", gap: "var(--s-4)" }}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "var(--s-4)",
+            }}
           >
             <Field label="Email" htmlFor="email">
               <Input
@@ -75,35 +71,15 @@ export default async function RegisterPage({
               />
             </Field>
 
-            <Field
-              label="Region"
-              htmlFor="location"
-              help={
-                regions.length === 0
-                  ? "No regions configured. You'll be able to set this from your profile later."
-                  : detectedRegion
-                    ? `Pre-selected from your IP (${detectedRegion.label}). Change if not right.`
-                    : "Pick the region we serve that's closest to you. Optional."
-              }
-            >
-              <select
-                id="location"
-                name="location"
-                className="input"
-                defaultValue={detectedRegion?.label ?? ""}
-              >
-                <option value="">Select a region (optional)</option>
-                {regions.map((r) => (
-                  <option key={r.id} value={r.label}>
-                    {r.label}
-                  </option>
-                ))}
-              </select>
-            </Field>
-
             {errorMessage && <p className="form-error">{errorMessage}</p>}
 
-            <Button type="submit" variant="primary" size="lg" block iconRight="arrow">
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
+              block
+              iconRight="arrow"
+            >
               Create account
             </Button>
           </form>

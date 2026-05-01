@@ -41,18 +41,13 @@ export async function register(formData: FormData): Promise<void> {
     redirect(`/register?error=${error}`);
   }
 
-  const location =
-    String(formData.get("location") ?? "")
-      .trim()
-      .slice(0, 64) || null;
-
   const password_hash = await hashPassword(password);
 
   let userId: string;
   try {
     const result = await query<{ id: string }>(
-      "INSERT INTO users (email, password_hash, location) VALUES ($1, $2, $3) RETURNING id::text",
-      [email, password_hash, location],
+      "INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING id::text",
+      [email, password_hash],
     );
     userId = result.rows[0]!.id;
   } catch (err) {
@@ -101,25 +96,6 @@ export async function updateProfile(formData: FormData): Promise<void> {
       WHERE id = $6::bigint`,
     [title, firstName, surname, town, postcode, user.id],
   );
-
-  revalidatePath("/profile");
-  revalidatePath("/", "layout");
-  redirect("/profile?saved=1");
-}
-
-export async function updateLocation(formData: FormData): Promise<void> {
-  const user = await getCurrentUser();
-  if (!user) redirect("/login");
-
-  const location =
-    String(formData.get("location") ?? "")
-      .trim()
-      .slice(0, 64) || null;
-
-  await query(`UPDATE users SET location = $1 WHERE id = $2::bigint`, [
-    location,
-    user.id,
-  ]);
 
   revalidatePath("/profile");
   revalidatePath("/", "layout");

@@ -8,7 +8,6 @@ type Row = {
   id: string;
   email: string;
   is_admin: boolean;
-  location: string | null;
   first_name: string | null;
   surname: string | null;
   town: string | null;
@@ -42,7 +41,6 @@ export default async function AdminUsersPage() {
     `SELECT u.id::text,
             u.email,
             u.is_admin,
-            u.location,
             u.first_name,
             u.surname,
             u.town,
@@ -80,7 +78,7 @@ export default async function AdminUsersPage() {
           <div className="users-row users-head">
             <div>Email</div>
             <div>Name</div>
-            <div>Location</div>
+            <div>Town</div>
             <div>Listings</div>
             <div>Threads</div>
             <div>Joined</div>
@@ -97,7 +95,7 @@ export default async function AdminUsersPage() {
                 {u.is_admin && <span className="users-tag --admin">Admin</span>}
               </div>
               <div>{fullName(u)}</div>
-              <div className="users-loc">{u.location ?? "—"}</div>
+              <div className="users-loc">{u.town ?? "—"}</div>
               <div>{u.listing_count}</div>
               <div>{u.conversation_count}</div>
               <div className="users-date">{formatDate(u.created_at)}</div>
