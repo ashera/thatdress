@@ -6,7 +6,6 @@ import { query, withTransaction } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { getCurrentRegionId } from "@/lib/regions";
 
-const TITLE_MAX = 200;
 const DESCRIPTION_MAX = 5000;
 const PRICE_MAX_DOLLARS = 1_000_000;
 
@@ -106,7 +105,6 @@ function getCheckbox(formData: FormData, key: string): boolean {
 }
 
 type ListingFields = {
-  title: string;
   description: string | null;
   price_cents: number;
   make_id: string;
@@ -155,9 +153,8 @@ type ParseResult =
   | { ok: false; error: string };
 
 function parseListingFields(formData: FormData): ParseResult {
-  const title = getString(formData, "title", TITLE_MAX);
-  if (!title) return { ok: false, error: "invalid-title" };
-
+  // Title is derived from year + make name + model in SQL — sellers don't
+  // supply it.
   const description = getString(formData, "description", DESCRIPTION_MAX);
   if (description.length > DESCRIPTION_MAX) {
     return { ok: false, error: "long-description" };
@@ -220,7 +217,6 @@ function parseListingFields(formData: FormData): ParseResult {
   return {
     ok: true,
     fields: {
-      title,
       description: nullableString(description),
       price_cents: priceCents,
       make_id,
@@ -266,111 +262,56 @@ function parseListingFields(formData: FormData): ParseResult {
   };
 }
 
-function listingValuesForInsert(f: ListingFields, sellerId: string) {
-  return [
-    f.title,
-    f.description,
-    f.price_cents,
-    sellerId,
-    f.make_id,
-    f.model,
-    f.year,
-    f.condition_id,
-    f.bike_class_id,
-    f.bike_category_id,
-    f.location_postal,
-    f.frame_size,
-    f.frame_style_id,
-    f.frame_material_id,
-    f.gender_fit_id,
-    f.wheel_size_id,
-    f.suspension_type_id,
-    f.brake_type_id,
-    f.motor_brand_id,
-    f.motor_type_id,
-    f.motor_watts_nominal,
-    f.motor_watts_peak,
-    f.motor_torque_nm,
-    f.battery_wh,
-    f.battery_voltage,
-    f.battery_amp_hours,
-    f.charge_time_hours,
-    f.top_speed_mph,
-    f.range_miles_min,
-    f.range_miles_max,
-    f.drive_mode_id,
-    f.mileage,
-    f.color,
-    f.weight_lbs,
-    f.display_type,
-    f.drivetrain,
-    f.accessories,
-    f.modifications,
-    f.has_warranty,
-    f.warranty_text,
-    f.has_original_receipt,
-    f.body_position_id,
-    f.offers_enabled,
-  ];
-}
-
-const INSERT_COLUMNS = `
-  title, description, price_cents, seller_id,
-  make_id, model, year, condition_id, bike_class_id, bike_category_id,
-  location_postal, frame_size, frame_style_id, frame_material_id,
-  gender_fit_id, wheel_size_id, suspension_type_id, brake_type_id,
-  motor_brand_id, motor_type_id, motor_watts_nominal, motor_watts_peak,
-  motor_torque_nm, battery_wh, battery_voltage, battery_amp_hours,
-  charge_time_hours, top_speed_mph, range_miles_min, range_miles_max,
-  drive_mode_id, mileage, color, weight_lbs, display_type, drivetrain,
-  accessories, modifications, has_warranty, warranty_text,
-  has_original_receipt, body_position_id, offers_enabled, region_id
-`;
-
+// Title is auto-derived from year + make name + model on every update so
+// it never drifts if any of the three change.
 const UPDATE_SET = `
-  title = $2,
-  description = $3,
-  price_cents = $4,
-  make_id = $5::bigint,
-  model = $6,
-  year = $7,
-  condition_id = $8::bigint,
-  bike_class_id = $9::bigint,
-  bike_category_id = $10::bigint,
-  location_postal = $11,
-  frame_size = $12,
-  frame_style_id = NULLIF($13, '')::bigint,
-  frame_material_id = NULLIF($14, '')::bigint,
-  gender_fit_id = NULLIF($15, '')::bigint,
-  wheel_size_id = NULLIF($16, '')::bigint,
-  suspension_type_id = NULLIF($17, '')::bigint,
-  brake_type_id = NULLIF($18, '')::bigint,
-  motor_brand_id = NULLIF($19, '')::bigint,
-  motor_type_id = NULLIF($20, '')::bigint,
-  motor_watts_nominal = $21,
-  motor_watts_peak = $22,
-  motor_torque_nm = $23,
-  battery_wh = $24,
-  battery_voltage = $25,
-  battery_amp_hours = $26,
-  charge_time_hours = $27,
-  top_speed_mph = $28,
-  range_miles_min = $29,
-  range_miles_max = $30,
-  drive_mode_id = NULLIF($31, '')::bigint,
-  mileage = $32,
-  color = $33,
-  weight_lbs = $34,
-  display_type = $35,
-  drivetrain = $36,
-  accessories = $37,
-  modifications = $38,
-  has_warranty = $39,
-  warranty_text = $40,
-  has_original_receipt = $41,
-  body_position_id = NULLIF($42, '')::bigint,
-  offers_enabled = $43,
-  region_id = NULLIF($44, '')::bigint
+  title = TRIM(BOTH FROM CONCAT_WS(' ',
+    $6::text,
+    (SELECT name FROM bike_makes WHERE id = $4::bigint),
+    $5
+  )),
+  description = $2,
+  price_cents = $3,
+  make_id = $4::bigint,
+  model = $5,
+  year = $6,
+  condition_id = $7::bigint,
+  bike_class_id = $8::bigint,
+  bike_category_id = $9::bigint,
+  location_postal = $10,
+  frame_size = $11,
+  frame_style_id = NULLIF($12, '')::bigint,
+  frame_material_id = NULLIF($13, '')::bigint,
+  gender_fit_id = NULLIF($14, '')::bigint,
+  wheel_size_id = NULLIF($15, '')::bigint,
+  suspension_type_id = NULLIF($16, '')::bigint,
+  brake_type_id = NULLIF($17, '')::bigint,
+  motor_brand_id = NULLIF($18, '')::bigint,
+  motor_type_id = NULLIF($19, '')::bigint,
+  motor_watts_nominal = $20,
+  motor_watts_peak = $21,
+  motor_torque_nm = $22,
+  battery_wh = $23,
+  battery_voltage = $24,
+  battery_amp_hours = $25,
+  charge_time_hours = $26,
+  top_speed_mph = $27,
+  range_miles_min = $28,
+  range_miles_max = $29,
+  drive_mode_id = NULLIF($30, '')::bigint,
+  mileage = $31,
+  color = $32,
+  weight_lbs = $33,
+  display_type = $34,
+  drivetrain = $35,
+  accessories = $36,
+  modifications = $37,
+  has_warranty = $38,
+  warranty_text = $39,
+  has_original_receipt = $40,
+  body_position_id = NULLIF($41, '')::bigint,
+  offers_enabled = $42,
+  region_id = NULLIF($43, '')::bigint
 `;
 
 function collectImageFiles(formData: FormData): File[] {
@@ -410,51 +351,6 @@ async function insertImages(
     );
     if (isPrimary) hasExistingPrimary = true;
   }
-}
-
-export async function createListing(formData: FormData): Promise<void> {
-  const user = await getCurrentUser();
-  if (!user) {
-    redirect("/login?error=invalid-credentials");
-  }
-
-  const parsed = parseListingFields(formData);
-  if (!parsed.ok) {
-    redirect(`/listings/new?error=${parsed.error}`);
-  }
-
-  const files = collectImageFiles(formData);
-  const imageErr = validateImages(files);
-  if (imageErr) redirect(`/listings/new?error=${imageErr}`);
-
-  // Region: form value wins; fall back to the seller's current session
-  // region for safety (the form makes it required, but admins can submit
-  // without one if no region is configured).
-  const formRegionId = String(formData.get("region_id") ?? "").trim();
-  const regionId = /^\d+$/.test(formRegionId)
-    ? formRegionId
-    : await getCurrentRegionId();
-
-  const values = listingValuesForInsert(parsed.fields, user.id);
-  values.push(regionId);
-  const placeholders = Array.from({ length: values.length }, (_, i) => `$${i + 1}`).join(
-    ", ",
-  );
-  const inserted = await query<{ id: string }>(
-    `INSERT INTO listings (${INSERT_COLUMNS}) VALUES (${placeholders}) RETURNING id::text`,
-    values,
-  );
-  const listingId = inserted.rows[0]!.id;
-
-  try {
-    await insertImages(listingId, files, 0, false);
-  } catch {
-    revalidatePath("/listings");
-    redirect(`/listings/${listingId}/edit?error=upload-failed`);
-  }
-
-  revalidatePath("/listings");
-  redirect(`/listings/${listingId}`);
 }
 
 export async function toggleListingSold(formData: FormData): Promise<void> {
@@ -565,10 +461,9 @@ export async function updateListing(formData: FormData): Promise<void> {
   await query(
     `UPDATE listings SET ${UPDATE_SET}
       WHERE id = $1::bigint
-        AND (seller_id = $45::bigint OR $46::boolean)`,
+        AND (seller_id = $44::bigint OR $45::boolean)`,
     [
       listingId,
-      f.title,
       f.description,
       f.price_cents,
       f.make_id,

@@ -29,7 +29,6 @@ const ERRORS: Record<string, string> = {
   "too-large": "Each photo must be 5 MB or smaller.",
   "bad-type": "Photos must be JPEG, PNG, or WebP.",
   "upload-failed": "We couldn't save those photos — please try again.",
-  "invalid-title": "Title is required (200 characters or fewer).",
   "long-description": "Description must be 5,000 characters or fewer.",
   "invalid-price": "Enter a valid price in dollars (e.g. 1899 or 1899.00).",
   "invalid-make": "Pick a make.",
@@ -162,7 +161,6 @@ export default async function EditListingPage({
   const images = imagesRes.rows;
 
   const defaults: ListingFormDefaults = {
-    title: listing.title,
     description: listing.description,
     price_dollars: (listing.price_cents / 100).toFixed(2),
     region_id: listing.region_id,

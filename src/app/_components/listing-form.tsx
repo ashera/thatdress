@@ -2,7 +2,6 @@ import type { ListingRefOptions, RefOption } from "@/lib/ref-data";
 import { Button, Field, Input, Textarea } from "./ui";
 
 export type ListingFormDefaults = {
-  title?: string | null;
   description?: string | null;
   price_dollars?: string;
   offers_enabled?: boolean;
@@ -200,15 +199,10 @@ export function ListingForm({
           </Field>
         </div>
 
-        <Field label="Title" htmlFor="title" help="Shown on listing cards.">
-          <Input
-            id="title"
-            name="title"
-            required
-            maxLength={200}
-            defaultValue={defaults.title ?? ""}
-          />
-        </Field>
+        <p className="card-sub" style={{ marginTop: 0 }}>
+          The listing title shows up automatically as &ldquo;Year Make
+          Model&rdquo;.
+        </p>
 
         <div className="grid-2">
           <Field label="Price (USD)" htmlFor="price">

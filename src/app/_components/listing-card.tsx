@@ -12,7 +12,6 @@ export type ListingCardStat = {
 export type ListingCardData = {
   id: string;
   title: string;
-  tagline: { year: string; make: string; model: string };
   price: string;
   chips: [string, string, string];
   stats: ListingCardStat[];
@@ -146,18 +145,6 @@ function buildHighlights(row: ListingCardRow): [string | null, string | null, st
   return [out[0] ?? null, out[1] ?? null, out[2] ?? null];
 }
 
-function buildTagline(row: ListingCardRow): {
-  year: string;
-  make: string;
-  model: string;
-} {
-  return {
-    year: row.year ? String(row.year) : PLACEHOLDER,
-    make: row.make_name ?? PLACEHOLDER,
-    model: row.model ?? PLACEHOLDER,
-  };
-}
-
 export function listingFromRow(
   row: ListingCardRow,
   currentUserId?: string | null,
@@ -179,7 +166,6 @@ export function listingFromRow(
   return {
     id: row.id,
     title: row.title,
-    tagline: buildTagline(row),
     price: priceFmt.format(row.price_cents / 100),
     chips: buildChips(row),
     stats: buildStats(row),
@@ -226,10 +212,6 @@ function ShortlistButton({
 
 export function ListingRow({ data }: { data: ListingCardData }) {
   const detailHref = `/listings/${data.id}`;
-  const tagline =
-    [data.tagline.year, data.tagline.make, data.tagline.model]
-      .filter((s) => s !== PLACEHOLDER)
-      .join(" · ") || PLACEHOLDER;
   return (
     <article
       className={`listing-row ${data.isHidden ? "is-hidden" : ""} ${data.isOwn ? "is-own" : ""} ${data.isSold ? "is-sold" : ""}`}
@@ -264,9 +246,6 @@ export function ListingRow({ data }: { data: ListingCardData }) {
 
       <div className="listing-row-info">
         <h3 className="listing-row-title">{data.title}</h3>
-        <p className={`listing-row-tagline ${tagline === PLACEHOLDER ? "is-empty" : ""}`}>
-          {tagline}
-        </p>
         <div className="listing-row-chips">
           {data.chips.map((c, i) => (
             <span
@@ -326,19 +305,6 @@ export function ListingCard({ data }: { data: ListingCardData }) {
           ))}
         </div>
         <h3 className="listing-title">{data.title}</h3>
-        <p className="listing-tagline">
-          <span className={data.tagline.year === PLACEHOLDER ? "is-empty" : ""}>
-            {data.tagline.year}
-          </span>
-          <span className="sep" aria-hidden> · </span>
-          <span className={data.tagline.make === PLACEHOLDER ? "is-empty" : ""}>
-            {data.tagline.make}
-          </span>
-          <span className="sep" aria-hidden> · </span>
-          <span className={data.tagline.model === PLACEHOLDER ? "is-empty" : ""}>
-            {data.tagline.model}
-          </span>
-        </p>
       </div>
 
       <div className="listing-photo">

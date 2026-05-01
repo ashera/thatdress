@@ -555,3 +555,19 @@ CREATE INDEX IF NOT EXISTS listing_views_viewer_idx
 -- Backfill existing accounts as verified — pre-rollout users shouldn't be
 -- nagged after the fact.
 UPDATE users SET email_verified_at = COALESCE(email_verified_at, created_at);
+
+-- Switch existing listings to the auto-derived "Year Make Model" title
+-- format. Skips rows where year/make/model aren't all present (drafts).
+UPDATE listings
+   SET title = derived.t
+  FROM (
+    SELECT l.id,
+           TRIM(BOTH FROM CONCAT_WS(' ', l.year::text, mk.name, l.model)) AS t
+      FROM listings l
+      LEFT JOIN bike_makes mk ON mk.id = l.make_id
+     WHERE l.year IS NOT NULL
+       AND l.make_id IS NOT NULL
+       AND l.model IS NOT NULL
+  ) derived
+ WHERE listings.id = derived.id
+   AND listings.title IS DISTINCT FROM derived.t;

@@ -6,7 +6,6 @@ import { query } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { getCurrentRegionId } from "@/lib/regions";
 
-const TITLE_MAX = 200;
 const DESCRIPTION_MAX = 5000;
 const PRICE_MAX_DOLLARS = 1_000_000;
 
@@ -197,9 +196,6 @@ export async function saveDraftPhotos(formData: FormData): Promise<void> {
 
   const stepUrl = `/listings/new/${listingId}/photos`;
 
-  const title = getString(formData, "title", TITLE_MAX);
-  if (!title) redirect(`${stepUrl}?error=invalid-title`);
-
   const make_id = getRequiredId(formData, "make_id");
   if (!make_id) redirect(`${stepUrl}?error=invalid-make`);
 
@@ -216,14 +212,19 @@ export async function saveDraftPhotos(formData: FormData): Promise<void> {
   const imageErr = validateImages(files);
   if (imageErr) redirect(`${stepUrl}?error=${imageErr}`);
 
+  // Title is derived from year, make name, and model — no free-text input.
   await query(
     `UPDATE listings
-        SET title = $2,
-            make_id = $3::bigint,
-            model = $4,
-            year = $5
+        SET make_id = $2::bigint,
+            model = $3,
+            year = $4,
+            title = TRIM(BOTH FROM CONCAT_WS(' ',
+              $4::text,
+              (SELECT name FROM bike_makes WHERE id = $2::bigint),
+              $3
+            ))
       WHERE id = $1::bigint`,
-    [listingId, title, make_id, model, year],
+    [listingId, make_id, model, year],
   );
 
   if (files.length > 0) {

@@ -61,17 +61,10 @@ export default async function WizardPhotosPage({
 
         <section className="form-card">
           <h2 className="card-heading">Bike basics</h2>
-          <p className="card-sub">All four are required to continue.</p>
-
-          <Field label="Title" htmlFor="title" help="Shown on listing cards.">
-            <Input
-              id="title"
-              name="title"
-              required
-              maxLength={200}
-              defaultValue={draft.title ?? ""}
-            />
-          </Field>
+          <p className="card-sub">
+            All three are required to continue. Your listing title is built
+            automatically from these — e.g. &ldquo;2024 Trek Allant+ 7&rdquo;.
+          </p>
 
           <Field label="Make" htmlFor="make_id">
             <select
