@@ -5,11 +5,17 @@ import { Icon } from "./ui";
 
 export function AvatarMenu({
   email,
+  name,
   children,
 }: {
   email: string;
+  name?: string | null;
   children: ReactNode;
 }) {
+  const displayName =
+    name && name.trim().length > 0
+      ? name.trim()
+      : email.split("@")[0] ?? email;
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -58,6 +64,7 @@ export function AvatarMenu({
         title={email}
       >
         <Icon name="user" />
+        <span className="avatar-name">{displayName}</span>
       </button>
       <div className="avatar-menu-panel">{children}</div>
     </div>
