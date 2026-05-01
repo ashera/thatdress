@@ -26,8 +26,7 @@ export function RegionPicker({ detected, regions, next = "/" }: Props) {
             <p className="region-gate-detect">
               {detected ? (
                 <>
-                  We detected your location as <strong>{detected}</strong>, but
-                  it&rsquo;s not in any of the regions we currently cover.
+                  We detected your location as <strong>{detected}</strong>.
                 </>
               ) : (
                 <>
