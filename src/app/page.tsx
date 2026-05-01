@@ -12,7 +12,8 @@ type SpecStats = {
   battery_max: number | null;
   speed_min: number | null;
   speed_max: number | null;
-  conditions: number;
+  weight_min: number | null;
+  weight_max: number | null;
 };
 
 async function getSpecStats(regionId: string | null): Promise<SpecStats> {
@@ -24,15 +25,23 @@ async function getSpecStats(regionId: string | null): Promise<SpecStats> {
       battery_max: string | null;
       speed_min: string | null;
       speed_max: string | null;
-      conditions: string;
+      weight_min: string | null;
+      weight_max: string | null;
     }>(
-      `SELECT MIN(NULLIF(range_miles_min, 0))::text AS range_min,
-              MAX(NULLIF(range_miles_max, 0))::text AS range_max,
-              MIN(NULLIF(battery_wh,      0))::text AS battery_min,
-              MAX(NULLIF(battery_wh,      0))::text AS battery_max,
-              MIN(NULLIF(top_speed_mph,   0))::text AS speed_min,
-              MAX(NULLIF(top_speed_mph,   0))::text AS speed_max,
-              COUNT(DISTINCT condition_id)::text     AS conditions
+      `SELECT LEAST(
+                MIN(NULLIF(range_miles_min, 0)),
+                MIN(NULLIF(range_miles_max, 0))
+              )::text AS range_min,
+              GREATEST(
+                MAX(NULLIF(range_miles_min, 0)),
+                MAX(NULLIF(range_miles_max, 0))
+              )::text AS range_max,
+              MIN(NULLIF(battery_wh,    0))::text AS battery_min,
+              MAX(NULLIF(battery_wh,    0))::text AS battery_max,
+              MIN(NULLIF(top_speed_mph, 0))::text AS speed_min,
+              MAX(NULLIF(top_speed_mph, 0))::text AS speed_max,
+              MIN(NULLIF(weight_lbs,    0))::text AS weight_min,
+              MAX(NULLIF(weight_lbs,    0))::text AS weight_max
          FROM listings
         WHERE is_published = TRUE
           AND sold_at IS NULL
@@ -49,7 +58,8 @@ async function getSpecStats(regionId: string | null): Promise<SpecStats> {
       battery_max: num(row?.battery_max),
       speed_min: num(row?.speed_min),
       speed_max: num(row?.speed_max),
-      conditions: Number(row?.conditions ?? 0),
+      weight_min: num(row?.weight_min),
+      weight_max: num(row?.weight_max),
     };
   } catch {
     return {
@@ -59,7 +69,8 @@ async function getSpecStats(regionId: string | null): Promise<SpecStats> {
       battery_max: null,
       speed_min: null,
       speed_max: null,
-      conditions: 0,
+      weight_min: null,
+      weight_max: null,
     };
   }
 }
@@ -68,7 +79,8 @@ function specRange(min: number | null, max: number | null): string {
   if (min == null && max == null) return "—";
   if (min == null) return String(max);
   if (max == null || max === min) return String(min);
-  return `${min}–${max}`;
+  const [low, high] = min <= max ? [min, max] : [max, min];
+  return `${low}–${high}`;
 }
 
 export default async function Home() {
@@ -175,8 +187,9 @@ export default async function Home() {
             unit="km/h"
           />
           <Spec
-            k="Conditions"
-            v={stats.conditions > 0 ? String(stats.conditions) : "—"}
+            k="Weight"
+            v={specRange(stats.weight_min, stats.weight_max)}
+            unit="kg"
           />
         </div>
       </section>
