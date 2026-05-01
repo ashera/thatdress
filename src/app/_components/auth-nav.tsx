@@ -158,6 +158,9 @@ export async function AuthNav() {
                     Log out
                   </Button>
                 </form>
+                <ButtonLink href="/support" variant="ghost" size="sm">
+                  Help
+                </ButtonLink>
               </>
             ) : (
               <>

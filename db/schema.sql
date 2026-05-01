@@ -443,3 +443,32 @@ CREATE TABLE IF NOT EXISTS offers (
 
 CREATE INDEX IF NOT EXISTS offers_listing_idx ON offers (listing_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS offers_buyer_idx ON offers (buyer_id, created_at DESC);
+
+-- =========================================================
+-- Support tickets
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS support_tickets (
+  id          BIGSERIAL    PRIMARY KEY,
+  user_id     BIGINT       NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  subject     TEXT         NOT NULL,
+  status      TEXT         NOT NULL DEFAULT 'open',
+  created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS support_tickets_user_idx
+  ON support_tickets (user_id, updated_at DESC);
+CREATE INDEX IF NOT EXISTS support_tickets_status_idx
+  ON support_tickets (status, updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS support_messages (
+  id          BIGSERIAL    PRIMARY KEY,
+  ticket_id   BIGINT       NOT NULL REFERENCES support_tickets(id) ON DELETE CASCADE,
+  sender_id   BIGINT       NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  body        TEXT         NOT NULL,
+  created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS support_messages_ticket_idx
+  ON support_messages (ticket_id, created_at);
