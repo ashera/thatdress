@@ -1,6 +1,5 @@
 import "server-only";
 import { createHash, randomBytes } from "node:crypto";
-import { revalidatePath } from "next/cache";
 import { query } from "@/lib/db";
 import {
   emailLayout,
@@ -100,6 +99,5 @@ export async function verifyEmailByToken(token: string): Promise<VerifyResult> {
     [row.id],
   );
 
-  revalidatePath("/", "layout");
   return { ok: true };
 }
