@@ -30,7 +30,7 @@ async function getListingCount(
   try {
     if (user?.isAdmin) {
       const r = await query<{ n: string }>(
-        "SELECT COUNT(*)::text AS n FROM listings",
+        "SELECT COUNT(*)::text AS n FROM listings WHERE is_draft = FALSE",
       );
       return Number(r.rows[0]?.n ?? 0);
     }

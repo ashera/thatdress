@@ -17,6 +17,40 @@ type Row = ListingCardRow & {
   view_count_7d: string;
 };
 
+type DraftItem = {
+  id: string;
+  title: string | null;
+  has_basics: boolean;
+  has_class: boolean;
+  has_condition: boolean;
+};
+
+function nextStepFor(d: DraftItem): string {
+  if (!d.has_basics) return `/listings/new/${d.id}/photos`;
+  if (!d.has_class) return `/listings/new/${d.id}/build`;
+  if (!d.has_condition) return `/listings/new/${d.id}/condition`;
+  return `/listings/new/${d.id}/publish`;
+}
+
+async function fetchDrafts(userId: string): Promise<DraftItem[]> {
+  try {
+    const r = await query<DraftItem>(
+      `SELECT id::text,
+              title,
+              (title <> '' AND make_id IS NOT NULL AND model IS NOT NULL AND year IS NOT NULL) AS has_basics,
+              (bike_class_id IS NOT NULL AND bike_category_id IS NOT NULL) AS has_class,
+              (condition_id IS NOT NULL) AS has_condition
+         FROM listings
+        WHERE seller_id = $1::bigint AND is_draft = TRUE
+        ORDER BY created_at DESC`,
+      [userId],
+    );
+    return r.rows;
+  } catch {
+    return [];
+  }
+}
+
 async function fetchOwnListings(
   userId: string,
 ): Promise<{ ok: true; rows: Row[] } | { ok: false; error: string }> {
@@ -81,6 +115,7 @@ async function fetchOwnListings(
          LEFT JOIN motor_types      mt   ON mt.id   = l.motor_type_id
          LEFT JOIN drive_modes      dm   ON dm.id   = l.drive_mode_id
         WHERE l.seller_id = $1::bigint
+          AND l.is_draft = FALSE
         ORDER BY l.is_published DESC, l.created_at DESC
         LIMIT 200`,
       [userId],
@@ -98,7 +133,10 @@ export default async function MyListingsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const result = await fetchOwnListings(user.id);
+  const [result, drafts] = await Promise.all([
+    fetchOwnListings(user.id),
+    fetchDrafts(user.id),
+  ]);
   const total = result.ok ? result.rows.length : 0;
   const hidden = result.ok
     ? result.rows.filter((r) => !r.is_published).length
@@ -121,6 +159,78 @@ export default async function MyListingsPage() {
           New listing
         </ButtonLink>
       </div>
+
+      {drafts.length > 0 && (
+        <section
+          style={{
+            marginBottom: "var(--s-7)",
+            padding: "var(--s-4) var(--s-5)",
+            background: "var(--surface-2, #f7f6f3)",
+            border: "1px solid var(--line, #e9e5df)",
+            borderRadius: 12,
+          }}
+        >
+          <h2 className="card-heading" style={{ margin: 0 }}>
+            Drafts in progress
+          </h2>
+          <p className="card-sub" style={{ marginTop: 4 }}>
+            {drafts.length === 1
+              ? "1 listing not finished yet."
+              : `${drafts.length} listings not finished yet.`}
+          </p>
+          <ul
+            style={{
+              listStyle: "none",
+              padding: 0,
+              margin: "var(--s-3) 0 0",
+              display: "flex",
+              flexDirection: "column",
+              gap: "var(--s-2)",
+            }}
+          >
+            {drafts.map((d) => (
+              <li
+                key={d.id}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  padding: "var(--s-3)",
+                  background: "#fff",
+                  border: "1px solid var(--line, #e9e5df)",
+                  borderRadius: 10,
+                }}
+              >
+                <div>
+                  <div style={{ fontWeight: 600, color: "var(--ink-1)" }}>
+                    {d.title?.trim() || "Untitled draft"}
+                  </div>
+                  <div style={{ fontSize: 13, color: "var(--ink-3)" }}>
+                    {!d.has_basics
+                      ? "Step 1 of 4 — photos & basics"
+                      : !d.has_class
+                      ? "Step 2 of 4 — build"
+                      : !d.has_condition
+                      ? "Step 3 of 4 — condition"
+                      : "Step 4 of 4 — publish"}
+                  </div>
+                </div>
+                <Link
+                  href={nextStepFor(d)}
+                  style={{
+                    fontWeight: 600,
+                    fontSize: "var(--t-body-s)",
+                    color: "var(--ink-1)",
+                    textDecoration: "none",
+                  }}
+                >
+                  Continue →
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {!result.ok ? (
         <div className="form-error">

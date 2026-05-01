@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { query } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { getCurrentRegionId } from "@/lib/regions";
@@ -28,6 +28,7 @@ type ListingRow = {
   seller_email: string | null;
   seller_id: string | null;
   is_published: boolean;
+  is_draft: boolean;
   offers_enabled: boolean;
   sold_at: string | null;
   region_id: string | null;
@@ -87,6 +88,7 @@ const LISTING_SELECT = `
   l.created_at::text,
   l.seller_id::text,
   l.is_published,
+  l.is_draft,
   l.offers_enabled,
   l.sold_at::text,
   l.region_id::text,
@@ -404,6 +406,10 @@ export default async function ListingDetailPage({
   const l = result.listing;
   const isOwner = currentUser != null && currentUser.id === l.seller_id;
   const isAdmin = currentUser?.isAdmin ?? false;
+  if (l.is_draft) {
+    if (isOwner) redirect(`/listings/new/${l.id}/photos`);
+    notFound();
+  }
   if (!l.is_published && !isOwner && !isAdmin) notFound();
   // Hide listings outside the viewer's region (unless they own it or are admin).
   if (

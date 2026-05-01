@@ -1,46 +1,54 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createListing } from "@/lib/actions/listings";
 import { getCurrentUser } from "@/lib/auth";
-import { loadListingRefOptions } from "@/lib/ref-data";
-import { getCurrentRegionId } from "@/lib/regions";
-import { ListingForm } from "../../_components/listing-form";
+import { query } from "@/lib/db";
+import { startDraftListing } from "@/lib/actions/listing-wizard";
+import { Button } from "../../_components/ui";
 
 export const dynamic = "force-dynamic";
 
-const ERRORS: Record<string, string> = {
-  "invalid-title": "Title is required (200 characters or fewer).",
-  "long-description": "Description must be 5,000 characters or fewer.",
-  "invalid-price": "Enter a valid price in dollars (e.g. 1899 or 1899.00).",
-  "invalid-make": "Pick a make.",
-  "invalid-model": "Model is required.",
-  "invalid-year": "Year must be between 2000 and next year.",
-  "invalid-condition": "Pick a condition.",
-  "invalid-class": "Pick a bike class.",
-  "invalid-category": "Pick a bike category.",
-  "invalid-location": "A postal code or location is required.",
-  "out-of-range": "One of the numeric values is outside the allowed range.",
-  "too-many": "You can attach up to 10 photos.",
-  "too-large": "Each photo must be 5 MB or smaller.",
-  "bad-type": "Photos must be JPEG, PNG, or WebP.",
+type DraftListItem = {
+  id: string;
+  title: string | null;
+  has_basics: boolean;
+  has_class: boolean;
+  has_condition: boolean;
+  updated_at: string;
 };
 
-export default async function NewListingPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ error?: string }>;
-}) {
-  const user = await getCurrentUser();
-  if (!user) {
-    redirect("/login");
+async function listDraftsForUser(userId: string): Promise<DraftListItem[]> {
+  try {
+    const r = await query<DraftListItem>(
+      `SELECT id::text,
+              title,
+              (title <> '' AND make_id IS NOT NULL AND model IS NOT NULL AND year IS NOT NULL) AS has_basics,
+              (bike_class_id IS NOT NULL AND bike_category_id IS NOT NULL) AS has_class,
+              (condition_id IS NOT NULL) AS has_condition,
+              created_at::text AS updated_at
+         FROM listings
+        WHERE seller_id = $1::bigint
+          AND is_draft = TRUE
+        ORDER BY created_at DESC`,
+      [userId],
+    );
+    return r.rows;
+  } catch {
+    return [];
   }
+}
 
-  const { error } = await searchParams;
-  const errorMessage = error ? (ERRORS[error] ?? "Something went wrong.") : null;
+function nextStepFor(d: DraftListItem): string {
+  if (!d.has_basics) return `/listings/new/${d.id}/photos`;
+  if (!d.has_class) return `/listings/new/${d.id}/build`;
+  if (!d.has_condition) return `/listings/new/${d.id}/condition`;
+  return `/listings/new/${d.id}/publish`;
+}
 
-  const [refs, currentRegionId] = await Promise.all([
-    loadListingRefOptions(),
-    getCurrentRegionId(),
-  ]);
+export default async function NewListingLandingPage() {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const drafts = await listDraftsForUser(user.id);
 
   return (
     <div className="page page--pad">
@@ -59,17 +67,77 @@ export default async function NewListingPage({
           New listing
         </h1>
         <p style={{ color: "var(--ink-3)", margin: "0 0 var(--s-7)" }}>
-          Tell future riders what you&rsquo;re selling.
+          We&rsquo;ll walk you through it in four short steps: photos &amp;
+          basics, the build, condition, and pricing.
         </p>
 
-        <ListingForm
-          action={createListing}
-          refs={refs}
-          defaults={{ region_id: currentRegionId ?? undefined }}
-          submitLabel="Publish listing"
-          errorMessage={errorMessage}
-          showPhotos
-        />
+        <form action={startDraftListing}>
+          <Button type="submit" variant="primary" iconRight="arrow">
+            Start a new listing
+          </Button>
+        </form>
+
+        {drafts.length > 0 && (
+          <section style={{ marginTop: "var(--s-7)" }}>
+            <h2 className="card-heading" style={{ margin: 0 }}>
+              In progress
+            </h2>
+            <p className="card-sub" style={{ marginTop: 4 }}>
+              Pick up where you left off.
+            </p>
+            <ul
+              style={{
+                listStyle: "none",
+                padding: 0,
+                margin: "var(--s-4) 0 0",
+                display: "flex",
+                flexDirection: "column",
+                gap: "var(--s-3)",
+              }}
+            >
+              {drafts.map((d) => (
+                <li
+                  key={d.id}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    padding: "var(--s-3) var(--s-4)",
+                    background: "var(--surface-1, #fff)",
+                    border: "1px solid var(--line, #e9e5df)",
+                    borderRadius: 12,
+                  }}
+                >
+                  <div>
+                    <div style={{ fontWeight: 600, color: "var(--ink-1)" }}>
+                      {d.title?.trim() || "Untitled draft"}
+                    </div>
+                    <div style={{ fontSize: 13, color: "var(--ink-3)" }}>
+                      {!d.has_basics
+                        ? "Step 1 of 4 — photos & basics"
+                        : !d.has_class
+                        ? "Step 2 of 4 — build"
+                        : !d.has_condition
+                        ? "Step 3 of 4 — condition"
+                        : "Step 4 of 4 — publish"}
+                    </div>
+                  </div>
+                  <Link
+                    href={nextStepFor(d)}
+                    style={{
+                      fontWeight: 600,
+                      fontSize: "var(--t-body-s)",
+                      color: "var(--ink-1)",
+                      textDecoration: "none",
+                    }}
+                  >
+                    Continue →
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
       </main>
     </div>
   );

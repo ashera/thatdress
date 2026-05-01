@@ -41,7 +41,11 @@ CREATE TABLE IF NOT EXISTS listings (
 ALTER TABLE listings
   ADD COLUMN IF NOT EXISTS seller_id    BIGINT  REFERENCES users(id) ON DELETE SET NULL,
   ADD COLUMN IF NOT EXISTS is_published BOOLEAN NOT NULL DEFAULT TRUE,
-  ADD COLUMN IF NOT EXISTS sold_at      TIMESTAMPTZ;
+  ADD COLUMN IF NOT EXISTS sold_at      TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS is_draft     BOOLEAN NOT NULL DEFAULT FALSE;
+
+CREATE INDEX IF NOT EXISTS listings_draft_idx
+  ON listings (seller_id, is_draft) WHERE is_draft = TRUE;
 
 CREATE INDEX IF NOT EXISTS listings_seller_id_idx ON listings (seller_id);
 CREATE INDEX IF NOT EXISTS listings_published_idx ON listings (is_published, created_at DESC);
