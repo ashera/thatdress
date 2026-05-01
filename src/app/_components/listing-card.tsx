@@ -65,8 +65,8 @@ function compactClass(label: string | null): string | null {
 
 function fmtRange(min: number | null, max: number | null): string | null {
   if (min == null && max == null) return null;
-  if (min != null && max != null && min !== max) return `${min}–${max} mi`;
-  return `${min ?? max} mi`;
+  if (min != null && max != null && min !== max) return `${min}–${max} km`;
+  return `${min ?? max} km`;
 }
 
 function buildChips(row: ListingCardRow): [string, string, string] {
@@ -85,7 +85,7 @@ function buildStats(row: ListingCardRow): ListingCardStat[] {
   let weightValue = PLACEHOLDER;
   if (row.weight_lbs) {
     const n = Number(row.weight_lbs);
-    if (Number.isFinite(n)) weightValue = `${n} lb`;
+    if (Number.isFinite(n)) weightValue = `${n} kg`;
   }
 
   return [
@@ -98,7 +98,9 @@ function buildStats(row: ListingCardRow): ListingCardStat[] {
     {
       icon: "speed",
       value:
-        row.top_speed_mph != null ? `${row.top_speed_mph} mph` : PLACEHOLDER,
+        row.top_speed_mph != null
+          ? `${row.top_speed_mph} km/h`
+          : PLACEHOLDER,
       label: "Top speed",
     },
     { icon: "weight", value: weightValue, label: "Weight" },

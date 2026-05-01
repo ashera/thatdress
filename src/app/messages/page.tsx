@@ -129,7 +129,9 @@ export default async function MessagesIndexPage() {
       ) : (
         <ul className="conversation-list">
           {result.rows.map((c) => {
-            const role = c.buyer_id === user.id ? "Buying" : "Selling";
+            // Label describes the OTHER party so the row reads as
+            // "[Seller] · ashera" = "the seller is ashera".
+            const role = c.buyer_id === user.id ? "Seller" : "Buyer";
             const unread = Number(c.unread_count);
             return (
               <li key={c.id}>

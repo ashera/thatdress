@@ -126,11 +126,13 @@ export default async function ConversationPage({
   const adminViewing = !isParticipant && user.isAdmin;
   const otherEmail =
     head.buyer_id === user.id ? head.seller_email : head.buyer_email;
+  // Label describes the OTHER party (not the current user) so it's
+  // unambiguous who's who in the thread header.
   const role = adminViewing
     ? "Viewing as admin"
     : head.buyer_id === user.id
-      ? "Buying"
-      : "Selling";
+      ? "Seller"
+      : "Buyer";
 
   // Only mark as read for participants — an admin lurking shouldn't
   // mask unread messages for the actual buyer/seller.

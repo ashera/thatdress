@@ -353,13 +353,13 @@ export function ListingForm({
         </div>
 
         <div className="grid-2">
-          <Field label="Top speed (mph)" htmlFor="top_speed_mph">
+          <Field label="Top speed (km/h)" htmlFor="top_speed_mph">
             <Input
               id="top_speed_mph"
               name="top_speed_mph"
               type="number"
               min={0}
-              max={60}
+              max={100}
               defaultValue={nullishStr(defaults.top_speed_mph)}
             />
           </Field>
@@ -373,36 +373,36 @@ export function ListingForm({
         </div>
 
         <div className="grid-2">
-          <Field label="Range — min (mi)" htmlFor="range_miles_min">
+          <Field label="Range — min (km)" htmlFor="range_miles_min">
             <Input
               id="range_miles_min"
               name="range_miles_min"
               type="number"
               min={0}
-              max={400}
+              max={600}
               defaultValue={nullishStr(defaults.range_miles_min)}
             />
           </Field>
-          <Field label="Range — max (mi)" htmlFor="range_miles_max">
+          <Field label="Range — max (km)" htmlFor="range_miles_max">
             <Input
               id="range_miles_max"
               name="range_miles_max"
               type="number"
               min={0}
-              max={400}
+              max={600}
               defaultValue={nullishStr(defaults.range_miles_max)}
             />
           </Field>
         </div>
 
         <div className="grid-2">
-          <Field label="Mileage on the bike" htmlFor="mileage">
+          <Field label="Mileage on the bike (km)" htmlFor="mileage">
             <Input
               id="mileage"
               name="mileage"
               type="number"
               min={0}
-              max={100000}
+              max={160000}
               defaultValue={nullishStr(defaults.mileage)}
             />
           </Field>
@@ -480,14 +480,14 @@ export function ListingForm({
               defaultValue={nullishStr(defaults.charge_time_hours)}
             />
           </Field>
-          <Field label="Weight (lbs)" htmlFor="weight_lbs">
+          <Field label="Weight (kg)" htmlFor="weight_lbs">
             <Input
               id="weight_lbs"
               name="weight_lbs"
               type="number"
               step="0.1"
               min={0}
-              max={500}
+              max={250}
               defaultValue={nullishStr(defaults.weight_lbs)}
             />
           </Field>

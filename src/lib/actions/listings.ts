@@ -23,6 +23,9 @@ const MIN_YEAR = 2000;
 const MAX_YEAR = CURRENT_YEAR + 1;
 
 type Range = { min: number; max: number };
+// Note: column names retain imperial suffixes (_mph, _miles, _lbs) but
+// stored values are now metric (km/h, km, kg). Renaming the columns is
+// a separate cleanup; the ranges below reflect the metric units.
 const RANGES: Record<string, Range> = {
   motor_watts_nominal: { min: 50, max: 3000 },
   motor_watts_peak: { min: 0, max: 5000 },
@@ -31,11 +34,11 @@ const RANGES: Record<string, Range> = {
   battery_voltage: { min: 0, max: 120 },
   battery_amp_hours: { min: 0, max: 50 },
   charge_time_hours: { min: 0, max: 24 },
-  top_speed_mph: { min: 0, max: 60 },
-  range_miles_min: { min: 0, max: 400 },
-  range_miles_max: { min: 0, max: 400 },
-  mileage: { min: 0, max: 100000 },
-  weight_lbs: { min: 0, max: 500 },
+  top_speed_mph: { min: 0, max: 100 }, // km/h
+  range_miles_min: { min: 0, max: 600 }, // km
+  range_miles_max: { min: 0, max: 600 }, // km
+  mileage: { min: 0, max: 160000 }, // km
+  weight_lbs: { min: 0, max: 250 }, // kg
 };
 
 function parsePriceToCents(raw: string): number | null {

@@ -91,9 +91,9 @@ export default async function Home() {
             gap: "var(--s-3)",
           }}
         >
-          <Spec k="Range" v="20–100" unit="mi" />
+          <Spec k="Range" v="30–160" unit="km" />
           <Spec k="Battery" v="300–800" unit="wh" />
-          <Spec k="Top speed" v="20–28" unit="mph" />
+          <Spec k="Top speed" v="32–45" unit="km/h" />
           <Spec k="Conditions" v="4" />
         </div>
       </section>

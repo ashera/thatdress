@@ -253,9 +253,9 @@ function buildSpecs(l: ListingRow): { group: string; items: Spec[] }[] {
   if (ah) motor.push({ k: "Battery Ah", v: ah });
   const charge = fmtNum(l.charge_time_hours, " hr");
   if (charge) motor.push({ k: "Charge time", v: charge });
-  const top = fmtNum(l.top_speed_mph, " mph");
+  const top = fmtNum(l.top_speed_mph, " km/h");
   if (top) motor.push({ k: "Top speed", v: top });
-  const range = rangeStr(l.range_miles_min, l.range_miles_max, " mi");
+  const range = rangeStr(l.range_miles_min, l.range_miles_max, " km");
   if (range) motor.push({ k: "Range", v: range });
   if (l.drive_mode_label)
     motor.push({ k: "Drive mode", v: l.drive_mode_label });
@@ -263,9 +263,9 @@ function buildSpecs(l: ListingRow): { group: string; items: Spec[] }[] {
   if (l.drivetrain) motor.push({ k: "Drivetrain", v: l.drivetrain });
 
   const usage: Spec[] = [];
-  const mileage = fmtNum(l.mileage, " mi");
+  const mileage = fmtNum(l.mileage, " km");
   if (mileage) usage.push({ k: "Mileage", v: mileage });
-  const weight = fmtNum(l.weight_lbs, " lb");
+  const weight = fmtNum(l.weight_lbs, " kg");
   if (weight) usage.push({ k: "Weight", v: weight });
   if (l.body_position_label)
     usage.push({ k: "Body position", v: l.body_position_label });
