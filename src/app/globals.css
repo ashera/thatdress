@@ -1426,6 +1426,29 @@ textarea.input {
   color: var(--ink-2);
 }
 
+/* Email verification banner (sitewide, logged-in unverified users) */
+.verify-banner {
+  background: var(--volt-50);
+  border-bottom: 1px solid var(--volt-200);
+  padding: 10px var(--s-7);
+  font-size: var(--t-body-s);
+  color: var(--volt-800);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+  max-width: 1280px;
+  margin: 0 auto;
+  width: 100%;
+}
+.verify-banner-text { flex: 1 1 auto; min-width: 0; }
+.verify-banner strong { color: var(--volt-800); }
+.verify-banner em { color: var(--volt-800); font-style: normal; font-weight: 600; }
+@media (max-width: 540px) {
+  .verify-banner { padding: 10px var(--s-4); }
+}
+
 /* Sold banner (detail page) */
 .sold-banner {
   background: var(--ink-1);

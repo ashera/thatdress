@@ -10,6 +10,7 @@ import {
   hashPassword,
   verifyPassword,
 } from "@/lib/auth";
+import { dispatchVerificationEmail } from "@/lib/email-verify";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -59,6 +60,8 @@ export async function register(formData: FormData): Promise<void> {
   }
 
   await createSession(userId);
+  // Fire-and-forget — don't block signup if Resend is down or unset.
+  await dispatchVerificationEmail(userId, email);
   redirect("/");
 }
 

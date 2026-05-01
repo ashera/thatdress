@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthNav } from "./_components/auth-nav";
 import { Footer } from "./_components/footer";
 import { RegionGate } from "./_components/region-gate";
+import { VerifyBanner } from "./_components/verify-banner";
 
 const archivoBlack = Archivo_Black({
   variable: "--font-display",
@@ -47,6 +48,7 @@ export default function RootLayout({
     >
       <body className="min-h-screen flex flex-col">
         <AuthNav />
+        <VerifyBanner />
         <div className="flex flex-1 flex-col">
           <RegionGate>{children}</RegionGate>
         </div>
