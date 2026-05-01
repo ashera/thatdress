@@ -5,6 +5,7 @@ import { getCurrentUser } from "@/lib/auth";
 import {
   addListingImages,
   deleteListingImage,
+  moveListingImage,
   setListingVisibility,
   setPrimaryImage,
   updateListing,
@@ -336,53 +337,89 @@ export default async function EditListingPage({
           </div>
         ) : (
           <div className="manage-grid">
-            {images.map((img) => (
-              <div
-                key={img.id}
-                className={`manage-tile ${img.is_primary ? "is-primary" : ""}`}
-              >
-                <img
-                  src={`/api/listings/${id}/images/${img.id}`}
-                  alt=""
-                  className="manage-photo"
-                />
-                {img.is_primary && (
-                  <span className="manage-flag">Default</span>
-                )}
-                <div className="manage-meta">
-                  {Math.round(img.byte_size / 1024)} KB ·{" "}
-                  {img.mime_type.replace("image/", "")}
-                </div>
-                <div className="manage-actions">
-                  {!img.is_primary && (
-                    <form action={setPrimaryImage}>
+            {images.map((img, i) => {
+              // First image is the default (primary). Reorder buttons only
+              // apply to the non-primary stack — index 1+ in the rendered list.
+              const canMoveUp = !img.is_primary && i > 1;
+              const canMoveDown = !img.is_primary && i < images.length - 1;
+              return (
+                <div
+                  key={img.id}
+                  className={`manage-tile ${img.is_primary ? "is-primary" : ""}`}
+                >
+                  <img
+                    src={`/api/listings/${id}/images/${img.id}`}
+                    alt=""
+                    className="manage-photo"
+                  />
+                  {img.is_primary && (
+                    <span className="manage-flag">Default</span>
+                  )}
+                  <div className="manage-meta">
+                    {Math.round(img.byte_size / 1024)} KB ·{" "}
+                    {img.mime_type.replace("image/", "")}
+                  </div>
+                  <div className="manage-actions">
+                    {!img.is_primary && (
+                      <form action={setPrimaryImage}>
+                        <input type="hidden" name="listingId" value={id} />
+                        <input type="hidden" name="imageId" value={img.id} />
+                        <Button
+                          type="submit"
+                          variant="ghost"
+                          size="sm"
+                          title="Set as default"
+                        >
+                          ★ Set default
+                        </Button>
+                      </form>
+                    )}
+                    {canMoveUp && (
+                      <form action={moveListingImage}>
+                        <input type="hidden" name="listingId" value={id} />
+                        <input type="hidden" name="imageId" value={img.id} />
+                        <input type="hidden" name="direction" value="up" />
+                        <Button
+                          type="submit"
+                          variant="ghost"
+                          size="sm"
+                          title="Move up"
+                        >
+                          ↑ Up
+                        </Button>
+                      </form>
+                    )}
+                    {canMoveDown && (
+                      <form action={moveListingImage}>
+                        <input type="hidden" name="listingId" value={id} />
+                        <input type="hidden" name="imageId" value={img.id} />
+                        <input type="hidden" name="direction" value="down" />
+                        <Button
+                          type="submit"
+                          variant="ghost"
+                          size="sm"
+                          title="Move down"
+                        >
+                          ↓ Down
+                        </Button>
+                      </form>
+                    )}
+                    <form action={deleteListingImage}>
                       <input type="hidden" name="listingId" value={id} />
                       <input type="hidden" name="imageId" value={img.id} />
                       <Button
                         type="submit"
                         variant="ghost"
                         size="sm"
-                        title="Set as default"
+                        title="Delete photo"
                       >
-                        ★ Set default
+                        ✕ Delete
                       </Button>
                     </form>
-                  )}
-                  <form action={deleteListingImage}>
-                    <input type="hidden" name="listingId" value={id} />
-                    <input type="hidden" name="imageId" value={img.id} />
-                    <Button
-                      type="submit"
-                      variant="ghost"
-                      size="sm"
-                      title="Delete photo"
-                    >
-                      ✕ Delete
-                    </Button>
-                  </form>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 

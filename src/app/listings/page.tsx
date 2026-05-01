@@ -36,9 +36,47 @@ type RawSearchParams = {
   view?: string | string[];
   visibility?: string | string[];
   mode?: string | string[];
+  sort?: string | string[];
 };
 
 type BrowseMode = "for-sale" | "sold" | "shortlist";
+
+type SortOption = "newest" | "price-asc" | "price-desc" | "year-desc";
+
+const SORT_LABELS: Record<SortOption, string> = {
+  newest: "Newest",
+  "price-asc": "Price: low to high",
+  "price-desc": "Price: high to low",
+  "year-desc": "Year: newest first",
+};
+
+const SORT_SQL: Record<SortOption, string> = {
+  newest: "l.created_at DESC",
+  "price-asc": "l.price_cents ASC, l.created_at DESC",
+  "price-desc": "l.price_cents DESC, l.created_at DESC",
+  "year-desc": "l.year DESC NULLS LAST, l.created_at DESC",
+};
+
+function parseSort(raw: string | string[] | undefined): SortOption {
+  const v = Array.isArray(raw) ? raw[0] : raw;
+  if (v === "price-asc" || v === "price-desc" || v === "year-desc") return v;
+  return "newest";
+}
+
+function buildSortHref(sort: SortOption, sp: RawSearchParams): string {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(sp)) {
+    if (key === "sort" || value === undefined) continue;
+    if (Array.isArray(value)) {
+      for (const v of value) if (v) params.append(key, v);
+    } else if (value) {
+      params.set(key, value);
+    }
+  }
+  if (sort !== "newest") params.set("sort", sort);
+  const qs = params.toString();
+  return qs ? `/listings?${qs}` : "/listings";
+}
 
 function buildModeHref(mode: BrowseMode, sp: RawSearchParams): string {
   const params = new URLSearchParams();
@@ -219,6 +257,7 @@ function buildFilters(
 async function fetchListings(
   whereSql: string,
   params: unknown[],
+  orderBy: string,
 ): Promise<
   | { ok: true; listings: ListingCardRow[] }
   | { ok: false; error: string }
@@ -284,7 +323,7 @@ async function fetchListings(
          LEFT JOIN motor_types      mt   ON mt.id   = l.motor_type_id
          LEFT JOIN drive_modes      dm   ON dm.id   = l.drive_mode_id
          ${whereSql}
-         ORDER BY l.created_at DESC
+         ORDER BY ${orderBy}
          LIMIT 50`,
       params,
     );
@@ -362,8 +401,11 @@ export default async function ListingsPage({
   const view: ListingsView =
     (Array.isArray(sp.view) ? sp.view[0] : sp.view) === "grid" ? "grid" : "cards";
 
+  const sort = parseSort(sp.sort);
+  const orderBy = SORT_SQL[sort];
+
   const [result, options, shortlistedIds] = await Promise.all([
-    fetchListings(whereSql, params),
+    fetchListings(whereSql, params, orderBy),
     loadFilterOptions(),
     getShortlistIds(user?.id),
   ]);
@@ -415,6 +457,23 @@ export default async function ListingsPage({
           )}
         </div>
         <div className="left">
+          <details className="sort-dropdown">
+            <summary>
+              <span className="sort-label">Sort:</span>{" "}
+              <strong>{SORT_LABELS[sort]}</strong>
+            </summary>
+            <div className="sort-menu">
+              {(Object.keys(SORT_LABELS) as SortOption[]).map((opt) => (
+                <Link
+                  key={opt}
+                  href={buildSortHref(opt, sp)}
+                  className={opt === sort ? "is-active" : ""}
+                >
+                  {SORT_LABELS[opt]}
+                </Link>
+              ))}
+            </div>
+          </details>
           <ViewToggle current={view} hrefFor={(v) => buildViewHref(v, sp)} />
           {user ? (
             <ButtonLink

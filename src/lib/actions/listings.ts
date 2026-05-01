@@ -689,6 +689,56 @@ export async function setPrimaryImage(formData: FormData): Promise<void> {
   redirect(`/listings/${listingId}/edit`);
 }
 
+export async function moveListingImage(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const listingId = String(formData.get("listingId") ?? "");
+  const imageId = String(formData.get("imageId") ?? "");
+  const direction = String(formData.get("direction") ?? "");
+  if (!/^\d+$/.test(imageId)) redirect("/listings");
+  if (!["up", "down"].includes(direction)) redirect("/listings");
+  if (!(await canEditListing(listingId, user))) redirect("/listings");
+
+  await withTransaction(async (client) => {
+    const cur = await client.query<{ position: number }>(
+      `SELECT position FROM listing_images
+        WHERE id = $1::bigint AND listing_id = $2::bigint LIMIT 1`,
+      [imageId, listingId],
+    );
+    if (cur.rows.length === 0) return;
+    const currentPos = cur.rows[0].position;
+
+    const adj = await client.query<{ id: string; position: number }>(
+      direction === "up"
+        ? `SELECT id::text, position FROM listing_images
+            WHERE listing_id = $1::bigint AND position < $2
+            ORDER BY position DESC LIMIT 1`
+        : `SELECT id::text, position FROM listing_images
+            WHERE listing_id = $1::bigint AND position > $2
+            ORDER BY position ASC LIMIT 1`,
+      [listingId, currentPos],
+    );
+    if (adj.rows.length === 0) return;
+
+    const otherId = adj.rows[0].id;
+    const otherPos = adj.rows[0].position;
+
+    await client.query(
+      `UPDATE listing_images SET position = $1 WHERE id = $2::bigint`,
+      [otherPos, imageId],
+    );
+    await client.query(
+      `UPDATE listing_images SET position = $1 WHERE id = $2::bigint`,
+      [currentPos, otherId],
+    );
+  });
+
+  revalidatePath(`/listings/${listingId}`);
+  revalidatePath(`/listings/${listingId}/edit`);
+  redirect(`/listings/${listingId}/edit`);
+}
+
 export async function deleteListingImage(formData: FormData): Promise<void> {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
