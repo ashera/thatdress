@@ -103,14 +103,16 @@ export async function AuthNav() {
               </>
             ) : (
               <>
-                {anonLocation && (
-                  <span
-                    className="anon-loc"
-                    title="Detected from your IP. Sign in or register to set your own."
-                  >
-                    {anonLocation}
+                <Link
+                  href="/regions/pick"
+                  className="anon-loc"
+                  title="Click to change region"
+                >
+                  <span>{anonLocation ?? "Pick region"}</span>
+                  <span className="anon-loc-x" aria-hidden>
+                    ⌄
                   </span>
-                )}
+                </Link>
                 <ButtonLink href="/login" variant="ghost" size="sm">
                   Log in
                 </ButtonLink>

@@ -563,6 +563,14 @@ input, select, textarea { font: inherit; color: inherit; }
   text-transform: uppercase;
   color: var(--ink-3);
   white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background var(--dur), border-color var(--dur), color var(--dur);
+}
+.topbar .anon-loc:hover {
+  background: var(--surface);
+  border-color: var(--hairline-strong);
+  color: var(--ink-1);
 }
 .topbar .anon-loc::before {
   content: "";
@@ -570,6 +578,11 @@ input, select, textarea { font: inherit; color: inherit; }
   height: 6px;
   border-radius: 50%;
   background: var(--ink-4);
+}
+.topbar .anon-loc-x {
+  font-size: 10px;
+  opacity: 0.6;
+  margin-left: 2px;
 }
 @media (max-width: 640px) {
   .topbar .anon-loc { display: none; }
