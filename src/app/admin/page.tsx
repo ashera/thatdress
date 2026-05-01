@@ -24,6 +24,11 @@ const ADMIN_LINKS: Array<{ href: string; title: string; desc: string }> = [
     title: "Support Tickets",
     desc: "Triage open tickets and reply to users.",
   },
+  {
+    href: "/admin/blog",
+    title: "Blog",
+    desc: "Write articles to attract visitors and support SEO.",
+  },
 ];
 
 export default async function AdminHomePage() {

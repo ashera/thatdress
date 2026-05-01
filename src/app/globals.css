@@ -3324,3 +3324,67 @@ textarea.input {
   .listing .body { padding: var(--s-4); }
   .hero h1 { font-size: clamp(30px, 10vw, 44px); }
 }
+
+/* =========================================================
+   BLOG / PROSE
+   ========================================================= */
+.prose {
+  color: var(--ink-2);
+  line-height: 1.65;
+  font-size: 17px;
+}
+.prose > * + * { margin-top: var(--s-4); }
+.prose h2 {
+  font-family: var(--font-display);
+  font-size: 28px;
+  letter-spacing: -0.01em;
+  color: var(--ink-1);
+  line-height: 1.2;
+  margin-top: var(--s-7);
+}
+.prose h3 {
+  font-family: var(--font-display);
+  font-size: 22px;
+  letter-spacing: -0.01em;
+  color: var(--ink-1);
+  margin-top: var(--s-6);
+}
+.prose p { margin: 0; }
+.prose a { color: var(--ink-1); text-decoration: underline; text-underline-offset: 3px; }
+.prose a:hover { text-decoration-thickness: 2px; }
+.prose ul, .prose ol { padding-left: 1.4em; margin: 0; }
+.prose li + li { margin-top: 4px; }
+.prose blockquote {
+  border-left: 3px solid var(--volt-300, #d4a017);
+  padding-left: var(--s-4);
+  color: var(--ink-2);
+  font-style: italic;
+  margin: 0;
+}
+.prose code {
+  font-family: var(--font-mono);
+  background: var(--surface-2, #f7f6f3);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.92em;
+}
+.prose pre {
+  font-family: var(--font-mono);
+  background: var(--ink-1);
+  color: #fff;
+  padding: var(--s-4);
+  border-radius: 10px;
+  overflow-x: auto;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.prose pre code { background: transparent; padding: 0; color: inherit; }
+.prose img { max-width: 100%; height: auto; border-radius: 10px; }
+.prose hr { border: 0; border-top: 1px solid var(--hairline); }
+.prose table { width: 100%; border-collapse: collapse; }
+.prose th, .prose td {
+  border: 1px solid var(--hairline);
+  padding: 6px 10px;
+  text-align: left;
+}
+.prose th { background: var(--surface-sunken); font-weight: 600; }

@@ -552,6 +552,40 @@ CREATE INDEX IF NOT EXISTS listing_views_listing_idx
 CREATE INDEX IF NOT EXISTS listing_views_viewer_idx
   ON listing_views (viewer_id, listing_id, viewed_at DESC);
 
+-- =========================================================
+-- Blog (admin-authored articles for SEO)
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS blog_posts (
+  id           BIGSERIAL    PRIMARY KEY,
+  slug         TEXT         UNIQUE NOT NULL,
+  title        TEXT         NOT NULL,
+  excerpt      TEXT,
+  body_md      TEXT         NOT NULL DEFAULT '',
+  author_id    BIGINT       REFERENCES users(id) ON DELETE SET NULL,
+  published_at TIMESTAMPTZ,
+  created_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  updated_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS blog_posts_published_idx
+  ON blog_posts (published_at DESC) WHERE published_at IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS blog_images (
+  id          BIGSERIAL    PRIMARY KEY,
+  post_id     BIGINT       NOT NULL REFERENCES blog_posts(id) ON DELETE CASCADE,
+  mime_type   TEXT         NOT NULL,
+  bytes       BYTEA        NOT NULL,
+  byte_size   INTEGER      NOT NULL,
+  created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS blog_images_post_idx ON blog_images (post_id);
+
+ALTER TABLE blog_posts
+  ADD COLUMN IF NOT EXISTS hero_image_id BIGINT
+    REFERENCES blog_images(id) ON DELETE SET NULL;
+
 -- Backfill existing accounts as verified — pre-rollout users shouldn't be
 -- nagged after the fact.
 UPDATE users SET email_verified_at = COALESCE(email_verified_at, created_at);
