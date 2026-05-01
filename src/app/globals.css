@@ -214,44 +214,6 @@ input, select, textarea { font: inherit; color: inherit; }
 @media (max-width: 640px) {
   .topbar-stats { display: none; }
 }
-.topbar-region-form { display: inline-flex; }
-.topbar-region {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 12px;
-  border: 1px solid var(--volt-200);
-  border-radius: var(--r-pill);
-  background: var(--volt-50);
-  color: var(--volt-800);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: background var(--dur);
-}
-.topbar-region:hover { background: var(--volt-100); }
-.topbar-region::before {
-  content: "";
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--volt-500);
-}
-.topbar-region-x {
-  font-size: 10px;
-  margin-left: 2px;
-  opacity: 0.7;
-}
-@media (max-width: 540px) {
-  .topbar-region-label {
-    max-width: 90px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-}
 .topbar .brand-mark {
   width: 28px; height: 28px;
   background: var(--ink-1);
