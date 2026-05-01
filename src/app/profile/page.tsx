@@ -1,21 +1,36 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { updateProfile } from "@/lib/actions/auth";
+import { requestEmailChange } from "@/lib/actions/email-change";
 import { Button, Field, Input } from "../_components/ui";
 
 export const dynamic = "force-dynamic";
 
 const TITLES = ["Mr", "Mrs", "Ms", "Mx", "Dr", "Prof"];
 
+const EMAIL_ERRORS: Record<string, string> = {
+  invalid: "That doesn't look like a valid email.",
+  same: "That's already your current email.",
+  password: "Password didn't match.",
+  taken: "That email is already in use.",
+  send: "We couldn't send the confirmation email. Try again in a moment.",
+};
+
 export default async function ProfilePage({
   searchParams,
 }: {
-  searchParams: Promise<{ saved?: string }>;
+  searchParams: Promise<{
+    saved?: string;
+    email_sent?: string;
+    email_error?: string;
+  }>;
 }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const { saved } = await searchParams;
+  const { saved, email_sent: emailSent, email_error: emailError } =
+    await searchParams;
+  const emailErrorMessage = emailError ? EMAIL_ERRORS[emailError] : null;
 
   return (
     <div className="page page--pad">
@@ -152,6 +167,68 @@ export default async function ProfilePage({
             <div style={{ display: "flex", justifyContent: "flex-end" }}>
               <Button type="submit" variant="primary" iconRight="arrow">
                 Save personal info
+              </Button>
+            </div>
+          </form>
+        </section>
+
+        <section className="form-card" style={{ marginTop: "var(--s-5)" }}>
+          <h2 className="card-heading">Change login email</h2>
+          <p className="card-sub">
+            Your email is also your username. Enter a new address and your
+            current password — we&rsquo;ll send a confirmation link to the
+            new address before switching.
+          </p>
+
+          {emailSent && !emailErrorMessage && (
+            <p
+              className="form-success"
+              style={{ marginBottom: "var(--s-4)" }}
+            >
+              Confirmation sent. Click the link in the new inbox to finish
+              the switch.
+            </p>
+          )}
+          {emailErrorMessage && (
+            <p
+              className="form-error"
+              style={{ marginBottom: "var(--s-4)" }}
+            >
+              {emailErrorMessage}
+            </p>
+          )}
+
+          <form
+            action={requestEmailChange}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "var(--s-4)",
+            }}
+          >
+            <Field label="New email" htmlFor="new_email">
+              <Input
+                id="new_email"
+                name="new_email"
+                type="email"
+                autoComplete="email"
+                required
+                maxLength={254}
+              />
+            </Field>
+            <Field label="Current password" htmlFor="email_change_password">
+              <Input
+                id="email_change_password"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                required
+                maxLength={72}
+              />
+            </Field>
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <Button type="submit" variant="primary" iconRight="arrow">
+                Send confirmation
               </Button>
             </div>
           </form>
