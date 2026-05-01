@@ -1,9 +1,11 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
-import { updateLocation } from "@/lib/actions/auth";
+import { updateLocation, updateProfile } from "@/lib/actions/auth";
 import { suggestLocationFromIp } from "@/lib/geo";
 import { listActiveRegions, matchRegion } from "@/lib/regions";
-import { Button, Field } from "../_components/ui";
+import { Button, Field, Input } from "../_components/ui";
+
+const TITLES = ["Mr", "Mrs", "Ms", "Mx", "Dr", "Prof"];
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +55,93 @@ export default async function ProfilePage({
             Saved.
           </p>
         )}
+
+        <section className="form-card" style={{ marginBottom: "var(--s-7)" }}>
+          <h2 className="card-heading">Personal info</h2>
+          <p className="card-sub">
+            Optional. Shown to buyers when you message them.
+          </p>
+
+          <form
+            action={updateProfile}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "var(--s-4)",
+            }}
+          >
+            <div className="grid-2">
+              <Field label="Title" htmlFor="title">
+                <select
+                  id="title"
+                  name="title"
+                  className="input"
+                  defaultValue={user.title ?? ""}
+                >
+                  <option value="">—</option>
+                  {TITLES.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <div />
+            </div>
+
+            <div className="grid-2">
+              <Field label="First name" htmlFor="first_name">
+                <Input
+                  id="first_name"
+                  name="first_name"
+                  type="text"
+                  maxLength={64}
+                  autoComplete="given-name"
+                  defaultValue={user.firstName ?? ""}
+                />
+              </Field>
+              <Field label="Surname" htmlFor="surname">
+                <Input
+                  id="surname"
+                  name="surname"
+                  type="text"
+                  maxLength={64}
+                  autoComplete="family-name"
+                  defaultValue={user.surname ?? ""}
+                />
+              </Field>
+            </div>
+
+            <div className="grid-2">
+              <Field label="Town / city" htmlFor="town">
+                <Input
+                  id="town"
+                  name="town"
+                  type="text"
+                  maxLength={64}
+                  autoComplete="address-level2"
+                  defaultValue={user.town ?? ""}
+                />
+              </Field>
+              <Field label="Postcode" htmlFor="postcode">
+                <Input
+                  id="postcode"
+                  name="postcode"
+                  type="text"
+                  maxLength={16}
+                  autoComplete="postal-code"
+                  defaultValue={user.postcode ?? ""}
+                />
+              </Field>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <Button type="submit" variant="primary" iconRight="arrow">
+                Save personal info
+              </Button>
+            </div>
+          </form>
+        </section>
 
         <section className="form-card">
           <h2 className="card-heading">Location</h2>
