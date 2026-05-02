@@ -1,0 +1,241 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { requireAdmin } from "@/lib/auth";
+import { query } from "@/lib/db";
+import {
+  deleteBlogKeyword,
+  updateBlogKeyword,
+} from "@/lib/actions/blog-builder";
+import { Button, Field, Input, Textarea } from "../../../../_components/ui";
+
+export const dynamic = "force-dynamic";
+
+const ERRORS: Record<string, string> = {
+  "invalid-phrase": "A phrase is required.",
+  duplicate: "Another keyword already uses that phrase.",
+};
+
+const INTENTS = [
+  "informational",
+  "commercial",
+  "navigational",
+  "transactional",
+] as const;
+
+const STATUSES = ["idea", "clustered", "drafted", "published"] as const;
+
+const STATUS_LABELS: Record<string, string> = {
+  idea: "Idea",
+  clustered: "Clustered",
+  drafted: "Drafted",
+  published: "Published",
+};
+
+type KeywordRow = {
+  id: string;
+  phrase: string;
+  intent: string | null;
+  search_volume: number | null;
+  difficulty: number | null;
+  notes: string | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+};
+
+function formatDate(s: string | null): string {
+  if (!s) return "—";
+  try {
+    return new Date(s).toLocaleString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  } catch {
+    return s;
+  }
+}
+
+export default async function EditKeywordPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ error?: string; saved?: string }>;
+}) {
+  await requireAdmin();
+  const { id } = await params;
+  const { error, saved } = await searchParams;
+  const errorMessage = error ? ERRORS[error] ?? "Something went wrong." : null;
+
+  if (!/^\d+$/.test(id)) notFound();
+
+  const r = await query<KeywordRow>(
+    `SELECT id::text,
+            phrase,
+            intent,
+            search_volume,
+            difficulty,
+            notes,
+            status,
+            created_at::text,
+            updated_at::text
+       FROM blog_keywords
+      WHERE id = $1::bigint
+      LIMIT 1`,
+    [id],
+  );
+  const k = r.rows[0];
+  if (!k) notFound();
+
+  return (
+    <div className="page admin-page" style={{ maxWidth: 720 }}>
+      <Link href="/admin/blog/builder" className="back-link">
+        ← Keyword bank
+      </Link>
+
+      <header className="admin-header">
+        <p className="eyebrow">Admin · Blog · Builder</p>
+        <h1>{k.phrase}</h1>
+        <p className="sub">
+          {STATUS_LABELS[k.status] ?? k.status} ·{" "}
+          {k.intent ?? "no intent"} · added {formatDate(k.created_at)}
+        </p>
+      </header>
+
+      {saved && !errorMessage && (
+        <p className="form-success" style={{ marginBottom: "var(--s-5)" }}>
+          Saved.
+        </p>
+      )}
+      {errorMessage && (
+        <p className="form-error" style={{ marginBottom: "var(--s-5)" }}>
+          {errorMessage}
+        </p>
+      )}
+
+      <form
+        action={updateBlogKeyword}
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "var(--s-4)",
+        }}
+      >
+        <input type="hidden" name="keywordId" value={k.id} />
+
+        <section className="form-card">
+          <h2 className="card-heading">Keyword</h2>
+          <Field label="Phrase" htmlFor="phrase">
+            <Input
+              id="phrase"
+              name="phrase"
+              required
+              maxLength={200}
+              defaultValue={k.phrase}
+            />
+          </Field>
+          <div className="grid-2">
+            <Field label="Intent" htmlFor="intent">
+              <select
+                id="intent"
+                name="intent"
+                className="input"
+                defaultValue={k.intent ?? ""}
+              >
+                <option value="">—</option>
+                {INTENTS.map((i) => (
+                  <option key={i} value={i}>
+                    {i}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Status" htmlFor="status">
+              <select
+                id="status"
+                name="status"
+                className="input"
+                defaultValue={k.status}
+              >
+                {STATUSES.map((s) => (
+                  <option key={s} value={s}>
+                    {STATUS_LABELS[s]}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </div>
+          <div className="grid-2">
+            <Field label="Search volume" htmlFor="search_volume">
+              <Input
+                id="search_volume"
+                name="search_volume"
+                type="number"
+                min={0}
+                max={10_000_000}
+                defaultValue={
+                  k.search_volume != null ? String(k.search_volume) : ""
+                }
+              />
+            </Field>
+            <Field label="Difficulty" htmlFor="difficulty">
+              <Input
+                id="difficulty"
+                name="difficulty"
+                type="number"
+                min={0}
+                max={100}
+                defaultValue={
+                  k.difficulty != null ? String(k.difficulty) : ""
+                }
+              />
+            </Field>
+          </div>
+          <Field label="Notes" htmlFor="notes">
+            <Textarea
+              id="notes"
+              name="notes"
+              rows={4}
+              maxLength={2000}
+              defaultValue={k.notes ?? ""}
+            />
+          </Field>
+        </section>
+
+        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+          <Button type="submit" variant="primary" iconRight="arrow">
+            Save changes
+          </Button>
+        </div>
+      </form>
+
+      <form
+        action={deleteBlogKeyword}
+        style={{
+          marginTop: "var(--s-7)",
+          paddingTop: "var(--s-5)",
+          borderTop: "1px solid var(--hairline)",
+          textAlign: "center",
+        }}
+      >
+        <input type="hidden" name="keywordId" value={k.id} />
+        <button
+          type="submit"
+          style={{
+            background: "transparent",
+            border: 0,
+            color: "var(--ink-3)",
+            fontSize: "var(--t-body-s)",
+            cursor: "pointer",
+            textDecoration: "underline",
+          }}
+        >
+          Delete this keyword
+        </button>
+      </form>
+    </div>
+  );
+}

@@ -71,6 +71,9 @@ export default async function AdminBlogIndexPage() {
         <ButtonLink href="/admin/blog/tags" variant="ghost">
           Manage tags
         </ButtonLink>
+        <ButtonLink href="/admin/blog/builder" variant="ghost">
+          Blog Builder
+        </ButtonLink>
       </div>
 
       {rows.length === 0 ? (

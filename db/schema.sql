@@ -603,6 +603,24 @@ CREATE TABLE IF NOT EXISTS blog_post_tags (
 CREATE INDEX IF NOT EXISTS blog_post_tags_tag_idx
   ON blog_post_tags (tag_id, post_id);
 
+-- Blog Builder: keyword bank used to seed auto-generated articles.
+CREATE TABLE IF NOT EXISTS blog_keywords (
+  id            BIGSERIAL    PRIMARY KEY,
+  phrase        TEXT         NOT NULL,
+  intent        TEXT,
+  search_volume INTEGER,
+  difficulty    INTEGER,
+  notes         TEXT,
+  status        TEXT         NOT NULL DEFAULT 'idea',
+  created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS blog_keywords_phrase_idx
+  ON blog_keywords (LOWER(phrase));
+CREATE INDEX IF NOT EXISTS blog_keywords_status_idx
+  ON blog_keywords (status, created_at DESC);
+
 -- Backfill existing accounts as verified — pre-rollout users shouldn't be
 -- nagged after the fact.
 UPDATE users SET email_verified_at = COALESCE(email_verified_at, created_at);

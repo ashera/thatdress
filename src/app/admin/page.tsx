@@ -29,6 +29,11 @@ const ADMIN_LINKS: Array<{ href: string; title: string; desc: string }> = [
     title: "Blog",
     desc: "Write articles to attract visitors and support SEO.",
   },
+  {
+    href: "/admin/blog/builder",
+    title: "Blog Builder",
+    desc: "Manage the keyword bank that seeds auto-generated articles.",
+  },
 ];
 
 export default async function AdminHomePage() {
