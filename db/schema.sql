@@ -648,6 +648,31 @@ CREATE TABLE IF NOT EXISTS blog_keyword_clusters (
 CREATE INDEX IF NOT EXISTS blog_keyword_clusters_kw_idx
   ON blog_keyword_clusters (keyword_id);
 
+-- Pre-generation analysis stored against each keyword.
+-- SERP analysis runs once per keyword and is overwritten on re-run.
+ALTER TABLE blog_keywords
+  ADD COLUMN IF NOT EXISTS serp_analysis_json JSONB,
+  ADD COLUMN IF NOT EXISTS serp_analyzed_at   TIMESTAMPTZ;
+
+-- One Pexels hero image per keyword. Refresh advances page_offset so the
+-- next fetch returns a different result.
+CREATE TABLE IF NOT EXISTS blog_keyword_images (
+  id               BIGSERIAL    PRIMARY KEY,
+  keyword_id       BIGINT       NOT NULL UNIQUE
+                                REFERENCES blog_keywords(id) ON DELETE CASCADE,
+  source           TEXT         NOT NULL DEFAULT 'pexels',
+  source_id        TEXT         NOT NULL,
+  url_large        TEXT         NOT NULL,
+  url_original     TEXT,
+  source_url       TEXT,
+  photographer     TEXT,
+  photographer_url TEXT,
+  alt              TEXT,
+  page_offset      INTEGER      NOT NULL DEFAULT 1,
+  created_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  updated_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
 -- Backfill existing accounts as verified — pre-rollout users shouldn't be
 -- nagged after the fact.
 UPDATE users SET email_verified_at = COALESCE(email_verified_at, created_at);

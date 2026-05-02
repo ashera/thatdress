@@ -5,13 +5,30 @@ const API_VERSION = "2023-06-01";
 const DEFAULT_MODEL = "claude-sonnet-4-6";
 const DEFAULT_MAX_TOKENS = 1500;
 
+// Server-managed tool definitions. Tool versions evolve — bump if Anthropic
+// publishes a newer one and the API rejects these.
+export const WEB_SEARCH_TOOL = {
+  type: "web_search_20250305",
+  name: "web_search",
+  max_uses: 3,
+} as const;
+
+export const WEB_FETCH_TOOL = {
+  type: "web_fetch_20250722",
+  name: "web_fetch",
+  max_uses: 3,
+} as const;
+
 export type Message = { role: "user" | "assistant"; content: string };
+
+export type Tool = Record<string, unknown>;
 
 export type CallOpts = {
   system: string;
   messages: Message[];
   model?: string;
   maxTokens?: number;
+  tools?: Tool[];
 };
 
 export type CallResult =
@@ -26,6 +43,15 @@ export async function callClaude(opts: CallOpts): Promise<CallResult> {
   }
   const model = opts.model ?? DEFAULT_MODEL;
   try {
+    const body: Record<string, unknown> = {
+      model,
+      max_tokens: opts.maxTokens ?? DEFAULT_MAX_TOKENS,
+      system: opts.system,
+      messages: opts.messages,
+    };
+    if (opts.tools && opts.tools.length > 0) {
+      body.tools = opts.tools;
+    }
     const res = await fetch(API_URL, {
       method: "POST",
       headers: {
@@ -33,12 +59,7 @@ export async function callClaude(opts: CallOpts): Promise<CallResult> {
         "anthropic-version": API_VERSION,
         "content-type": "application/json",
       },
-      body: JSON.stringify({
-        model,
-        max_tokens: opts.maxTokens ?? DEFAULT_MAX_TOKENS,
-        system: opts.system,
-        messages: opts.messages,
-      }),
+      body: JSON.stringify(body),
     });
     if (!res.ok) {
       const detail = await res.text().catch(() => `${res.status}`);
@@ -47,6 +68,9 @@ export async function callClaude(opts: CallOpts): Promise<CallResult> {
     const json = (await res.json()) as {
       content?: Array<{ type: string; text?: string }>;
     };
+    // Server-managed tools (web_search, web_fetch) emit non-text content
+    // blocks (server_tool_use, web_search_tool_result, etc.) inline. We
+    // ignore those and just return the model's final text.
     const text =
       (json.content ?? [])
         .filter((b) => b.type === "text")

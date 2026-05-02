@@ -4,7 +4,13 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { query, withTransaction } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
-import { callClaude, extractJson } from "@/lib/anthropic";
+import {
+  callClaude,
+  extractJson,
+  WEB_FETCH_TOOL,
+  WEB_SEARCH_TOOL,
+} from "@/lib/anthropic";
+import { searchPexels } from "@/lib/pexels";
 
 const PHRASE_MAX = 200;
 const NOTES_MAX = 2000;
@@ -397,5 +403,242 @@ export async function deleteBlogCluster(formData: FormData): Promise<void> {
   await query(`DELETE FROM blog_clusters WHERE id = $1::bigint`, [id]);
   revalidatePath("/admin/blog/builder");
   redirect("/admin/blog/builder?saved=1");
+}
+
+// ---------------------------------------------------------------------------
+// SERP analysis (Claude with web_search + web_fetch tools)
+// ---------------------------------------------------------------------------
+
+const SERP_SYSTEM_PROMPT = `You are an SEO research assistant.
+
+You will receive a primary keyword. Use the web_search tool to search Google for that exact phrase. From the results, identify the top 3 ORGANIC ranking pages — skip ads, video carousels, and featured snippets. Use the web_fetch tool to fetch each of the top 3 URLs and read their content.
+
+Then analyze the three pages:
+- Format: classify each as one of: listicle, tutorial, guide, comparison, review, mixed
+- Length: estimate word count of each
+- Topics: list the key topics each page actually covers (5-12 per page)
+
+Compute:
+- average_word_count across the three
+- target_word_count: a range within ±20% of the average, formatted "X-Y words"
+- common_topics: topics covered by ALL three pages
+- missing_topics_to_add: 1-2 topics that none of the top 3 cover but that a great article on this keyword should include
+- recommended_format: which of the four formats (listicle/tutorial/guide/comparison) the data suggests
+- format_rationale: one sentence on why
+
+Return ONLY a single valid JSON object — no prose, no markdown fences. Shape:
+
+{
+  "keyword": "...",
+  "summary": "1-2 sentence read of the SERP landscape",
+  "top_results": [
+    {
+      "rank": 1,
+      "url": "...",
+      "title": "...",
+      "domain": "...",
+      "format": "listicle | tutorial | guide | comparison | review | mixed",
+      "estimated_word_count": 0,
+      "topics_covered": ["..."]
+    },
+    { "rank": 2, ... },
+    { "rank": 3, ... }
+  ],
+  "average_word_count": 0,
+  "target_word_count": "X-Y words",
+  "common_topics": ["..."],
+  "missing_topics_to_add": ["..."],
+  "recommended_format": "listicle | tutorial | guide | comparison",
+  "format_rationale": "..."
+}`;
+
+type SerpAnalysis = {
+  keyword?: string;
+  summary?: string;
+  top_results?: Array<{
+    rank?: number;
+    url?: string;
+    title?: string;
+    domain?: string;
+    format?: string;
+    estimated_word_count?: number;
+    topics_covered?: string[];
+  }>;
+  average_word_count?: number;
+  target_word_count?: string;
+  common_topics?: string[];
+  missing_topics_to_add?: string[];
+  recommended_format?: string;
+  format_rationale?: string;
+};
+
+export async function runSerpAnalysis(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const keywordId = String(formData.get("keywordId") ?? "");
+  if (!/^\d+$/.test(keywordId))
+    redirect("/admin/blog/builder");
+
+  const r = await query<{ phrase: string }>(
+    `SELECT phrase FROM blog_keywords WHERE id = $1::bigint LIMIT 1`,
+    [keywordId],
+  );
+  const root = r.rows[0];
+  if (!root) redirect(`/admin/blog/builder/${keywordId}?error=missing-root`);
+
+  const result = await callClaude({
+    system: SERP_SYSTEM_PROMPT,
+    messages: [
+      {
+        role: "user",
+        content: `Primary keyword: "${root.phrase}"\n\nRun the analysis now and return the JSON.`,
+      },
+    ],
+    tools: [WEB_SEARCH_TOOL, WEB_FETCH_TOOL],
+    maxTokens: 4096,
+  });
+  if (!result.ok) {
+    const code = result.error.includes("ANTHROPIC_API_KEY")
+      ? "no-key"
+      : "claude-error";
+    // eslint-disable-next-line no-console
+    console.error("[serp] Claude call failed", result.error);
+    redirect(`/admin/blog/builder/${keywordId}?error=${code}`);
+  }
+
+  const parsed = extractJson<SerpAnalysis>(result.text);
+  if (!parsed || !Array.isArray(parsed.top_results)) {
+    // eslint-disable-next-line no-console
+    console.error(
+      "[serp] Could not parse SERP JSON",
+      result.text.slice(0, 500),
+    );
+    redirect(`/admin/blog/builder/${keywordId}?error=bad-output`);
+  }
+
+  await query(
+    `UPDATE blog_keywords
+        SET serp_analysis_json = $2::jsonb,
+            serp_analyzed_at = NOW(),
+            updated_at = NOW()
+      WHERE id = $1::bigint`,
+    [keywordId, JSON.stringify(parsed)],
+  );
+
+  revalidatePath(`/admin/blog/builder/${keywordId}`);
+  redirect(`/admin/blog/builder/${keywordId}?saved=1`);
+}
+
+export async function clearSerpAnalysis(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const keywordId = String(formData.get("keywordId") ?? "");
+  if (!/^\d+$/.test(keywordId))
+    redirect("/admin/blog/builder");
+
+  await query(
+    `UPDATE blog_keywords
+        SET serp_analysis_json = NULL,
+            serp_analyzed_at = NULL,
+            updated_at = NOW()
+      WHERE id = $1::bigint`,
+    [keywordId],
+  );
+
+  revalidatePath(`/admin/blog/builder/${keywordId}`);
+  redirect(`/admin/blog/builder/${keywordId}?saved=1`);
+}
+
+// ---------------------------------------------------------------------------
+// Pexels hero image
+// ---------------------------------------------------------------------------
+
+export async function refreshPexelsImage(
+  formData: FormData,
+): Promise<void> {
+  await requireAdmin();
+  const keywordId = String(formData.get("keywordId") ?? "");
+  if (!/^\d+$/.test(keywordId))
+    redirect("/admin/blog/builder");
+
+  const k = await query<{ phrase: string }>(
+    `SELECT phrase FROM blog_keywords WHERE id = $1::bigint LIMIT 1`,
+    [keywordId],
+  );
+  const phrase = k.rows[0]?.phrase;
+  if (!phrase) redirect(`/admin/blog/builder/${keywordId}?error=missing-root`);
+
+  const existing = await query<{ page_offset: number; source_id: string }>(
+    `SELECT page_offset, source_id FROM blog_keyword_images
+      WHERE keyword_id = $1::bigint LIMIT 1`,
+    [keywordId],
+  );
+  const lastOffset = existing.rows[0]?.page_offset ?? 0;
+  const lastSourceId = existing.rows[0]?.source_id ?? null;
+
+  // Pull a small batch and pick the first one we haven't already shown.
+  // Advancing the page each refresh keeps results fresh; perPage > 1 lets
+  // us skip the previously-shown id.
+  const nextPage = lastOffset + 1;
+  const pexels = await searchPexels(phrase, { page: nextPage, perPage: 5 });
+  if (!pexels.ok) {
+    const code = pexels.error.includes("PEXELS_API_KEY")
+      ? "no-pexels-key"
+      : "pexels-error";
+    // eslint-disable-next-line no-console
+    console.error("[pexels] search failed", pexels.error);
+    redirect(`/admin/blog/builder/${keywordId}?error=${code}`);
+  }
+  if (pexels.photos.length === 0) {
+    redirect(`/admin/blog/builder/${keywordId}?error=no-pexels-results`);
+  }
+
+  const pick =
+    pexels.photos.find((p) => String(p.id) !== lastSourceId) ?? pexels.photos[0];
+
+  await query(
+    `INSERT INTO blog_keyword_images
+       (keyword_id, source, source_id, url_large, url_original,
+        source_url, photographer, photographer_url, alt, page_offset)
+     VALUES ($1::bigint, 'pexels', $2, $3, $4, $5, $6, $7, $8, $9)
+     ON CONFLICT (keyword_id) DO UPDATE
+       SET source = EXCLUDED.source,
+           source_id = EXCLUDED.source_id,
+           url_large = EXCLUDED.url_large,
+           url_original = EXCLUDED.url_original,
+           source_url = EXCLUDED.source_url,
+           photographer = EXCLUDED.photographer,
+           photographer_url = EXCLUDED.photographer_url,
+           alt = EXCLUDED.alt,
+           page_offset = EXCLUDED.page_offset,
+           updated_at = NOW()`,
+    [
+      keywordId,
+      String(pick.id),
+      pick.src.large2x ?? pick.src.large ?? pick.src.original,
+      pick.src.original,
+      pick.url,
+      pick.photographer,
+      pick.photographer_url,
+      pick.alt ?? phrase,
+      nextPage,
+    ],
+  );
+
+  revalidatePath(`/admin/blog/builder/${keywordId}`);
+  redirect(`/admin/blog/builder/${keywordId}?saved=1`);
+}
+
+export async function clearPexelsImage(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const keywordId = String(formData.get("keywordId") ?? "");
+  if (!/^\d+$/.test(keywordId))
+    redirect("/admin/blog/builder");
+
+  await query(
+    `DELETE FROM blog_keyword_images WHERE keyword_id = $1::bigint`,
+    [keywordId],
+  );
+
+  revalidatePath(`/admin/blog/builder/${keywordId}`);
+  redirect(`/admin/blog/builder/${keywordId}?saved=1`);
 }
 
