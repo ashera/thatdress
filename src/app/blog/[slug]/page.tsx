@@ -99,10 +99,10 @@ export async function generateMetadata({
   const baseUrl = await getBaseUrl();
   const description = post.excerpt ?? stripMarkdown(post.body_md, 160);
   const url = `${baseUrl}/blog/${post.slug}`;
-  const ogImage = post.hero_image_id
-    ? `${baseUrl}/api/blog/posts/${post.id}/hero`
-    : undefined;
 
+  // og:image and twitter:image are populated automatically from the
+  // opengraph-image.tsx convention in this folder — no need to set them
+  // here (and doing so would stack two images on the post).
   return {
     title: `${post.title} · ebikeflip blog`,
     description,
@@ -115,13 +115,11 @@ export async function generateMetadata({
       siteName: "ebikeflip",
       publishedTime: post.published_at,
       modifiedTime: post.updated_at,
-      images: ogImage ? [{ url: ogImage }] : undefined,
     },
     twitter: {
-      card: ogImage ? "summary_large_image" : "summary",
+      card: "summary_large_image",
       title: post.title,
       description,
-      images: ogImage ? [ogImage] : undefined,
     },
   };
 }
