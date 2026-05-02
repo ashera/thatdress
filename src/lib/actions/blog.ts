@@ -132,6 +132,42 @@ export async function deleteBlogPost(formData: FormData): Promise<void> {
   redirect("/admin/blog");
 }
 
+export async function setBlogPublishedAt(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const id = String(formData.get("postId") ?? "");
+  if (!/^\d+$/.test(id)) redirect("/admin/blog");
+
+  const raw = String(formData.get("published_at") ?? "").trim();
+  // datetime-local supplies "YYYY-MM-DDTHH:mm" in the user's local zone.
+  // Empty input means "unschedule" (back to draft).
+  let publishedAt: Date | null = null;
+  if (raw) {
+    const parsed = new Date(raw);
+    if (!Number.isNaN(parsed.getTime())) publishedAt = parsed;
+    else redirect(`/admin/blog/${id}/edit?error=invalid-date`);
+  }
+
+  await query(
+    `UPDATE blog_posts
+        SET published_at = $2,
+            updated_at = NOW()
+      WHERE id = $1::bigint`,
+    [id, publishedAt],
+  );
+
+  const r = await query<{ slug: string }>(
+    `SELECT slug FROM blog_posts WHERE id = $1::bigint LIMIT 1`,
+    [id],
+  );
+  const slug = r.rows[0]?.slug;
+
+  revalidatePath("/blog");
+  if (slug) revalidatePath(`/blog/${slug}`);
+  revalidatePath("/admin/blog");
+  revalidatePath(`/admin/blog/${id}/edit`);
+  redirect(`/admin/blog/${id}/edit?saved=1`);
+}
+
 export async function toggleBlogPublished(formData: FormData): Promise<void> {
   await requireAdmin();
   const id = String(formData.get("postId") ?? "");

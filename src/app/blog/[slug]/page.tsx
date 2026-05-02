@@ -118,7 +118,10 @@ export default async function BlogPostPage({
   if (!post) notFound();
 
   const isAdmin = user?.isAdmin ?? false;
-  if (!post.published_at && !isAdmin) notFound();
+  const isLive =
+    post.published_at != null &&
+    new Date(post.published_at).getTime() <= Date.now();
+  if (!isLive && !isAdmin) notFound();
 
   const html = renderMarkdown(post.body_md);
   const baseUrl = await getBaseUrl();
@@ -160,12 +163,14 @@ export default async function BlogPostPage({
           ← All posts
         </Link>
 
-        {!post.published_at && isAdmin && (
+        {!isLive && isAdmin && (
           <p
             className="form-error"
             style={{ marginTop: "var(--s-4)", marginBottom: 0 }}
           >
-            Draft — only admins see this. Publish from the admin console.
+            {post.published_at
+              ? `Scheduled — goes live ${formatDate(post.published_at)}. Only admins see this preview.`
+              : "Draft — only admins see this. Publish from the admin console."}
           </p>
         )}
 

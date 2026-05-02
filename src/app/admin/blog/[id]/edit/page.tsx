@@ -5,6 +5,7 @@ import { query } from "@/lib/db";
 import {
   clearBlogHero,
   deleteBlogPost,
+  setBlogPublishedAt,
   toggleBlogPublished,
   updateBlogPost,
 } from "@/lib/actions/blog";
@@ -15,7 +16,26 @@ export const dynamic = "force-dynamic";
 const ERRORS: Record<string, string> = {
   "invalid-title": "Title is required.",
   "invalid-slug": "Slug must be lowercase letters, numbers, and dashes only.",
+  "invalid-date": "That doesn't look like a valid date and time.",
 };
+
+function toDatetimeLocal(s: string | null): string {
+  if (!s) return "";
+  // Trim seconds + tz so <input type="datetime-local"> accepts it.
+  // Postgres TIMESTAMPTZ::text gives e.g. "2026-05-09 13:30:00+00".
+  // Convert to "YYYY-MM-DDTHH:mm" in local time.
+  try {
+    const d = new Date(s);
+    if (Number.isNaN(d.getTime())) return "";
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return (
+      `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` +
+      `T${pad(d.getHours())}:${pad(d.getMinutes())}`
+    );
+  } catch {
+    return "";
+  }
+}
 
 type PostRow = {
   id: string;
@@ -75,6 +95,10 @@ export default async function EditBlogPostPage({
   if (!post) notFound();
 
   const isPublished = !!post.published_at;
+  const isScheduled =
+    isPublished &&
+    post.published_at != null &&
+    new Date(post.published_at).getTime() > Date.now();
 
   return (
     <div className="page admin-page" style={{ maxWidth: 720 }}>
@@ -86,7 +110,12 @@ export default async function EditBlogPostPage({
         <p className="eyebrow">Admin · Blog</p>
         <h1>{post.title}</h1>
         <p className="sub">
-          {isPublished ? (
+          {isScheduled ? (
+            <>
+              <span className="users-tag --susp">Scheduled</span> Goes live{" "}
+              {formatDate(post.published_at)}
+            </>
+          ) : isPublished ? (
             <>
               <span className="users-tag --ok">Published</span>{" "}
               {formatDate(post.published_at)} ·{" "}
@@ -114,29 +143,67 @@ export default async function EditBlogPostPage({
 
       <section
         className="form-card"
-        style={{
-          marginBottom: "var(--s-5)",
-          display: "flex",
-          gap: "var(--s-3)",
-          flexWrap: "wrap",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
+        style={{ marginBottom: "var(--s-5)" }}
       >
-        <div>
-          <h2 className="card-heading" style={{ margin: 0 }}>
-            {isPublished ? "Currently live" : "Not yet published"}
-          </h2>
-          <p className="card-sub" style={{ marginTop: 4 }}>
-            {isPublished
-              ? "Toggle off to take it down without losing the content."
-              : "Toggle on when you're ready for readers and search."}
-          </p>
+        <div
+          style={{
+            display: "flex",
+            gap: "var(--s-3)",
+            flexWrap: "wrap",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: "var(--s-4)",
+          }}
+        >
+          <div>
+            <h2 className="card-heading" style={{ margin: 0 }}>
+              {isScheduled
+                ? "Scheduled"
+                : isPublished
+                ? "Currently live"
+                : "Not yet published"}
+            </h2>
+            <p className="card-sub" style={{ marginTop: 4 }}>
+              {isScheduled
+                ? "Will appear automatically once the publish time passes."
+                : isPublished
+                ? "Toggle off to take it down without losing the content."
+                : "Toggle on when you're ready for readers and search."}
+            </p>
+          </div>
+          <form action={toggleBlogPublished}>
+            <input type="hidden" name="postId" value={post.id} />
+            <Button type="submit" variant={isPublished ? "ghost" : "primary"}>
+              {isPublished ? "Unpublish" : "Publish now"}
+            </Button>
+          </form>
         </div>
-        <form action={toggleBlogPublished}>
+
+        <form
+          action={setBlogPublishedAt}
+          style={{
+            display: "flex",
+            gap: "var(--s-3)",
+            flexWrap: "wrap",
+            alignItems: "flex-end",
+            paddingTop: "var(--s-3)",
+            borderTop: "1px solid var(--hairline)",
+          }}
+        >
           <input type="hidden" name="postId" value={post.id} />
-          <Button type="submit" variant={isPublished ? "ghost" : "primary"}>
-            {isPublished ? "Unpublish" : "Publish now"}
+          <Field
+            label="Or schedule for a specific time"
+            htmlFor="published_at"
+          >
+            <Input
+              id="published_at"
+              name="published_at"
+              type="datetime-local"
+              defaultValue={toDatetimeLocal(post.published_at)}
+            />
+          </Field>
+          <Button type="submit" variant="dark">
+            Save schedule
           </Button>
         </form>
       </section>
