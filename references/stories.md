@@ -1,63 +1,79 @@
 # Stories & Anecdotes
 
-> Recurring stories from Marco's career. Draw from these when a blog post needs an anecdote.
+> Recurring stories from Marco's eBike life. Draw from these when a blog post needs an anecdote.
 > Don't make up new ones — use these, adapt them to fit the context.
 
-## Origin story — the Windsor garage
+## Origin story — the Gumtree mess and the gap that opened up
 
-Marco qualified as a plumber in 2004. Worked for a big franchise operator for five years. In 2009, left and started Plumbing Co out of a borrowed garage in Windsor with one van and the 04 phone number he still uses today.
+Marco bought his first eBike in 2019 after Punt Road traffic finally broke him. Tried to sell his old commuter on Gumtree two years later. The first three "interested buyers" wanted to "PayPal you the money plus shipping for my courier" — three classic scams in a row. The fourth turned up, lowballed by 40%, and left. Listed on BikeExchange instead. Sold in two days for fair money to someone in Geelong who actually rode bikes.
 
-**The reason he left the franchise:** the training wasn't "how to fix a tap" — it was "how to upsell a tap to $1,400." Scripts. Pricing psychology. Phantom add-ons on the invoice. He walked after five years.
+When BikeExchange folded in 2023, Marco realised there was no eBike-specific marketplace where he could repeat that experience. So he built one. The first version of ebikeflip went live on a long weekend in 2024 from his kitchen table, with his 17-year-old offering unsolicited UX feedback the whole time.
 
-**Use this story when:** writing about trust, pricing transparency, why the business is flat-fee, or the difference between owner-operators and franchise plumbers.
+**Use this story when:** writing about trust, why an eBike-specific marketplace exists, why peer-to-peer matters, or the origin of ebikeflip.
 
-## The fat-in-the-candle story
+## The battery-as-candle story
 
-Nine out of ten blocked kitchen sinks in Prahran are the same thing: fat. Cooking oil, bacon grease, the bit of butter left in the pan. Goes down warm, hits the cold drain pipe about a metre in, and **sets like a candle**. Over a couple of months it narrows the pipe until a stray piece of rice finally seals it off.
+The most common reason a "barely used" used eBike has 30km of range instead of the listed 60km is the same thing every time: the previous owner left it plugged in overnight, every night, for two years. Cells stayed at 100% state of charge under constant trickle current, internal resistance climbed, and capacity quietly dropped.
 
-**Use this story when:** writing about blocked kitchen sinks, why kettles of boiling water work, or why the blockage "keeps coming back".
+By the time the bike is listed for sale, the battery is physically full but electrically tired — a 36V pack that used to hit 42V right off the charger now reads 39V, and the bike does about half what the spec sheet promised.
 
-## The tree roots in clay pipes
+**Use this story when:** writing about battery degradation, used eBike inspections, why "barely used" listings often disappoint, or how to charge correctly day-to-day.
 
-Houses in the inner south (Prahran, South Yarra, Windsor) were mostly built 1890–1960. Clay pipes from the era. Tree roots find the joints and sit there for decades, letting water through at first, then narrowing, then blocking.
+## The connector-corrosion mystery
 
-**The fix:** CCTV the line, see where the roots are, cut them with the jet-rodder. If it's the same spot that blocks three times in a year, replace that section. One-off fix, not a recurring problem.
+Inner-south Melbourne weather (everyone rides through one rain shower a week) plus uncovered battery contacts is *the* eBike intermittent-power story. Battery says full. Bike says no power. Take the battery off, contacts look fine. Put it back on, still no power. Then someone wipes the contacts with a dry cloth and a cotton bud, the bike comes back to life. Two weeks later, dead again.
 
-**Use this story when:** writing about recurring blockages, CCTV drain camera work, or older-house plumbing.
+The fix: dielectric grease on the battery contacts and the bike's mounting plate. Five-dollar tube, 30 seconds to apply, problem doesn't come back.
 
-## The 90-minute Sunday burst pipe
+**Use this story when:** writing about intermittent eBike electrical issues, why your bike randomly cuts out, weatherproofing checks before buying used, or simple maintenance habits.
 
-Sunday, late 2023. Customer (Sarah K. in Prahran) called about a burst pipe. Water everywhere. Marco was onsite in 40 minutes, had the water back on in 90 minutes total, and charged exactly what he quoted on the phone.
+## The 9am Sunday handover
 
-**Use this story when:** writing about emergency response, weekend availability, or the "no price surprise" promise. Don't use the customer's name without context — say "a customer in Prahran" or "a Sunday callout last year".
+Last spring a buyer messaged at 8pm Saturday about a Specialized Turbo Vado listed in Brunswick. Asked the seller if he could meet that night. Seller said tomorrow morning. Buyer rocked up at 9am Sunday, went for a 25-minute test ride that included one solid hill, paid for a 15-minute condition check at the bike shop two blocks away, and rode the bike home to Northcote that afternoon. Total deal time from "interested" to "in my garage": 13 hours.
 
-## The $1,800 hot water quote
+That's what peer-to-peer is supposed to feel like.
 
-Another customer (Dominic R., St Kilda) got quoted $1,800 by another plumber for a like-for-like electric hot water replacement. Marco did it for $1,950 — but it was a **heat pump upgrade, including the VEU rebate handled**. Paid less, got a better unit, ~$650/year less in power bills.
+**Use this story when:** writing about how to buy a used eBike well, what a clean transaction looks like, or what makes a good buyer or seller.
 
-**Use this story when:** writing about hot water system costs, the VEU rebate, or why the cheapest quote isn't the cheapest outcome.
+## The $2,400 hub-drive vs the $3,200 mid-drive
 
-## The aerator job
+A buyer was choosing between two listings: a $2,400 hub-drive eBike (3 years old, 8,000 km, original battery) and a $3,200 mid-drive (3 years old, 9,000 km, replacement battery fitted last year). Picked the cheaper one because the maths felt obvious.
 
-Marco was once called to a job where the customer said their kitchen tap had "no pressure at all." He unscrewed the aerator, rinsed it under the other tap, and the pressure was back in 90 seconds. Had to charge $149 because that's the call-out fee.
+Eighteen months later, the hub-drive's battery was on its way out ($1,000 replacement) and the controller had glitched twice ($350 to fix). The mid-drive owner spent $0 on either over the same window — then sold for $2,200 when they upgraded.
 
-**Use this story when:** writing about low water pressure, DIY fixes, or why the business tells you to try things yourself first.
+Total cost over 18 months: $3,750 for the hub-drive, $1,000 for the mid-drive after resale. Cheapest sticker, most expensive ride.
 
-## The "other guy charged me $900 for a washer"
+**Use this story when:** writing about TCO, mid-drive vs hub motor decisions, why sticker price isn't the whole story, or the long-term cost of buying down-market.
 
-A recurring line Marco hears. Every time a new customer comes in because their tap is dripping, they tell him a variant of "the last plumber charged $900 to change a washer." It's why Plumbing Co prices are flat, written, and approved before any work starts.
+## The dead-display $400 deal
 
-**Use this story when:** writing about pricing transparency, why the business is flat-fee, or introducing the "no bill-shock" promise.
+A bloke listed a 2-year-old mid-drive eBike on Facebook Marketplace for $400 because "the screen is dead and it won't turn on." A buyer with a bit of forum-reading and $15 worth of curiosity bought it, ordered a generic Bafang display from AliExpress for $14.50, plugged it in, and had a $1,800 bike — original frame, motor, battery, all fine. The previous owner had assumed a dead display meant a dead bike.
 
-## The galvanised pipe story (houses pre-1980)
+The lesson isn't "buy broken bikes for fun." The lesson is: most "broken" eBike listings are one cheap replaceable part away from being fully fixable. Spend 10 minutes on a forum before assuming a listing is junk.
 
-Pre-1980 Melbourne houses — most of the inner-south single-storey Victorians and inter-war California bungalows — have galvanised steel water mains from meter to house. They corrode from the inside. By 2026, many of them are more rust than steel. Water pressure drops, eventually flow collapses.
+**Use this story when:** writing about used eBike value, what makes a listing "broken" vs "scrap", repairability, or why budget shoppers should learn the components.
 
-**Use this story when:** writing about low water pressure in older homes, whole-house plumbing replacements, or pre-purchase plumbing inspections.
+## The "$1,200 to swap a battery" line
+
+A line ebikeflip hears constantly: "I took my old eBike to the original dealer to ask about a new battery and they quoted me $1,200." The replacement battery itself, from the brand's own online store: $750. The labour to swap it: 15 minutes. The dealer's "fitting fee, electronic recalibration, and bike inspection": $400 stacked on top.
+
+Most modern systems don't *need* recalibration. You plug the new pack in, the bike sees it, it works. Independent eBike mechanics do the same swap for $50.
+
+It's why we tell sellers to list with the dealer-paranoia tax stripped out, and buyers to factor a *real* replacement cost — not a dealer's worst-case quote — into their negotiations.
+
+**Use this story when:** writing about battery replacement costs, dealer vs independent service, negotiation, or why "the dealer said $X" isn't necessarily the real number.
+
+## The 2017–2019 hub-controller wave
+
+Hub-drive eBikes from the 2017–2019 era are dropping like flies on the resale market right now. The controllers (the brain that actually runs the motor) were cheaper electronics than what came after, and most are hitting end-of-life around the 4–6 year mark. Symptoms vary — random cutouts, error codes that come and go, displays that lie about state of charge — but the failure mode is the same.
+
+If you're buying a 2017–2019 hub-drive listing, plan on a controller swap within 12 months ($150–$400 for the part, $80–$120 for the labour). Build that cost into the offer instead of being surprised by it.
+
+**Use this story when:** writing about older used eBikes, model-year landmines, hub-drive-specific failures, or how to factor age into a peer-to-peer offer.
 
 ## How to use these
 
-- **Don't recite them verbatim.** Adapt the bones — Marco, the timeframe, the specific detail (fat-as-candle, 90-minute response, $1,800 quote) — to fit the post.
+- **Don't recite them verbatim.** Adapt the bones — the timeframe, the specific number (39V, $400, 13 hours), the specific situation — to fit the post.
 - **Use at most one story per blog post.** More than that feels like stuffing.
-- **Always include one specific concrete detail** — a street, a time, a price, a customer's situation — to make it feel real.
+- **Always include one specific concrete detail** — a price, a brand, a suburb, a time — to make it feel real.
 - **Never invent a new story.** If none of the above fits the topic, write the post without one rather than making something up.
