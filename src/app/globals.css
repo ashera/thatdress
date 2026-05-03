@@ -3387,4 +3387,8 @@ textarea.input {
   padding: 6px 10px;
   text-align: left;
 }
+
+@keyframes submit-spin {
+  to { transform: rotate(360deg); }
+}
 .prose th { background: var(--surface-sunken); font-weight: 600; }

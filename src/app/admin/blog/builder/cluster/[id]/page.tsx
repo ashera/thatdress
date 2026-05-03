@@ -16,6 +16,7 @@ import {
   toggleImageInclude,
 } from "@/lib/actions/blog-builder";
 import { Button, Field, Input } from "../../../../../_components/ui";
+import { SubmitButton } from "../../../../../_components/submit-button";
 
 export const dynamic = "force-dynamic";
 
@@ -370,9 +371,12 @@ export default async function ClusterReviewPage({
           <div style={{ display: "flex", gap: 8 }}>
             <form action={runSerpAnalysis}>
               <input type="hidden" name="clusterId" value={cluster.id} />
-              <Button type="submit" variant={serp ? "ghost" : "primary"}>
+              <SubmitButton
+                variant={serp ? "ghost" : "primary"}
+                pendingLabel="Running… (5–15s)"
+              >
                 {serp ? "Re-run analysis" : "Run analysis"}
-              </Button>
+              </SubmitButton>
             </form>
             {serp && (
               <form action={clearSerpAnalysis}>
