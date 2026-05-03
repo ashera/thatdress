@@ -97,6 +97,8 @@ Rules:
 - Pick 1–2 opinions from the Opinions list and bake them in as editorial stances.
 - Use stats VERBATIM — never round, paraphrase, or invent numbers. Cite them naturally.
 - Adapt 1–2 stories to fit the article. They turn generic prose into something a human would write.
+- Where the topic genuinely connects to one of the EXISTING POSTS YOU CAN LINK TO, drop a markdown link to it ([anchor text](/blog/slug)) — natural cross-references only, never forced. Aim for 1–3 internal links per post if relevant ones exist; zero is fine if none fit.
+- Tags: pick 3–5 from AVAILABLE TAGS only. Do not invent new tags — anything outside the list will be discarded.
 - For each hero image, supply an image_placement entry with the slot, the EXACT H2 heading text it should appear after, a one-sentence caption, and a layout choice. The platform inserts the actual image and Pexels credit programmatically — do NOT embed image markdown in body_markdown yourself.
 - Layout choices for image_placements: "full" = full-width break (use sparingly, for shots that deserve emphasis), "right" = float right with text wrapping, "left" = float left with text wrapping. AIM FOR VARIETY: do not make every image full-width. A good post mixes one full + several right/left so the page has visual rhythm.
 
@@ -119,14 +121,22 @@ export function composePostSystemPrompt(refs: PostPromptReferences): string {
   return parts.join("\n");
 }
 
+export type PostPromptExistingPost = {
+  slug: string;
+  title: string;
+  tags: string[];
+};
+
 export function composePostUserPrompt(opts: {
   cluster: PostPromptCluster;
   members: PostPromptMember[];
   serp: PostPromptSerp | null;
   images: PostPromptImage[];
   references: PostPromptReferences;
+  existingPosts: PostPromptExistingPost[];
+  availableTags: string[];
 }): string {
-  const { cluster, members, serp, images, references } = opts;
+  const { cluster, members, serp, images, references, existingPosts, availableTags } = opts;
   const primary = members.find((m) => m.is_primary);
   const secondary = members.filter((m) => !m.is_primary);
 
@@ -193,6 +203,25 @@ export function composePostUserPrompt(opts: {
         }
       }
     }
+  }
+  lines.push("");
+
+  lines.push("EXISTING POSTS YOU CAN LINK TO (use [anchor](/blog/slug) markdown):");
+  if (existingPosts.length === 0) {
+    lines.push("(none — skip cross-linking for this post)");
+  } else {
+    for (const p of existingPosts) {
+      const tagSuffix = p.tags.length > 0 ? ` — ${p.tags.join(", ")}` : "";
+      lines.push(`- [${p.title}](/blog/${p.slug})${tagSuffix}`);
+    }
+  }
+  lines.push("");
+
+  lines.push("AVAILABLE TAGS (pick 3–5 from this list only):");
+  if (availableTags.length === 0) {
+    lines.push("(none — leave the tags array empty)");
+  } else {
+    lines.push(availableTags.join(", "));
   }
   lines.push("");
 

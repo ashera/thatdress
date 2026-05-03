@@ -148,7 +148,14 @@ export default async function ClusterReviewPage({
 
   if (!/^\d+$/.test(id)) notFound();
 
-  const [clusterRes, membersRes, imageRes, referenceFiles] = await Promise.all([
+  const [
+    clusterRes,
+    membersRes,
+    imageRes,
+    referenceFiles,
+    existingPostsRes,
+    availableTagsRes,
+  ] = await Promise.all([
     query<ClusterRow>(
       `SELECT id::text,
               name,
@@ -195,6 +202,25 @@ export default async function ClusterReviewPage({
       [id],
     ),
     loadBlogReferences(),
+    query<{ slug: string; title: string; tags: string[] }>(
+      `SELECT p.slug,
+              p.title,
+              COALESCE(
+                ARRAY_AGG(t.label) FILTER (WHERE t.id IS NOT NULL),
+                ARRAY[]::text[]
+              ) AS tags
+         FROM blog_posts p
+    LEFT JOIN blog_post_tags pt ON pt.post_id = p.id
+    LEFT JOIN blog_tags t       ON t.id = pt.tag_id
+        WHERE p.published_at IS NOT NULL
+          AND p.published_at <= NOW()
+        GROUP BY p.id
+        ORDER BY p.published_at DESC
+        LIMIT 12`,
+    ),
+    query<{ label: string }>(
+      `SELECT label FROM blog_tags ORDER BY sort_order, label`,
+    ),
   ]);
   const referencesByKey = new Map(
     referenceFiles.map((f) => [f.key, f.body]),
@@ -250,6 +276,8 @@ export default async function ClusterReviewPage({
       source_url: i.source_url,
     })),
     references,
+    existingPosts: existingPostsRes.rows,
+    availableTags: availableTagsRes.rows.map((r) => r.label),
   });
   const gateReason = postDone
     ? "A post has already been generated for this cluster."

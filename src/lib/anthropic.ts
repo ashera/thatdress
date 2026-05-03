@@ -28,8 +28,21 @@ export type ToolChoice =
   | { type: "any" }
   | { type: "tool"; name: string };
 
+/**
+ * System prompt: either a plain string (simple case) or an array of content
+ * blocks. Use the array form when you want to attach cache_control to a
+ * specific block — Anthropic prompt caching reuses identical prefixes
+ * across calls within a 5-minute TTL, charging 10% of normal input cost
+ * for cached tokens (and counting at 10% against ITPM).
+ */
+export type SystemContentBlock = {
+  type: "text";
+  text: string;
+  cache_control?: { type: "ephemeral" };
+};
+
 export type CallOpts = {
-  system: string;
+  system: string | SystemContentBlock[];
   messages: Message[];
   model?: string;
   maxTokens?: number;

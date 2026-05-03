@@ -66,6 +66,7 @@ import { searchPexels } from "@/lib/pexels";
 import {
   composePostSystemPrompt,
   composePostUserPrompt,
+  type PostPromptExistingPost,
   type PostPromptReferences,
 } from "@/lib/blog-post-prompt";
 import { loadBlogReferences } from "@/lib/blog-references";
@@ -1123,7 +1124,8 @@ export async function generateBlogPostFromCluster(
     redirect(`/admin/blog/builder/cluster/${clusterId}?error=missing-serp`);
   }
 
-  const [membersRes, imageRes, refFiles] = await Promise.all([
+  const [membersRes, imageRes, refFiles, existingPostsRes, availableTagsRes] =
+    await Promise.all([
     query<{
       phrase: string;
       is_primary: boolean;
@@ -1149,6 +1151,27 @@ export async function generateBlogPostFromCluster(
       [clusterId],
     ),
     loadBlogReferences(),
+    // Recently published posts so Claude can drop natural cross-links.
+    // Capped at 12 to keep the prompt under the tier-1 ITPM budget.
+    query<{ slug: string; title: string; tags: string[] }>(
+      `SELECT p.slug,
+              p.title,
+              COALESCE(
+                ARRAY_AGG(t.label) FILTER (WHERE t.id IS NOT NULL),
+                ARRAY[]::text[]
+              ) AS tags
+         FROM blog_posts p
+    LEFT JOIN blog_post_tags pt ON pt.post_id = p.id
+    LEFT JOIN blog_tags t       ON t.id = pt.tag_id
+        WHERE p.published_at IS NOT NULL
+          AND p.published_at <= NOW()
+        GROUP BY p.id
+        ORDER BY p.published_at DESC
+        LIMIT 12`,
+    ),
+    query<{ id: string; label: string }>(
+      `SELECT id::text, label FROM blog_tags ORDER BY sort_order, label`,
+    ),
   ]);
   if (imageRes.rows.length === 0) {
     redirect(`/admin/blog/builder/cluster/${clusterId}?error=missing-images`);
@@ -1162,6 +1185,14 @@ export async function generateBlogPostFromCluster(
     stats: refsByKey.get("stats") ?? null,
     stories: refsByKey.get("stories") ?? null,
   };
+
+  const existingPosts: PostPromptExistingPost[] = existingPostsRes.rows.map(
+    (r) => ({ slug: r.slug, title: r.title, tags: r.tags }),
+  );
+  const availableTags = availableTagsRes.rows.map((r) => r.label);
+  const tagIdsByLowerLabel = new Map(
+    availableTagsRes.rows.map((r) => [r.label.toLowerCase(), r.id]),
+  );
 
   const systemPrompt = composePostSystemPrompt(references);
   const userPrompt = composePostUserPrompt({
@@ -1178,10 +1209,24 @@ export async function generateBlogPostFromCluster(
       source_url: r.source_url,
     })),
     references,
+    existingPosts,
+    availableTags,
   });
 
   const result = await callClaude({
-    system: systemPrompt,
+    // System prompt is identical across every cluster's generation
+    // (base rules + voice + humour). Marking it cache_control: ephemeral
+    // lets Anthropic reuse the cached prefix across calls within a
+    // 5-min TTL — 10% of normal input cost on cache hits, and 10%
+    // toward ITPM, which buys back rate-limit headroom for back-to-back
+    // generations.
+    system: [
+      {
+        type: "text",
+        text: systemPrompt,
+        cache_control: { type: "ephemeral" },
+      },
+    ],
     messages: [{ role: "user", content: userPrompt }],
     // 5000 fits a ~3000-word post with the tool-call wrapping; tier-1
     // ITPM is 10k and Anthropic reserves max_tokens against the limit
@@ -1286,6 +1331,26 @@ export async function generateBlogPostFromCluster(
           WHERE id = $1::bigint`,
         [id, imgRes.rows[0]!.id],
       );
+    }
+
+    // Link any tags Claude returned that match an existing blog_tags row.
+    // Unmatched tags are silently dropped — the prompt explicitly tells
+    // the model to pick from AVAILABLE TAGS, so anything else is a miss.
+    if (Array.isArray(parsed.tags) && parsed.tags.length > 0) {
+      const tagIds = new Set<string>();
+      for (const raw of parsed.tags) {
+        if (typeof raw !== "string") continue;
+        const id = tagIdsByLowerLabel.get(raw.toLowerCase().trim());
+        if (id) tagIds.add(id);
+      }
+      for (const tagId of tagIds) {
+        await client.query(
+          `INSERT INTO blog_post_tags (post_id, tag_id)
+           VALUES ($1::bigint, $2::bigint)
+           ON CONFLICT DO NOTHING`,
+          [id, tagId],
+        );
+      }
     }
 
     await client.query(
