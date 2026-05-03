@@ -26,13 +26,8 @@ const ADMIN_LINKS: Array<{ href: string; title: string; desc: string }> = [
   },
   {
     href: "/admin/blog",
-    title: "Blog",
+    title: "Blog Management",
     desc: "Write articles to attract visitors and support SEO.",
-  },
-  {
-    href: "/admin/blog/builder",
-    title: "Blog Builder",
-    desc: "Manage the keyword bank that seeds auto-generated articles.",
   },
 ];
 
