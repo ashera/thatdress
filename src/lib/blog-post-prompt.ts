@@ -175,17 +175,23 @@ export function composePostUserPrompt(opts: {
   }
   lines.push("");
 
-  lines.push("HERO IMAGES (insert these with captions; cite Pexels):");
+  lines.push("HERO IMAGES");
+  lines.push(
+    "The first image below becomes the hero banner at the top of the post automatically — do NOT include it in image_placements. Use image_placements only for the remaining images, referencing them by slot number.",
+  );
   if (images.length === 0) {
     lines.push("(none included)");
   } else {
+    let isFirst = true;
     for (const img of images) {
       const photog = img.photographer ?? "unknown photographer";
       const alt = img.alt ?? "(no alt)";
       const link = img.source_url ?? "(no link)";
+      const tag = isFirst ? " [HERO]" : "";
       lines.push(
-        `- Slot ${img.slot + 1} — by ${photog} — alt: "${alt}" — ${link}`,
+        `- Slot ${img.slot}${tag} — by ${photog} — alt: "${alt}" — ${link}`,
       );
+      isFirst = false;
     }
   }
   lines.push("");

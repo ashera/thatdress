@@ -821,6 +821,32 @@ type InjectImage = {
   source_url: string | null;
 };
 
+const HERO_MAX_BYTES = 8 * 1024 * 1024;
+
+/**
+ * Fetch the hero candidate's bytes from Pexels so they can be inlined into
+ * blog_images. Returns null on any failure (network, oversized, non-image
+ * response) — the post will be created without a hero in that case.
+ */
+async function fetchHeroBytes(
+  source: { url_large: string } | null,
+): Promise<{ mime: string; data: Buffer } | null> {
+  if (!source) return null;
+  try {
+    const res = await fetch(source.url_large);
+    if (!res.ok) return null;
+    const mime = res.headers.get("content-type") ?? "image/jpeg";
+    if (!mime.startsWith("image/")) return null;
+    const ab = await res.arrayBuffer();
+    if (ab.byteLength === 0 || ab.byteLength > HERO_MAX_BYTES) return null;
+    return { mime, data: Buffer.from(ab) };
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[post-gen] hero fetch failed (non-fatal)", err);
+    return null;
+  }
+}
+
 /** Markdown block for one image: image, blank, italic caption with credit. */
 function imageMarkdown(img: InjectImage, caption?: string): string {
   const altText = (caption || img.alt || "").trim();
@@ -1007,13 +1033,20 @@ export async function generateBlogPostFromCluster(
     redirect(`/admin/blog/builder/cluster/${clusterId}?error=bad-output`);
   }
 
-  // Inject Pexels images into the body markdown using Claude's placement
-  // hints. Anything Claude didn't match to a heading falls through to the
-  // bottom of the post so no included image silently disappears.
+  // First included image becomes the hero banner. We fetch its bytes here
+  // so the transaction stays short. A failure to fetch is non-fatal: the
+  // post is still created, just without a hero (user can upload one later).
+  const heroSource = imageRes.rows[0] ?? null;
+  const bodyImageRows = heroSource ? imageRes.rows.slice(1) : imageRes.rows;
+  const heroBytes = await fetchHeroBytes(heroSource);
+
+  // Inject the body Pexels images using Claude's placement hints. Anything
+  // Claude didn't match to a heading falls through to the bottom so no
+  // included image silently disappears.
   const bodyMd = injectImagesIntoBody({
     bodyMd: String(parsed.body_markdown).trim(),
     placements: parsed.image_placements,
-    images: imageRes.rows,
+    images: bodyImageRows,
   });
 
   // Slug: prefer Claude's, fall back to slugified title; on conflict,
@@ -1051,6 +1084,21 @@ export async function generateBlogPostFromCluster(
       }
     }
     const id = rows[0]!.id;
+
+    if (heroBytes) {
+      const imgRes = await client.query<{ id: string }>(
+        `INSERT INTO blog_images (post_id, mime_type, bytes, byte_size)
+         VALUES ($1::bigint, $2, $3, $4)
+         RETURNING id::text`,
+        [id, heroBytes.mime, heroBytes.data, heroBytes.data.length],
+      );
+      await client.query(
+        `UPDATE blog_posts SET hero_image_id = $2::bigint, updated_at = NOW()
+          WHERE id = $1::bigint`,
+        [id, imgRes.rows[0]!.id],
+      );
+    }
+
     await client.query(
       `UPDATE blog_clusters
           SET generated_post_id = $2::bigint, updated_at = NOW()
