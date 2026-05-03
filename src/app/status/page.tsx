@@ -1,5 +1,6 @@
 import os from "node:os";
 import { query, getPoolStats } from "@/lib/db";
+import { pingAnthropic } from "@/lib/anthropic";
 import { buildInfo } from "@/lib/build-info";
 
 export const dynamic = "force-dynamic";
@@ -120,13 +121,15 @@ function shortVersion(v: string): string {
 }
 
 export default async function StatusPage() {
-  const [latency, serverInfo, activeConns, counts, latest] = await Promise.all([
-    safe(pingDatabase),
-    safe(getServerInfo),
-    safe(getActiveConnections),
-    safe(getCounts),
-    safe(getLatest),
-  ]);
+  const [latency, serverInfo, activeConns, counts, latest, anthropic] =
+    await Promise.all([
+      safe(pingDatabase),
+      safe(getServerInfo),
+      safe(getActiveConnections),
+      safe(getCounts),
+      safe(getLatest),
+      safe(() => pingAnthropic()),
+    ]);
 
   const pool = getPoolStats();
   const mem = process.memoryUsage();
@@ -150,6 +153,8 @@ export default async function StatusPage() {
 
   const dbOk = latency.ok;
   const dbLatency = latency.ok ? `${latency.value} ms` : "—";
+  const anthropicOk = anthropic.ok;
+  const anthropicLatency = anthropic.ok ? `${anthropic.value.latencyMs} ms` : "—";
 
   return (
     <div className="page status-page">
@@ -169,6 +174,11 @@ export default async function StatusPage() {
           tone={dbOk ? "ok" : "err"}
         />
         <KPI label="DB latency" value={dbLatency} />
+        <KPI
+          label="Claude API"
+          value={anthropicOk ? "Live" : "Down"}
+          tone={anthropicOk ? "ok" : "err"}
+        />
         <KPI
           label="Listings"
           value={counts.ok ? counts.value.listings : "—"}
@@ -237,6 +247,30 @@ export default async function StatusPage() {
             </KVList>
           ) : (
             <ErrLine msg={counts.error} />
+          )}
+        </DetailCard>
+
+        <DetailCard title="Claude API">
+          {anthropic.ok ? (
+            <KVList>
+              <KV k="Status" v="Live" />
+              <KV k="Round-trip" v={anthropicLatency} />
+              <KV k="Model" v={anthropic.value.model} />
+              <KV
+                k="API key"
+                v={anthropic.value.keyConfigured ? "Configured" : "Missing"}
+              />
+            </KVList>
+          ) : (
+            <>
+              <KVList>
+                <KV
+                  k="API key"
+                  v={process.env.ANTHROPIC_API_KEY ? "Configured" : "Missing"}
+                />
+              </KVList>
+              <ErrLine msg={anthropic.error} />
+            </>
           )}
         </DetailCard>
 

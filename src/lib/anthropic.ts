@@ -87,6 +87,46 @@ export async function callClaude(opts: CallOpts): Promise<CallResult> {
   }
 }
 
+export type PingResult = {
+  latencyMs: number;
+  model: string;
+  keyConfigured: boolean;
+};
+
+/**
+ * Cheapest possible round-trip to the Messages API. Validates that the key
+ * works, the model is reachable, and the network path is open. Caps output
+ * at 1 token so cost stays trivial.
+ */
+export async function pingAnthropic(model?: string): Promise<PingResult> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const keyConfigured = Boolean(apiKey);
+  const useModel = model ?? DEFAULT_MODEL;
+  if (!apiKey) {
+    throw new Error("ANTHROPIC_API_KEY not configured");
+  }
+  const t0 = Date.now();
+  const res = await fetch(API_URL, {
+    method: "POST",
+    headers: {
+      "x-api-key": apiKey,
+      "anthropic-version": API_VERSION,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      model: useModel,
+      max_tokens: 1,
+      messages: [{ role: "user", content: "hi" }],
+    }),
+  });
+  const latencyMs = Date.now() - t0;
+  if (!res.ok) {
+    const detail = await res.text().catch(() => `${res.status}`);
+    throw new Error(`Anthropic ${res.status}: ${detail}`);
+  }
+  return { latencyMs, model: useModel, keyConfigured };
+}
+
 /**
  * Pull the first JSON object/array out of a model response. Models often
  * wrap JSON in prose or fenced code blocks even when instructed not to.
