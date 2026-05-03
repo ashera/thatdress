@@ -104,6 +104,141 @@ async function fetchStatusCounts(): Promise<Record<string, number>> {
   }
 }
 
+function Workflow() {
+  const steps: Array<{ n: number; title: string; body: React.ReactNode }> = [
+    {
+      n: 1,
+      title: "Add keywords",
+      body: (
+        <>
+          Drop topics into the bank one at a time or paste a list. New entries
+          start as <strong>Idea</strong>.
+        </>
+      ),
+    },
+    {
+      n: 2,
+      title: "Cluster",
+      body: (
+        <>
+          Group related keywords into a cluster with Claude — one cluster
+          becomes one article. Pick a primary keyword. Status flips to{" "}
+          <strong>Clustered</strong>.
+        </>
+      ),
+    },
+    {
+      n: 3,
+      title: "Pre-generate",
+      body: (
+        <>
+          On the primary keyword, run a SERP analysis to see what&rsquo;s
+          ranking and pick a hero image from five Pexels candidates.
+        </>
+      ),
+    },
+    {
+      n: 4,
+      title: "Draft & publish",
+      body: (
+        <>
+          Generate the post from the cluster, then schedule or publish it from
+          blog admin. Status moves through <strong>Drafted</strong> →{" "}
+          <strong>Published</strong>.
+        </>
+      ),
+    },
+  ];
+
+  return (
+    <section
+      aria-label="Workflow"
+      style={{
+        padding: "var(--s-4)",
+        background: "var(--surface-sunken)",
+        border: "1px solid var(--hairline)",
+        borderRadius: 12,
+        marginBottom: "var(--s-5)",
+      }}
+    >
+      <h2
+        style={{
+          fontSize: 12,
+          fontFamily: "var(--font-mono)",
+          letterSpacing: "0.06em",
+          textTransform: "uppercase",
+          color: "var(--ink-3)",
+          margin: "0 0 var(--s-3)",
+          fontWeight: 600,
+        }}
+      >
+        How it works
+      </h2>
+      <ol
+        style={{
+          listStyle: "none",
+          padding: 0,
+          margin: 0,
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+          gap: "var(--s-3)",
+        }}
+      >
+        {steps.map((s) => (
+          <li
+            key={s.n}
+            style={{
+              display: "flex",
+              gap: "var(--s-2)",
+              alignItems: "flex-start",
+            }}
+          >
+            <span
+              style={{
+                flex: "0 0 24px",
+                width: 24,
+                height: 24,
+                borderRadius: 999,
+                background: "var(--ink-1)",
+                color: "#fff",
+                fontSize: 12,
+                fontWeight: 700,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                lineHeight: 1,
+              }}
+            >
+              {s.n}
+            </span>
+            <div style={{ minWidth: 0 }}>
+              <div
+                style={{
+                  fontWeight: 600,
+                  color: "var(--ink-1)",
+                  fontSize: "var(--t-body-s)",
+                  marginBottom: 2,
+                }}
+              >
+                {s.title}
+              </div>
+              <div
+                style={{
+                  fontSize: 13,
+                  color: "var(--ink-3)",
+                  lineHeight: 1.4,
+                }}
+              >
+                {s.body}
+              </div>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
 export default async function BlogBuilderListPage({
   searchParams,
 }: {
@@ -137,6 +272,8 @@ export default async function BlogBuilderListPage({
           ))}
         </p>
       </header>
+
+      <Workflow />
 
       {s.saved && (
         <p className="form-success" style={{ marginBottom: "var(--s-4)" }}>
