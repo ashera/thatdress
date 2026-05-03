@@ -56,3 +56,30 @@ function Spinner() {
     />
   );
 }
+
+/**
+ * Pending-aware submit button that keeps your own className/style. Use this
+ * for inline-styled buttons; use SubmitButton for the standard .btn look.
+ */
+type PendingProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+  pendingChildren?: ReactNode;
+  children: ReactNode;
+};
+
+export function PendingButton({
+  pendingChildren,
+  children,
+  ...rest
+}: PendingProps) {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      {...rest}
+      type="submit"
+      disabled={pending || rest.disabled}
+      aria-busy={pending || undefined}
+    >
+      {pending ? pendingChildren ?? children : children}
+    </button>
+  );
+}

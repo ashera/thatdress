@@ -16,7 +16,10 @@ import {
   toggleImageInclude,
 } from "@/lib/actions/blog-builder";
 import { Button, Field, Input } from "../../../../../_components/ui";
-import { SubmitButton } from "../../../../../_components/submit-button";
+import {
+  PendingButton,
+  SubmitButton,
+} from "../../../../../_components/submit-button";
 
 export const dynamic = "force-dynamic";
 
@@ -638,9 +641,12 @@ export default async function ClusterReviewPage({
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <form action={findInitialImages}>
               <input type="hidden" name="clusterId" value={cluster.id} />
-              <Button type="submit" variant={hasAnyImage ? "ghost" : "primary"}>
+              <SubmitButton
+                variant={hasAnyImage ? "ghost" : "primary"}
+                pendingLabel="Searching Pexels…"
+              >
                 {hasAnyImage ? "Re-fill empty slots" : "Find images"}
-              </Button>
+              </SubmitButton>
             </form>
             {hasAnyImage && (
               <form action={clearAllImages}>
@@ -794,8 +800,8 @@ export default async function ClusterReviewPage({
                         value={cluster.id}
                       />
                       <input type="hidden" name="slot" value={slot} />
-                      <button
-                        type="submit"
+                      <PendingButton
+                        pendingChildren="Refreshing…"
                         style={{
                           padding: "4px 10px",
                           fontSize: 12,
@@ -808,7 +814,7 @@ export default async function ClusterReviewPage({
                         }}
                       >
                         Refresh
-                      </button>
+                      </PendingButton>
                     </form>
                     <form action={clearImageSlot}>
                       <input
@@ -859,8 +865,8 @@ export default async function ClusterReviewPage({
                       value={cluster.id}
                     />
                     <input type="hidden" name="slot" value={slot} />
-                    <button
-                      type="submit"
+                    <PendingButton
+                      pendingChildren="Searching…"
                       style={{
                         width: "100%",
                         padding: "6px 10px",
@@ -874,7 +880,7 @@ export default async function ClusterReviewPage({
                       }}
                     >
                       Find a photo
-                    </button>
+                    </PendingButton>
                   </form>
                 </>
               )}
@@ -893,9 +899,9 @@ export default async function ClusterReviewPage({
           </p>
           <form action={generateClusterFromKeyword}>
             <input type="hidden" name="keywordId" value={primary.keyword_id} />
-            <Button type="submit" variant="ghost">
+            <SubmitButton variant="ghost" pendingLabel="Generating… (5–15s)">
               Regenerate from &ldquo;{primary.phrase}&rdquo;
-            </Button>
+            </SubmitButton>
           </form>
         </section>
       )}

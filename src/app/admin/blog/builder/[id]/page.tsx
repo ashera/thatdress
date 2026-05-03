@@ -8,6 +8,7 @@ import {
   updateBlogKeyword,
 } from "@/lib/actions/blog-builder";
 import { Button, Field, Input, Textarea } from "../../../../_components/ui";
+import { SubmitButton } from "../../../../_components/submit-button";
 
 export const dynamic = "force-dynamic";
 
@@ -231,9 +232,12 @@ export default async function EditKeywordPage({
 
         <form action={generateClusterFromKeyword}>
           <input type="hidden" name="keywordId" value={k.id} />
-          <Button type="submit" variant={clusters.length > 0 ? "ghost" : "primary"}>
+          <SubmitButton
+            variant={clusters.length > 0 ? "ghost" : "primary"}
+            pendingLabel="Generating… (5–15s)"
+          >
             {clusters.length > 0 ? "Regenerate cluster" : "Generate cluster"}
-          </Button>
+          </SubmitButton>
         </form>
         <p
           style={{
