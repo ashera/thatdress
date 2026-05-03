@@ -667,6 +667,14 @@ ALTER TABLE blog_clusters
   ADD COLUMN IF NOT EXISTS serp_analysis_json JSONB,
   ADD COLUMN IF NOT EXISTS serp_analyzed_at   TIMESTAMPTZ;
 
+-- Capture the last Generate Post call against this cluster so failures
+-- (rate limits, unparseable JSON, etc.) can be inspected without digging
+-- through server logs. Overwritten on each attempt.
+ALTER TABLE blog_clusters
+  ADD COLUMN IF NOT EXISTS last_gen_response_text TEXT,
+  ADD COLUMN IF NOT EXISTS last_gen_error         TEXT,
+  ADD COLUMN IF NOT EXISTS last_gen_at            TIMESTAMPTZ;
+
 -- Cutover from the earlier per-keyword variant. Pre-launch, so any
 -- existing analyses can be re-run from the cluster page.
 ALTER TABLE blog_keywords

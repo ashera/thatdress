@@ -106,6 +106,9 @@ type ClusterRow = {
   updated_at: string;
   serp_analysis_json: SerpAnalysis | null;
   serp_analyzed_at: string | null;
+  last_gen_response_text: string | null;
+  last_gen_error: string | null;
+  last_gen_at: string | null;
 };
 
 type MemberRow = {
@@ -156,7 +159,10 @@ export default async function ClusterReviewPage({
               created_at::text,
               updated_at::text,
               serp_analysis_json,
-              serp_analyzed_at::text
+              serp_analyzed_at::text,
+              last_gen_response_text,
+              last_gen_error,
+              last_gen_at::text
          FROM blog_clusters WHERE id = $1::bigint LIMIT 1`,
       [id],
     ),
@@ -278,6 +284,83 @@ export default async function ClusterReviewPage({
         <p className="form-error" style={{ marginBottom: "var(--s-5)" }}>
           {errorMessage}
         </p>
+      )}
+
+      {cluster.last_gen_at && (
+        <details
+          open={Boolean(cluster.last_gen_error)}
+          style={{
+            marginBottom: "var(--s-5)",
+            padding: "var(--s-3) var(--s-4)",
+            background: cluster.last_gen_error
+              ? "#fff2f2"
+              : "var(--surface-sunken)",
+            border: `1px solid ${
+              cluster.last_gen_error ? "#f5c2c2" : "var(--hairline)"
+            }`,
+            borderRadius: 10,
+          }}
+        >
+          <summary
+            style={{
+              cursor: "pointer",
+              fontSize: "var(--t-body-s)",
+              fontWeight: 600,
+              color: cluster.last_gen_error ? "#a01818" : "var(--ink-2)",
+            }}
+          >
+            Last generation attempt — {formatDate(cluster.last_gen_at)}{" "}
+            {cluster.last_gen_error ? "(failed)" : "(success)"}
+          </summary>
+          {cluster.last_gen_error && (
+            <p
+              style={{
+                marginTop: "var(--s-3)",
+                marginBottom: "var(--s-2)",
+                color: "#a01818",
+                fontSize: "var(--t-body-s)",
+              }}
+            >
+              <strong>Error:</strong> {cluster.last_gen_error}
+            </p>
+          )}
+          {cluster.last_gen_response_text != null && (
+            <>
+              <p
+                style={{
+                  fontSize: 11,
+                  fontFamily: "var(--font-mono)",
+                  letterSpacing: "0.06em",
+                  textTransform: "uppercase",
+                  color: "var(--ink-3)",
+                  margin: "var(--s-3) 0 6px",
+                }}
+              >
+                Raw Claude response (
+                {cluster.last_gen_response_text.length.toLocaleString()} chars)
+              </p>
+              <pre
+                style={{
+                  margin: 0,
+                  padding: "var(--s-3)",
+                  background: "#fff",
+                  border: "1px solid var(--hairline)",
+                  borderRadius: 8,
+                  fontSize: 12,
+                  fontFamily: "var(--font-mono)",
+                  whiteSpace: "pre-wrap",
+                  wordBreak: "break-word",
+                  lineHeight: 1.5,
+                  color: "var(--ink-2)",
+                  maxHeight: 480,
+                  overflow: "auto",
+                }}
+              >
+                {cluster.last_gen_response_text}
+              </pre>
+            </>
+          )}
+        </details>
       )}
 
       <section

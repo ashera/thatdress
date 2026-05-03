@@ -906,6 +906,29 @@ const HERO_MAX_BYTES = 8 * 1024 * 1024;
  * blog_images. Returns null on any failure (network, oversized, non-image
  * response) — the post will be created without a hero in that case.
  */
+/** Persist the latest Generate Post attempt so failures can be inspected
+ * from the cluster page without digging through server logs. Best-effort —
+ * we never let a logging failure block the redirect. */
+async function recordGenAttempt(
+  clusterId: string,
+  responseText: string,
+  error: string | null,
+): Promise<void> {
+  try {
+    await query(
+      `UPDATE blog_clusters
+          SET last_gen_response_text = $2,
+              last_gen_error         = $3,
+              last_gen_at            = NOW()
+        WHERE id = $1::bigint`,
+      [clusterId, responseText, error],
+    );
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.error("[post-gen] failed to record attempt", e);
+  }
+}
+
 async function fetchHeroBytes(
   source: { url_large: string } | null,
 ): Promise<{ mime: string; data: Buffer } | null> {
@@ -1114,6 +1137,7 @@ export async function generateBlogPostFromCluster(
     maxTokens: 5000,
   });
   if (!result.ok) {
+    await recordGenAttempt(clusterId, "", result.error);
     const code = result.error.includes("ANTHROPIC_API_KEY")
       ? "no-key"
       : "claude-error";
@@ -1124,6 +1148,11 @@ export async function generateBlogPostFromCluster(
 
   const parsed = extractJson<GeneratedPostJson>(result.text);
   if (!parsed || !parsed.title || !parsed.body_markdown) {
+    await recordGenAttempt(
+      clusterId,
+      result.text,
+      "extractJson returned null or missing required fields (title/body_markdown)",
+    );
     // eslint-disable-next-line no-console
     console.error(
       "[post-gen] Could not parse post JSON",
@@ -1206,6 +1235,8 @@ export async function generateBlogPostFromCluster(
     );
     return id;
   });
+
+  await recordGenAttempt(clusterId, result.text, null);
 
   revalidatePath(`/admin/blog/builder/cluster/${clusterId}`);
   revalidatePath(`/admin/blog/${postId}/edit`);
