@@ -54,6 +54,33 @@ export type PostPromptReferences = {
   stories: string | null;
 };
 
+// Character budgets for reference content sent in the prompt. The full
+// markdown files stay in references/ for the library viewer; only the
+// copy injected into the system/user prompt is clipped. Sized so the
+// total input stays under the 10k-tokens/min tier-1 rate limit
+// (~4 chars per token).
+const REFERENCE_BUDGETS = {
+  voice: 3500,
+  humour: 3500,
+  opinions: 2400,
+  stats: 2400,
+  stories: 2400,
+} as const;
+
+function clipForPrompt(body: string | null, maxChars: number): string | null {
+  if (!body) return null;
+  const trimmed = body.trim();
+  if (trimmed.length <= maxChars) return trimmed;
+  // Prefer a paragraph break near the cap so the trimmed text doesn't
+  // end mid-sentence; fall back to a clean word boundary.
+  const slice = trimmed.slice(0, maxChars);
+  const lastPara = slice.lastIndexOf("\n\n");
+  if (lastPara > maxChars * 0.7) {
+    return slice.slice(0, lastPara).trimEnd();
+  }
+  return slice.replace(/\s+\S*$/, "").trimEnd();
+}
+
 const POST_SYSTEM_BASE = `You are a senior content writer for ebikeflip, a peer-to-peer marketplace for buying and selling used electric bikes (eBikes).
 
 Given a keyword cluster, a SERP landscape analysis, hero images, and editorial reference materials, write a single complete blog post that targets the cluster's primary keyword while naturally covering its related queries.
@@ -91,15 +118,17 @@ Rules:
 
 export function composePostSystemPrompt(refs: PostPromptReferences): string {
   const parts: string[] = [POST_SYSTEM_BASE];
-  if (refs.voice) {
+  const voice = clipForPrompt(refs.voice, REFERENCE_BUDGETS.voice);
+  if (voice) {
     parts.push("");
     parts.push("=== VOICE GUIDE ===");
-    parts.push(refs.voice.trim());
+    parts.push(voice);
   }
-  if (refs.humour) {
+  const humour = clipForPrompt(refs.humour, REFERENCE_BUDGETS.humour);
+  if (humour) {
     parts.push("");
     parts.push("=== HUMOUR GUIDE ===");
-    parts.push(refs.humour.trim());
+    parts.push(humour);
   }
   return parts.join("\n");
 }
@@ -205,15 +234,24 @@ export function composePostUserPrompt(opts: {
   lines.push("EDITORIAL MATERIALS");
   lines.push("");
   lines.push("=== OPINIONS (pick 1–2 and bake in as editorial stances) ===");
-  lines.push(references.opinions?.trim() ?? "(opinions reference missing)");
+  lines.push(
+    clipForPrompt(references.opinions, REFERENCE_BUDGETS.opinions) ??
+      "(opinions reference missing)",
+  );
   lines.push("");
   lines.push(
     "=== STATS (use verbatim — never round, paraphrase, or invent) ===",
   );
-  lines.push(references.stats?.trim() ?? "(stats reference missing)");
+  lines.push(
+    clipForPrompt(references.stats, REFERENCE_BUDGETS.stats) ??
+      "(stats reference missing)",
+  );
   lines.push("");
   lines.push("=== STORIES (adapt 1–2 to fit the article) ===");
-  lines.push(references.stories?.trim() ?? "(stories reference missing)");
+  lines.push(
+    clipForPrompt(references.stories, REFERENCE_BUDGETS.stories) ??
+      "(stories reference missing)",
+  );
   lines.push("");
 
   lines.push("Write the post now and return only the JSON.");
