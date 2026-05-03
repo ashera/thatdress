@@ -3479,6 +3479,54 @@ textarea.input {
   to { transform: rotate(360deg); }
 }
 
+/* Inspection checklist radio pills — uses :has() to restyle the label
+   when the hidden radio is checked, so the pill flips state instantly
+   on click without needing a client component. */
+.checklist-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  background: #fff;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-3);
+  white-space: nowrap;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+  position: relative;
+}
+.checklist-pill input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+.checklist-pill:hover {
+  border-color: var(--ink-3);
+  color: var(--ink-1);
+}
+.checklist-pill:has(input:focus-visible) {
+  outline: 2px solid var(--volt-300);
+  outline-offset: 2px;
+}
+.checklist-pill--ok:has(input:checked) {
+  background: var(--volt-50);
+  border-color: var(--volt-300);
+  color: var(--ink-1);
+}
+.checklist-pill--bad:has(input:checked) {
+  background: #fff2f2;
+  border-color: #f5c2c2;
+  color: #a01818;
+}
+
 /* Post body images — three layouts so blog posts get visual rhythm
    instead of a stack of full-width photos. Floats clear at headings
    and at <hr>, and collapse to full-width on narrow viewports. */

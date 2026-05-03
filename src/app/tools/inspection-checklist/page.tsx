@@ -467,37 +467,13 @@ function RadioPill({
   checked: boolean;
   tone: "ok" | "bad";
 }) {
-  const accent =
-    tone === "ok"
-      ? checked
-        ? { bg: "var(--volt-50)", border: "var(--volt-300)", color: "var(--ink-1)" }
-        : { bg: "#fff", border: "var(--hairline)", color: "var(--ink-3)" }
-      : checked
-        ? { bg: "#fff2f2", border: "#f5c2c2", color: "#a01818" }
-        : { bg: "#fff", border: "var(--hairline)", color: "var(--ink-3)" };
   return (
-    <label
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 6,
-        padding: "4px 12px",
-        background: accent.bg,
-        border: `1px solid ${accent.border}`,
-        borderRadius: 999,
-        cursor: "pointer",
-        fontSize: 13,
-        fontWeight: 600,
-        color: accent.color,
-        whiteSpace: "nowrap",
-      }}
-    >
+    <label className={`checklist-pill checklist-pill--${tone}`}>
       <input
         type="radio"
         name={name}
         value={value}
         defaultChecked={checked}
-        style={{ width: 0, height: 0, opacity: 0, position: "absolute" }}
       />
       {label}
     </label>
