@@ -183,12 +183,34 @@ export default async function EditBlogPostPage({
                 : "Toggle on when you're ready for readers and search."}
             </p>
           </div>
-          <form action={toggleBlogPublished}>
-            <input type="hidden" name="postId" value={post.id} />
-            <Button type="submit" variant={isPublished ? "ghost" : "primary"}>
-              {isPublished ? "Unpublish" : "Publish now"}
-            </Button>
-          </form>
+          <div
+            style={{
+              display: "flex",
+              gap: 8,
+              flexWrap: "wrap",
+              alignItems: "center",
+            }}
+          >
+            <Link
+              href={`/blog/${post.slug}`}
+              target="_blank"
+              rel="noopener"
+              className="btn --ghost"
+              title={
+                isPublished
+                  ? "Open the live post in a new tab"
+                  : "Open the draft preview in a new tab (admin-only view)"
+              }
+            >
+              Preview ↗
+            </Link>
+            <form action={toggleBlogPublished}>
+              <input type="hidden" name="postId" value={post.id} />
+              <Button type="submit" variant={isPublished ? "ghost" : "primary"}>
+                {isPublished ? "Unpublish" : "Publish now"}
+              </Button>
+            </form>
+          </div>
         </div>
 
         <form
