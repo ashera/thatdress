@@ -1152,7 +1152,7 @@ export async function generateBlogPostFromCluster(
     ),
     loadBlogReferences(),
     // Recently published posts so Claude can drop natural cross-links.
-    // Capped at 12 to keep the prompt under the tier-1 ITPM budget.
+    // Capped at 8 to keep the prompt under the tier-1 ITPM budget.
     query<{ slug: string; title: string; tags: string[] }>(
       `SELECT p.slug,
               p.title,
@@ -1167,7 +1167,7 @@ export async function generateBlogPostFromCluster(
           AND p.published_at <= NOW()
         GROUP BY p.id
         ORDER BY p.published_at DESC
-        LIMIT 12`,
+        LIMIT 8`,
     ),
     query<{ id: string; label: string }>(
       `SELECT id::text, label FROM blog_tags ORDER BY sort_order, label`,
@@ -1228,10 +1228,10 @@ export async function generateBlogPostFromCluster(
       },
     ],
     messages: [{ role: "user", content: userPrompt }],
-    // 5000 fits a ~3000-word post with the tool-call wrapping; tier-1
+    // 4000 fits a ~2500-word post with the tool-call wrapping; tier-1
     // ITPM is 10k and Anthropic reserves max_tokens against the limit
     // up-front, so we keep this tight.
-    maxTokens: 5000,
+    maxTokens: 4000,
     tools: [SUBMIT_POST_TOOL],
     // Force the model to call submit_post — no free-text fallback.
     toolChoice: { type: "tool", name: "submit_post" },

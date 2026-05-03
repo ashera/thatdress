@@ -216,7 +216,7 @@ export default async function ClusterReviewPage({
           AND p.published_at <= NOW()
         GROUP BY p.id
         ORDER BY p.published_at DESC
-        LIMIT 12`,
+        LIMIT 8`,
     ),
     query<{ label: string }>(
       `SELECT label FROM blog_tags ORDER BY sort_order, label`,

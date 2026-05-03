@@ -177,17 +177,20 @@ export function composePostUserPrompt(opts: {
     }
     lines.push("");
     lines.push("Common topics (must cover):");
-    const common = serp.common_topics ?? [];
+    const common = (serp.common_topics ?? []).slice(0, 10);
     if (common.length === 0) lines.push("- (none identified)");
     else for (const t of common) lines.push(`- ${t}`);
     lines.push("");
     lines.push("Gap topics (use as differentiators):");
-    const gaps = serp.missing_topics_to_add ?? [];
+    const gaps = (serp.missing_topics_to_add ?? []).slice(0, 4);
     if (gaps.length === 0) lines.push("- (none identified)");
     else for (const t of gaps) lines.push(`- ${t}`);
     lines.push("");
     lines.push("Top 3 ranking pages (write something better):");
-    const top = serp.top_results ?? [];
+    // Cap top_results to 3 and per-page topics to 6 — verbose analyses
+    // can otherwise add ~1k tokens to the prompt and tip us over the
+    // tier-1 ITPM limit.
+    const top = (serp.top_results ?? []).slice(0, 3);
     if (top.length === 0) {
       lines.push("(none captured)");
     } else {
@@ -198,8 +201,9 @@ export function composePostUserPrompt(opts: {
           r.estimated_word_count ? `~${r.estimated_word_count} words` : "?"
         }`;
         lines.push(head);
-        if (r.topics_covered && r.topics_covered.length > 0) {
-          lines.push(`   topics: ${r.topics_covered.join(", ")}`);
+        const topics = (r.topics_covered ?? []).slice(0, 6);
+        if (topics.length > 0) {
+          lines.push(`   topics: ${topics.join(", ")}`);
         }
       }
     }
