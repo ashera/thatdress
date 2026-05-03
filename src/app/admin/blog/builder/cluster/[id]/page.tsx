@@ -8,6 +8,7 @@ import {
   clearSerpAnalysis,
   deleteBlogCluster,
   findInitialImages,
+  generateBlogPostFromCluster,
   generateClusterFromKeyword,
   refreshImageSlot,
   removeKeywordFromCluster,
@@ -50,6 +51,12 @@ const ERRORS: Record<string, string> = {
     "Pexels returned an error. Check server logs and try again.",
   "no-pexels-results":
     "Pexels has no more landscape photos for this phrase. Try a related keyword.",
+  "already-generated":
+    "A draft post has already been generated for this cluster. Delete the post on its edit page to regenerate.",
+  "missing-serp":
+    "Run the SERP analysis before generating a post.",
+  "missing-images":
+    "Include at least one hero image before generating a post.",
 };
 
 type ImageRow = {
@@ -303,12 +310,23 @@ export default async function ClusterReviewPage({
                   : "Pre-generation in progress"}
             </h2>
           </div>
-          <GeneratePostDialog
-            disabled={!canGenerate}
-            disabledReason={gateReason}
-            systemPrompt={postSystemPrompt}
-            userPrompt={postUserPrompt}
-          />
+          {postDone ? (
+            <Link
+              href={`/admin/blog/${cluster.generated_post_id}/edit`}
+              className="btn --primary"
+            >
+              View draft →
+            </Link>
+          ) : (
+            <GeneratePostDialog
+              disabled={!canGenerate}
+              disabledReason={gateReason}
+              systemPrompt={postSystemPrompt}
+              userPrompt={postUserPrompt}
+              clusterId={cluster.id}
+              generateAction={generateBlogPostFromCluster}
+            />
+          )}
         </div>
 
         <ol
@@ -353,7 +371,7 @@ export default async function ClusterReviewPage({
             title="Post"
             detail={
               postDone
-                ? "Generated"
+                ? "Draft generated — click View draft to review and publish"
                 : canGenerate
                   ? "Click Generate Post to preview the prompt"
                   : gateReason

@@ -11,6 +11,12 @@ import {
   WEB_SEARCH_TOOL,
 } from "@/lib/anthropic";
 import { searchPexels } from "@/lib/pexels";
+import {
+  composePostSystemPrompt,
+  composePostUserPrompt,
+  type PostPromptReferences,
+} from "@/lib/blog-post-prompt";
+import { loadBlogReferences } from "@/lib/blog-references";
 
 const PHRASE_MAX = 200;
 const NOTES_MAX = 2000;
@@ -778,3 +784,211 @@ export async function clearAllImages(formData: FormData): Promise<void> {
   redirect(`/admin/blog/builder/cluster/${clusterId}?saved=1`);
 }
 
+// ---------------------------------------------------------------------------
+// Generate Post from cluster — calls Claude with the composed prompt and
+// persists a draft into blog_posts. Refuses to overwrite an existing draft;
+// to regenerate, delete the old post first (the FK is ON DELETE SET NULL).
+// ---------------------------------------------------------------------------
+
+type GeneratedPostJson = {
+  title?: string;
+  slug?: string;
+  meta_description?: string;
+  tags?: string[];
+  body_markdown?: string;
+  image_placements?: Array<{
+    slot?: number;
+    after_heading?: string;
+    caption?: string;
+  }>;
+};
+
+function slugify(input: string): string {
+  return input
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 80);
+}
+
+export async function generateBlogPostFromCluster(
+  formData: FormData,
+): Promise<void> {
+  await requireAdmin();
+  const clusterId = String(formData.get("clusterId") ?? "");
+  if (!/^\d+$/.test(clusterId)) redirect("/admin/blog/builder");
+
+  // Refuse if the cluster already has a generated post. The FK is ON DELETE
+  // SET NULL, so deleting the post clears this and unlocks regeneration.
+  const guardRes = await query<{
+    name: string;
+    intent: string | null;
+    generated_post_id: string | null;
+    serp_analyzed_at: string | null;
+    serp_analysis_json: unknown;
+  }>(
+    `SELECT name, intent, generated_post_id::text,
+            serp_analyzed_at::text, serp_analysis_json
+       FROM blog_clusters WHERE id = $1::bigint LIMIT 1`,
+    [clusterId],
+  );
+  const guard = guardRes.rows[0];
+  if (!guard) redirect("/admin/blog/builder");
+  if (guard.generated_post_id) {
+    redirect(
+      `/admin/blog/builder/cluster/${clusterId}?error=already-generated`,
+    );
+  }
+  if (!guard.serp_analyzed_at) {
+    redirect(`/admin/blog/builder/cluster/${clusterId}?error=missing-serp`);
+  }
+
+  const [membersRes, imageRes, refFiles] = await Promise.all([
+    query<{
+      phrase: string;
+      is_primary: boolean;
+    }>(
+      `SELECT k.phrase, kc.is_primary
+         FROM blog_keyword_clusters kc
+         JOIN blog_keywords k ON k.id = kc.keyword_id
+        WHERE kc.cluster_id = $1::bigint
+        ORDER BY kc.is_primary DESC, k.phrase`,
+      [clusterId],
+    ),
+    query<{
+      slot: number;
+      photographer: string | null;
+      alt: string | null;
+      source_url: string | null;
+    }>(
+      `SELECT slot, photographer, alt, source_url
+         FROM blog_cluster_images
+        WHERE cluster_id = $1::bigint AND include_in_post = TRUE
+        ORDER BY slot`,
+      [clusterId],
+    ),
+    loadBlogReferences(),
+  ]);
+  if (imageRes.rows.length === 0) {
+    redirect(`/admin/blog/builder/cluster/${clusterId}?error=missing-images`);
+  }
+
+  const refsByKey = new Map(refFiles.map((f) => [f.key, f.body]));
+  const references: PostPromptReferences = {
+    voice: refsByKey.get("voice") ?? null,
+    humour: refsByKey.get("humour") ?? null,
+    opinions: refsByKey.get("opinions") ?? null,
+    stats: refsByKey.get("stats") ?? null,
+    stories: refsByKey.get("stories") ?? null,
+  };
+
+  const systemPrompt = composePostSystemPrompt(references);
+  const userPrompt = composePostUserPrompt({
+    cluster: { name: guard.name, intent: guard.intent },
+    members: membersRes.rows.map((r) => ({
+      phrase: r.phrase,
+      is_primary: r.is_primary,
+    })),
+    serp: (guard.serp_analysis_json as never) ?? null,
+    images: imageRes.rows.map((r) => ({
+      slot: r.slot,
+      photographer: r.photographer,
+      alt: r.alt,
+      source_url: r.source_url,
+    })),
+    references,
+  });
+
+  const result = await callClaude({
+    system: systemPrompt,
+    messages: [{ role: "user", content: userPrompt }],
+    maxTokens: 8192,
+  });
+  if (!result.ok) {
+    const code = result.error.includes("ANTHROPIC_API_KEY")
+      ? "no-key"
+      : "claude-error";
+    // eslint-disable-next-line no-console
+    console.error("[post-gen] Claude call failed", result.error);
+    redirect(`/admin/blog/builder/cluster/${clusterId}?error=${code}`);
+  }
+
+  const parsed = extractJson<GeneratedPostJson>(result.text);
+  if (!parsed || !parsed.title || !parsed.body_markdown) {
+    // eslint-disable-next-line no-console
+    console.error(
+      "[post-gen] Could not parse post JSON",
+      result.text.slice(0, 500),
+    );
+    redirect(`/admin/blog/builder/cluster/${clusterId}?error=bad-output`);
+  }
+
+  // Build body_md: append Claude's image placement suggestions at the end
+  // so the user can weave them in manually via the edit page.
+  let bodyMd = String(parsed.body_markdown).trim();
+  if (
+    Array.isArray(parsed.image_placements) &&
+    parsed.image_placements.length > 0
+  ) {
+    bodyMd += "\n\n---\n\n**Suggested image placements:**\n\n";
+    for (const p of parsed.image_placements) {
+      const slot = (p.slot ?? 0) + 1;
+      const where = p.after_heading
+        ? ` after the heading "${p.after_heading}"`
+        : "";
+      const caption = p.caption ?? "(no caption)";
+      bodyMd += `- Slot ${slot}${where}: ${caption}\n`;
+    }
+  }
+
+  // Slug: prefer Claude's, fall back to slugified title; on conflict,
+  // append the cluster id so the insert succeeds.
+  const baseSlug =
+    slugify(parsed.slug ?? "") || slugify(parsed.title) || `cluster-${clusterId}`;
+  const title = String(parsed.title).slice(0, 200);
+  const excerpt = parsed.meta_description
+    ? String(parsed.meta_description).slice(0, 200)
+    : null;
+
+  const postId = await withTransaction(async (client) => {
+    let slug = baseSlug;
+    let rows: { id: string }[];
+    try {
+      const r = await client.query<{ id: string }>(
+        `INSERT INTO blog_posts (slug, title, excerpt, body_md)
+         VALUES ($1, $2, $3, $4)
+         RETURNING id::text`,
+        [slug, title, excerpt, bodyMd],
+      );
+      rows = r.rows;
+    } catch (err) {
+      if ((err as { code?: string }).code === "23505") {
+        slug = `${baseSlug}-${clusterId}`;
+        const r = await client.query<{ id: string }>(
+          `INSERT INTO blog_posts (slug, title, excerpt, body_md)
+           VALUES ($1, $2, $3, $4)
+           RETURNING id::text`,
+          [slug, title, excerpt, bodyMd],
+        );
+        rows = r.rows;
+      } else {
+        throw err;
+      }
+    }
+    const id = rows[0]!.id;
+    await client.query(
+      `UPDATE blog_clusters
+          SET generated_post_id = $2::bigint, updated_at = NOW()
+        WHERE id = $1::bigint`,
+      [clusterId, id],
+    );
+    return id;
+  });
+
+  revalidatePath(`/admin/blog/builder/cluster/${clusterId}`);
+  revalidatePath(`/admin/blog/${postId}/edit`);
+  revalidatePath("/admin/blog");
+  redirect(`/admin/blog/${postId}/edit?saved=1&from-cluster=${clusterId}`);
+}
