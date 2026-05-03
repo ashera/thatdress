@@ -1334,6 +1334,89 @@ textarea.input {
   .hero-grid { gap: var(--s-7); }
 }
 
+/* Floating eBike toolbox card — sits over the bike image in the hero,
+   bottom-right corner. Hidden on narrow viewports where the bike image
+   collapses behind the text and there's no real estate for it. */
+.hero-toolbox {
+  position: absolute;
+  bottom: var(--s-7);
+  right: var(--s-7);
+  z-index: 1;
+  width: min(300px, 38%);
+  padding: var(--s-4);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--hairline);
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(28, 24, 22, 0.08);
+}
+.hero-toolbox-title {
+  margin: 0 0 var(--s-3);
+  font-size: 12px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--volt-700);
+  font-weight: 700;
+}
+.hero-toolbox-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  list-style: none;
+  padding: 0;
+  margin: 0 0 var(--s-3);
+}
+.hero-toolbox-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 12px;
+  background: #fff;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  text-decoration: none;
+  color: var(--ink-1);
+  font-size: 13px;
+  font-weight: 600;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+.hero-toolbox-link::after {
+  content: "→";
+  color: var(--ink-3);
+  font-weight: 600;
+}
+.hero-toolbox-link:hover {
+  border-color: var(--volt-300);
+  background: var(--volt-50);
+  color: var(--ink-1);
+}
+.hero-toolbox-link:hover::after {
+  color: var(--volt-700);
+}
+.hero-toolbox-all {
+  display: inline-block;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  text-decoration: none;
+  font-weight: 600;
+  padding-top: var(--s-2);
+  border-top: 1px solid var(--hairline);
+  width: 100%;
+  text-align: center;
+}
+.hero-toolbox-all:hover {
+  color: var(--ink-1);
+}
+@media (max-width: 1024px) {
+  .hero-toolbox { display: none; }
+}
+
 /* =========================================================
    AUTH PAGE LAYOUT (login / register)
    ========================================================= */

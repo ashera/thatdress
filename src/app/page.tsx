@@ -228,6 +228,30 @@ export default async function Home({
             sizes="(max-width: 900px) 100vw, 60vw"
           />
         </div>
+        <aside className="hero-toolbox" aria-label="eBike toolbox">
+          <p className="hero-toolbox-title">eBike toolbox</p>
+          <ul className="hero-toolbox-list">
+            {[
+              { href: "/tools/battery-voltage", label: "Battery check" },
+              { href: "/tools/range", label: "Range estimate" },
+              { href: "/tools/legality", label: "AU legality" },
+              { href: "/tools/cost-vs-car", label: "Cost vs car" },
+              {
+                href: "/tools/inspection-checklist",
+                label: "Inspection checklist",
+              },
+            ].map((t) => (
+              <li key={t.href}>
+                <Link href={t.href} className="hero-toolbox-link">
+                  {t.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <Link href="/tools" className="hero-toolbox-all">
+            All tools →
+          </Link>
+        </aside>
         <div className="hero-grid">
           <div>
             <p className="eyebrow">Peer-to-peer eBike marketplace</p>
