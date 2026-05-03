@@ -685,6 +685,12 @@ CREATE TABLE IF NOT EXISTS blog_cluster_images (
 CREATE UNIQUE INDEX IF NOT EXISTS blog_cluster_images_slot_idx
   ON blog_cluster_images (cluster_id, slot);
 
+-- Slots 0-4 are filled from the cluster's primary keyword (search_phrase
+-- left NULL = "use the primary"). Slots 5+ are user-added custom-keyword
+-- images and store the phrase that was used so refresh keeps that topic.
+ALTER TABLE blog_cluster_images
+  ADD COLUMN IF NOT EXISTS search_phrase TEXT;
+
 -- Cutover from the earlier per-keyword variant. Pre-launch, so the rows
 -- aren't worth migrating; the cluster picker re-fills from Pexels.
 DROP TABLE IF EXISTS blog_keyword_images;

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
 import { query } from "@/lib/db";
 import {
+  addCustomKeywordImage,
   clearAllImages,
   clearImageSlot,
   clearSerpAnalysis,
@@ -57,6 +58,8 @@ const ERRORS: Record<string, string> = {
     "Run the SERP analysis before generating a post.",
   "missing-images":
     "Include at least one hero image before generating a post.",
+  "invalid-phrase":
+    "Custom keyword must be 2–200 characters.",
 };
 
 type ImageRow = {
@@ -69,6 +72,7 @@ type ImageRow = {
   photographer: string | null;
   photographer_url: string | null;
   alt: string | null;
+  search_phrase: string | null;
 };
 
 type SerpAnalysis = {
@@ -177,7 +181,8 @@ export default async function ClusterReviewPage({
               source_url,
               photographer,
               photographer_url,
-              alt
+              alt,
+              search_phrase
          FROM blog_cluster_images
         WHERE cluster_id = $1::bigint
         ORDER BY slot`,
@@ -206,8 +211,15 @@ export default async function ClusterReviewPage({
     { length: IMAGE_SLOTS },
     (_, i) => imagesBySlot.get(i) ?? null,
   );
+  // Custom-keyword extras live at slot >= IMAGE_SLOTS. Sorted by slot so
+  // the order they were added is preserved.
+  const extras: ImageRow[] = imageRes.rows
+    .filter((r) => r.slot >= IMAGE_SLOTS)
+    .sort((a, b) => a.slot - b.slot);
   const hasAnyImage = slots.some((s) => s != null);
-  const includedCount = slots.filter((s) => s?.include_in_post).length;
+  const includedCount =
+    slots.filter((s) => s?.include_in_post).length +
+    extras.filter((e) => e.include_in_post).length;
   const serp = cluster.serp_analysis_json;
 
   const serpDone = Boolean(cluster.serp_analyzed_at);
@@ -1055,6 +1067,259 @@ export default async function ClusterReviewPage({
             </div>
           ))}
         </div>
+
+        {extras.length > 0 && (
+          <>
+            <hr
+              style={{
+                border: 0,
+                borderTop: "1px dashed var(--hairline)",
+                margin: "var(--s-4) 0",
+              }}
+            />
+            <p
+              style={{
+                margin: "0 0 var(--s-3)",
+                fontSize: 12,
+                fontFamily: "var(--font-mono)",
+                letterSpacing: "0.06em",
+                textTransform: "uppercase",
+                color: "var(--ink-3)",
+              }}
+            >
+              Extra images (custom keywords)
+            </p>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+                gap: "var(--s-3)",
+              }}
+            >
+              {extras.map((img) => (
+                <div
+                  key={img.slot}
+                  style={{
+                    position: "relative",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 6,
+                    padding: "var(--s-3)",
+                    background: img.include_in_post
+                      ? "var(--volt-50)"
+                      : "var(--surface-sunken)",
+                    border: `1px solid ${
+                      img.include_in_post
+                        ? "var(--volt-300)"
+                        : "var(--hairline)"
+                    }`,
+                    borderRadius: 10,
+                    opacity: img.include_in_post ? 1 : 0.65,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: 6,
+                      fontSize: 11,
+                      fontFamily: "var(--font-mono)",
+                      letterSpacing: "0.04em",
+                      color: "var(--ink-3)",
+                    }}
+                  >
+                    <span
+                      title={img.search_phrase ?? ""}
+                      style={{
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                        textTransform: "lowercase",
+                        fontWeight: 600,
+                        color: "var(--ink-2)",
+                      }}
+                    >
+                      “{img.search_phrase ?? "custom"}”
+                    </span>
+                    {img.include_in_post && (
+                      <span
+                        className="users-tag --ok"
+                        style={{ fontSize: 10 }}
+                      >
+                        Included
+                      </span>
+                    )}
+                  </div>
+                  <img
+                    src={img.url_large}
+                    alt={img.alt ?? cluster.name}
+                    style={{
+                      width: "100%",
+                      aspectRatio: "16 / 10",
+                      objectFit: "cover",
+                      borderRadius: 8,
+                      background: "#fff",
+                      display: "block",
+                    }}
+                  />
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: "var(--ink-3)",
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    by{" "}
+                    {img.photographer_url ? (
+                      <a
+                        href={img.photographer_url}
+                        target="_blank"
+                        rel="noopener"
+                        style={{ color: "var(--ink-2)" }}
+                      >
+                        {img.photographer}
+                      </a>
+                    ) : (
+                      img.photographer
+                    )}{" "}
+                    ·{" "}
+                    {img.source_url ? (
+                      <a
+                        href={img.source_url}
+                        target="_blank"
+                        rel="noopener"
+                        style={{ color: "var(--ink-2)" }}
+                      >
+                        Pexels
+                      </a>
+                    ) : (
+                      "Pexels"
+                    )}
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 6,
+                      flexWrap: "wrap",
+                      marginTop: 4,
+                    }}
+                  >
+                    <form action={toggleImageInclude}>
+                      <input
+                        type="hidden"
+                        name="clusterId"
+                        value={cluster.id}
+                      />
+                      <input type="hidden" name="slot" value={img.slot} />
+                      <button
+                        type="submit"
+                        style={{
+                          padding: "4px 10px",
+                          fontSize: 12,
+                          background: img.include_in_post
+                            ? "#fff"
+                            : "var(--ink-1)",
+                          color: img.include_in_post
+                            ? "var(--ink-1)"
+                            : "#fff",
+                          border: "1px solid var(--ink-1)",
+                          borderRadius: 999,
+                          cursor: "pointer",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {img.include_in_post ? "Exclude" : "Include"}
+                      </button>
+                    </form>
+                    <form action={refreshImageSlot}>
+                      <input
+                        type="hidden"
+                        name="clusterId"
+                        value={cluster.id}
+                      />
+                      <input type="hidden" name="slot" value={img.slot} />
+                      <PendingButton
+                        pendingChildren="Refreshing…"
+                        style={{
+                          padding: "4px 10px",
+                          fontSize: 12,
+                          background: "transparent",
+                          color: "var(--ink-2)",
+                          border: "1px solid var(--hairline)",
+                          borderRadius: 999,
+                          cursor: "pointer",
+                          fontWeight: 600,
+                        }}
+                      >
+                        Refresh
+                      </PendingButton>
+                    </form>
+                    <form action={clearImageSlot}>
+                      <input
+                        type="hidden"
+                        name="clusterId"
+                        value={cluster.id}
+                      />
+                      <input type="hidden" name="slot" value={img.slot} />
+                      <button
+                        type="submit"
+                        title="Remove this custom image"
+                        style={{
+                          padding: "4px 10px",
+                          fontSize: 12,
+                          background: "transparent",
+                          color: "var(--ink-3)",
+                          border: "1px solid var(--hairline)",
+                          borderRadius: 999,
+                          cursor: "pointer",
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        <hr
+          style={{
+            border: 0,
+            borderTop: "1px dashed var(--hairline)",
+            margin: "var(--s-4) 0",
+          }}
+        />
+        <form
+          action={addCustomKeywordImage}
+          style={{
+            display: "flex",
+            gap: "var(--s-2)",
+            alignItems: "flex-end",
+            flexWrap: "wrap",
+          }}
+        >
+          <input type="hidden" name="clusterId" value={cluster.id} />
+          <Field
+            label="Add an image from another keyword"
+            htmlFor="custom-phrase"
+          >
+            <Input
+              id="custom-phrase"
+              name="phrase"
+              required
+              minLength={2}
+              maxLength={200}
+              placeholder="e.g. ebike commuter sunrise"
+              style={{ minWidth: 280 }}
+            />
+          </Field>
+          <SubmitButton variant="dark" pendingLabel="Searching Pexels…">
+            + Add image
+          </SubmitButton>
+        </form>
       </section>
 
       {primary && (

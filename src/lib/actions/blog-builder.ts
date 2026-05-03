@@ -615,18 +615,21 @@ async function upsertImageSlot(
   slot: number,
   page: number,
   pick: PexelsPick,
-  phrase: string,
+  altFallback: string,
+  searchPhrase: string | null,
 ): Promise<void> {
+  // search_phrase is set on INSERT but NOT updated on conflict — refreshes
+  // preserve whatever phrase the slot was originally created with.
   await query(
     `INSERT INTO blog_cluster_images
        (cluster_id, slot, source, source_id, url_large, url_original,
         source_url, photographer, photographer_url, alt, page_offset,
-        include_in_post)
+        include_in_post, search_phrase)
      VALUES ($1::bigint, $2::int, 'pexels', $3, $4, $5, $6, $7, $8, $9, $10,
              COALESCE(
                (SELECT include_in_post FROM blog_cluster_images
                   WHERE cluster_id = $1::bigint AND slot = $2::int),
-               TRUE))
+               TRUE), $11)
      ON CONFLICT (cluster_id, slot) DO UPDATE
        SET source = EXCLUDED.source,
            source_id = EXCLUDED.source_id,
@@ -647,8 +650,9 @@ async function upsertImageSlot(
       pick.url,
       pick.photographer,
       pick.photographer_url,
-      pick.alt ?? phrase,
+      pick.alt ?? altFallback,
       page,
+      searchPhrase,
     ],
   );
 }
@@ -670,7 +674,9 @@ export async function findInitialImages(
     `/admin/blog/builder/cluster/${clusterId}`,
   );
   for (let i = 0; i < IMAGE_SLOTS && i < photos.length; i++) {
-    await upsertImageSlot(clusterId, i, 1, photos[i], phrase);
+    // Primary slots store NULL search_phrase — the cluster's primary
+    // keyword is the implicit source.
+    await upsertImageSlot(clusterId, i, 1, photos[i], phrase, null);
   }
 
   revalidatePath(`/admin/blog/builder/cluster/${clusterId}`);
@@ -683,21 +689,32 @@ export async function refreshImageSlot(formData: FormData): Promise<void> {
   const slotRaw = String(formData.get("slot") ?? "");
   if (!/^\d+$/.test(clusterId) || !/^\d+$/.test(slotRaw))
     redirect("/admin/blog/builder");
-  const slot = Math.max(0, Math.min(IMAGE_SLOTS - 1, Number(slotRaw)));
+  const slot = Math.max(0, Number(slotRaw));
 
-  const phrase = await loadClusterSearchPhrase(clusterId);
+  // Use the slot's stored search_phrase if it has one (custom-keyword
+  // slots ≥ 5); fall back to the cluster's primary keyword otherwise.
+  const slotRowRes = await query<{ search_phrase: string | null }>(
+    `SELECT search_phrase FROM blog_cluster_images
+      WHERE cluster_id = $1::bigint AND slot = $2::int LIMIT 1`,
+    [clusterId, slot],
+  );
+  const storedPhrase = slotRowRes.rows[0]?.search_phrase ?? null;
+  const phrase =
+    storedPhrase ?? (await loadClusterSearchPhrase(clusterId));
   if (!phrase)
     redirect(`/admin/blog/builder/cluster/${clusterId}?error=missing-root`);
 
-  // Skip every source_id already in any slot for this cluster. Use the
-  // highest existing page_offset + 1 so each refresh genuinely advances.
+  // Skip every source_id already in any slot for this cluster that shares
+  // the same search phrase. Use the highest existing page_offset + 1 so
+  // each refresh genuinely advances.
   const existing = await query<{
     source_id: string;
     page_offset: number;
   }>(
     `SELECT source_id, page_offset FROM blog_cluster_images
-      WHERE cluster_id = $1::bigint`,
-    [clusterId],
+      WHERE cluster_id = $1::bigint
+        AND COALESCE(search_phrase, '') = COALESCE($2::text, '')`,
+    [clusterId, storedPhrase],
   );
   const usedIds = new Set(existing.rows.map((r) => r.source_id));
   const maxOffset = existing.rows.reduce(
@@ -724,7 +741,45 @@ export async function refreshImageSlot(formData: FormData): Promise<void> {
     );
   }
 
-  await upsertImageSlot(clusterId, slot, pageUsed, pick, phrase);
+  await upsertImageSlot(clusterId, slot, pageUsed, pick, phrase, storedPhrase);
+
+  revalidatePath(`/admin/blog/builder/cluster/${clusterId}`);
+  redirect(`/admin/blog/builder/cluster/${clusterId}?saved=1`);
+}
+
+/**
+ * Add an extra image slot fed by a custom search phrase. New slots take
+ * the next index after the highest existing slot, but never lower than
+ * IMAGE_SLOTS (so primary slots 0–4 stay reserved even if they're empty).
+ */
+export async function addCustomKeywordImage(
+  formData: FormData,
+): Promise<void> {
+  await requireAdmin();
+  const clusterId = String(formData.get("clusterId") ?? "");
+  const rawPhrase = String(formData.get("phrase") ?? "").trim();
+  if (!/^\d+$/.test(clusterId)) redirect("/admin/blog/builder");
+  if (rawPhrase.length < 2 || rawPhrase.length > 200) {
+    redirect(
+      `/admin/blog/builder/cluster/${clusterId}?error=invalid-phrase`,
+    );
+  }
+  const phrase = rawPhrase;
+
+  const maxSlotRes = await query<{ max_slot: number | null }>(
+    `SELECT MAX(slot)::int AS max_slot FROM blog_cluster_images
+      WHERE cluster_id = $1::bigint`,
+    [clusterId],
+  );
+  const maxSlot = maxSlotRes.rows[0]?.max_slot ?? -1;
+  const nextSlot = Math.max(IMAGE_SLOTS, maxSlot + 1);
+
+  const photos = await fetchPexelsPage(
+    phrase,
+    1,
+    `/admin/blog/builder/cluster/${clusterId}`,
+  );
+  await upsertImageSlot(clusterId, nextSlot, 1, photos[0], phrase, phrase);
 
   revalidatePath(`/admin/blog/builder/cluster/${clusterId}`);
   redirect(`/admin/blog/builder/cluster/${clusterId}?saved=1`);
@@ -770,14 +825,20 @@ export async function clearImageSlot(formData: FormData): Promise<void> {
   redirect(`/admin/blog/builder/cluster/${clusterId}?saved=1`);
 }
 
+/**
+ * Clear the primary-keyword slots only (slot < IMAGE_SLOTS). Custom-keyword
+ * extras (slot ≥ IMAGE_SLOTS) are preserved — clear those individually via
+ * clearImageSlot.
+ */
 export async function clearAllImages(formData: FormData): Promise<void> {
   await requireAdmin();
   const clusterId = String(formData.get("clusterId") ?? "");
   if (!/^\d+$/.test(clusterId)) redirect("/admin/blog/builder");
 
   await query(
-    `DELETE FROM blog_cluster_images WHERE cluster_id = $1::bigint`,
-    [clusterId],
+    `DELETE FROM blog_cluster_images
+      WHERE cluster_id = $1::bigint AND slot < $2::int`,
+    [clusterId, IMAGE_SLOTS],
   );
 
   revalidatePath(`/admin/blog/builder/cluster/${clusterId}`);
