@@ -33,6 +33,12 @@ const TOOLS: Array<{ href: string; title: string; desc: string; tag: string }> =
       desc: "Annual running cost comparison for your commute. Spoiler: not close.",
       tag: "buyer",
     },
+    {
+      href: "/tools/inspection-checklist",
+      title: "Inspection checklist",
+      desc: "22 checks across battery, drivetrain, brakes, electronics, frame, and paperwork — with a buy/walk verdict.",
+      tag: "buyer",
+    },
   ];
 
 export default function ToolsHubPage() {
