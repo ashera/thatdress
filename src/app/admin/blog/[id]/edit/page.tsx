@@ -218,6 +218,15 @@ export default async function EditBlogPostPage({
               alignItems: "center",
             }}
           >
+            {sourceCluster && (
+              <Link
+                href={`/admin/blog/builder/cluster/${sourceCluster.id}`}
+                className="btn --ghost"
+                title={`Open the cluster this post was generated from: ${sourceCluster.name}`}
+              >
+                View cluster
+              </Link>
+            )}
             <Link
               href={`/blog/${post.slug}`}
               target="_blank"
