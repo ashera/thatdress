@@ -1108,7 +1108,10 @@ export async function generateBlogPostFromCluster(
   const result = await callClaude({
     system: systemPrompt,
     messages: [{ role: "user", content: userPrompt }],
-    maxTokens: 8192,
+    // 5000 fits a ~3000-word post with JSON wrapping and image placements;
+    // tier-1 ITPM is 10k and Anthropic reserves max_tokens against the
+    // limit up-front, so we keep this tight.
+    maxTokens: 5000,
   });
   if (!result.ok) {
     const code = result.error.includes("ANTHROPIC_API_KEY")

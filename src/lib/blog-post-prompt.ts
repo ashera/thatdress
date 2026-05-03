@@ -56,15 +56,16 @@ export type PostPromptReferences = {
 
 // Character budgets for reference content sent in the prompt. The full
 // markdown files stay in references/ for the library viewer; only the
-// copy injected into the system/user prompt is clipped. Sized so the
-// total input stays under the 10k-tokens/min tier-1 rate limit
-// (~4 chars per token).
+// copy injected into the system/user prompt is clipped. Sized to keep
+// input + max_tokens under the 10k tier-1 rate limit (Anthropic
+// reserves max_tokens up-front against ITPM, so input alone can't fill
+// the budget). At ~4 chars/token, total ref content here is ~2k tokens.
 const REFERENCE_BUDGETS = {
-  voice: 3500,
-  humour: 3500,
-  opinions: 2400,
-  stats: 2400,
-  stories: 2400,
+  voice: 2000,
+  humour: 2000,
+  opinions: 1500,
+  stats: 1500,
+  stories: 1500,
 } as const;
 
 function clipForPrompt(body: string | null, maxChars: number): string | null {
