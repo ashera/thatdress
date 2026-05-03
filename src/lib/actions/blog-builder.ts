@@ -474,23 +474,20 @@ type SerpAnalysis = {
 
 export async function runSerpAnalysis(formData: FormData): Promise<void> {
   await requireAdmin();
-  const keywordId = String(formData.get("keywordId") ?? "");
-  if (!/^\d+$/.test(keywordId))
+  const clusterId = String(formData.get("clusterId") ?? "");
+  if (!/^\d+$/.test(clusterId))
     redirect("/admin/blog/builder");
 
-  const r = await query<{ phrase: string }>(
-    `SELECT phrase FROM blog_keywords WHERE id = $1::bigint LIMIT 1`,
-    [keywordId],
-  );
-  const root = r.rows[0];
-  if (!root) redirect(`/admin/blog/builder/${keywordId}?error=missing-root`);
+  const phrase = await loadClusterSearchPhrase(clusterId);
+  if (!phrase)
+    redirect(`/admin/blog/builder/cluster/${clusterId}?error=missing-root`);
 
   const result = await callClaude({
     system: SERP_SYSTEM_PROMPT,
     messages: [
       {
         role: "user",
-        content: `Primary keyword: "${root.phrase}"\n\nRun the analysis now and return the JSON.`,
+        content: `Primary keyword: "${phrase}"\n\nRun the analysis now and return the JSON.`,
       },
     ],
     tools: [WEB_SEARCH_TOOL, WEB_FETCH_TOOL],
@@ -502,7 +499,7 @@ export async function runSerpAnalysis(formData: FormData): Promise<void> {
       : "claude-error";
     // eslint-disable-next-line no-console
     console.error("[serp] Claude call failed", result.error);
-    redirect(`/admin/blog/builder/${keywordId}?error=${code}`);
+    redirect(`/admin/blog/builder/cluster/${clusterId}?error=${code}`);
   }
 
   const parsed = extractJson<SerpAnalysis>(result.text);
@@ -512,39 +509,39 @@ export async function runSerpAnalysis(formData: FormData): Promise<void> {
       "[serp] Could not parse SERP JSON",
       result.text.slice(0, 500),
     );
-    redirect(`/admin/blog/builder/${keywordId}?error=bad-output`);
+    redirect(`/admin/blog/builder/cluster/${clusterId}?error=bad-output`);
   }
 
   await query(
-    `UPDATE blog_keywords
+    `UPDATE blog_clusters
         SET serp_analysis_json = $2::jsonb,
             serp_analyzed_at = NOW(),
             updated_at = NOW()
       WHERE id = $1::bigint`,
-    [keywordId, JSON.stringify(parsed)],
+    [clusterId, JSON.stringify(parsed)],
   );
 
-  revalidatePath(`/admin/blog/builder/${keywordId}`);
-  redirect(`/admin/blog/builder/${keywordId}?saved=1`);
+  revalidatePath(`/admin/blog/builder/cluster/${clusterId}`);
+  redirect(`/admin/blog/builder/cluster/${clusterId}?saved=1`);
 }
 
 export async function clearSerpAnalysis(formData: FormData): Promise<void> {
   await requireAdmin();
-  const keywordId = String(formData.get("keywordId") ?? "");
-  if (!/^\d+$/.test(keywordId))
+  const clusterId = String(formData.get("clusterId") ?? "");
+  if (!/^\d+$/.test(clusterId))
     redirect("/admin/blog/builder");
 
   await query(
-    `UPDATE blog_keywords
+    `UPDATE blog_clusters
         SET serp_analysis_json = NULL,
             serp_analyzed_at = NULL,
             updated_at = NOW()
       WHERE id = $1::bigint`,
-    [keywordId],
+    [clusterId],
   );
 
-  revalidatePath(`/admin/blog/builder/${keywordId}`);
-  redirect(`/admin/blog/builder/${keywordId}?saved=1`);
+  revalidatePath(`/admin/blog/builder/cluster/${clusterId}`);
+  redirect(`/admin/blog/builder/cluster/${clusterId}?saved=1`);
 }
 
 // ---------------------------------------------------------------------------

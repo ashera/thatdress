@@ -648,11 +648,17 @@ CREATE TABLE IF NOT EXISTS blog_keyword_clusters (
 CREATE INDEX IF NOT EXISTS blog_keyword_clusters_kw_idx
   ON blog_keyword_clusters (keyword_id);
 
--- Pre-generation analysis stored against each keyword.
--- SERP analysis runs once per keyword and is overwritten on re-run.
-ALTER TABLE blog_keywords
+-- SERP analysis lives on the cluster (one cluster = one article).
+-- Runs against the primary keyword's phrase and is overwritten on re-run.
+ALTER TABLE blog_clusters
   ADD COLUMN IF NOT EXISTS serp_analysis_json JSONB,
   ADD COLUMN IF NOT EXISTS serp_analyzed_at   TIMESTAMPTZ;
+
+-- Cutover from the earlier per-keyword variant. Pre-launch, so any
+-- existing analyses can be re-run from the cluster page.
+ALTER TABLE blog_keywords
+  DROP COLUMN IF EXISTS serp_analysis_json,
+  DROP COLUMN IF EXISTS serp_analyzed_at;
 
 -- Up to 5 Pexels hero candidates per cluster, slotted 0-4. Each slot
 -- refreshes independently. include_in_post is the flag the post generator

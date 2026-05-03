@@ -5,12 +5,14 @@ import { query } from "@/lib/db";
 import {
   clearAllImages,
   clearImageSlot,
+  clearSerpAnalysis,
   deleteBlogCluster,
   findInitialImages,
   generateClusterFromKeyword,
   refreshImageSlot,
   removeKeywordFromCluster,
   renameBlogCluster,
+  runSerpAnalysis,
   toggleImageInclude,
 } from "@/lib/actions/blog-builder";
 import { Button, Field, Input } from "../../../../../_components/ui";
@@ -51,6 +53,26 @@ type ImageRow = {
   alt: string | null;
 };
 
+type SerpAnalysis = {
+  keyword?: string;
+  summary?: string;
+  top_results?: Array<{
+    rank?: number;
+    url?: string;
+    title?: string;
+    domain?: string;
+    format?: string;
+    estimated_word_count?: number;
+    topics_covered?: string[];
+  }>;
+  average_word_count?: number;
+  target_word_count?: string;
+  common_topics?: string[];
+  missing_topics_to_add?: string[];
+  recommended_format?: string;
+  format_rationale?: string;
+};
+
 type ClusterRow = {
   id: string;
   name: string;
@@ -60,6 +82,8 @@ type ClusterRow = {
   generated_post_id: string | null;
   created_at: string;
   updated_at: string;
+  serp_analysis_json: SerpAnalysis | null;
+  serp_analyzed_at: string | null;
 };
 
 type MemberRow = {
@@ -108,7 +132,9 @@ export default async function ClusterReviewPage({
               model_used,
               generated_post_id::text,
               created_at::text,
-              updated_at::text
+              updated_at::text,
+              serp_analysis_json,
+              serp_analyzed_at::text
          FROM blog_clusters WHERE id = $1::bigint LIMIT 1`,
       [id],
     ),
@@ -153,6 +179,7 @@ export default async function ClusterReviewPage({
   );
   const hasAnyImage = slots.some((s) => s != null);
   const includedCount = slots.filter((s) => s?.include_in_post).length;
+  const serp = cluster.serp_analysis_json;
 
   return (
     <div className="page admin-page" style={{ maxWidth: 880 }}>
@@ -312,6 +339,273 @@ export default async function ClusterReviewPage({
               </li>
             ))}
           </ul>
+        )}
+      </section>
+
+      <section className="form-card" style={{ marginBottom: "var(--s-5)" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            gap: "var(--s-3)",
+            flexWrap: "wrap",
+            alignItems: "flex-start",
+            marginBottom: "var(--s-3)",
+          }}
+        >
+          <div>
+            <h2 className="card-heading" style={{ margin: 0 }}>
+              SERP analysis
+            </h2>
+            <p className="card-sub" style={{ marginTop: 4 }}>
+              Search Google for the primary keyword
+              {primary ? ` (“${primary.phrase}”)` : ""}, fetch the top 3
+              organic results, and analyze their format, length, and
+              topics.
+              {cluster.serp_analyzed_at
+                ? ` Last run ${formatDate(cluster.serp_analyzed_at)}.`
+                : " Not run yet."}
+            </p>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <form action={runSerpAnalysis}>
+              <input type="hidden" name="clusterId" value={cluster.id} />
+              <Button type="submit" variant={serp ? "ghost" : "primary"}>
+                {serp ? "Re-run analysis" : "Run analysis"}
+              </Button>
+            </form>
+            {serp && (
+              <form action={clearSerpAnalysis}>
+                <input type="hidden" name="clusterId" value={cluster.id} />
+                <Button type="submit" variant="ghost">
+                  Clear
+                </Button>
+              </form>
+            )}
+          </div>
+        </div>
+
+        {serp ? (
+          <div
+            style={{
+              padding: "var(--s-4)",
+              background: "var(--surface-sunken)",
+              borderRadius: 10,
+              border: "1px solid var(--hairline)",
+              fontSize: "var(--t-body-s)",
+            }}
+          >
+            {serp.summary && (
+              <p style={{ margin: "0 0 var(--s-3)", color: "var(--ink-2)" }}>
+                {serp.summary}
+              </p>
+            )}
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+                gap: "var(--s-3)",
+                marginBottom: "var(--s-4)",
+              }}
+            >
+              <div>
+                <div
+                  style={{
+                    fontFamily: "var(--font-mono)",
+                    fontSize: 11,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
+                    color: "var(--ink-3)",
+                  }}
+                >
+                  Recommended format
+                </div>
+                <div
+                  style={{
+                    fontWeight: 700,
+                    color: "var(--ink-1)",
+                    textTransform: "capitalize",
+                  }}
+                >
+                  {serp.recommended_format ?? "—"}
+                </div>
+              </div>
+              <div>
+                <div
+                  style={{
+                    fontFamily: "var(--font-mono)",
+                    fontSize: 11,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
+                    color: "var(--ink-3)",
+                  }}
+                >
+                  Target length
+                </div>
+                <div style={{ fontWeight: 700, color: "var(--ink-1)" }}>
+                  {serp.target_word_count ??
+                    (serp.average_word_count
+                      ? `~${serp.average_word_count} words`
+                      : "—")}
+                </div>
+              </div>
+            </div>
+
+            {serp.format_rationale && (
+              <p
+                style={{
+                  margin: "0 0 var(--s-4)",
+                  color: "var(--ink-3)",
+                  fontStyle: "italic",
+                }}
+              >
+                {serp.format_rationale}
+              </p>
+            )}
+
+            {Array.isArray(serp.top_results) && serp.top_results.length > 0 && (
+              <div style={{ marginBottom: "var(--s-4)" }}>
+                <div
+                  style={{
+                    fontFamily: "var(--font-mono)",
+                    fontSize: 11,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
+                    color: "var(--ink-3)",
+                    marginBottom: 6,
+                  }}
+                >
+                  Top 3 ranking pages
+                </div>
+                <ol
+                  style={{
+                    margin: 0,
+                    paddingLeft: 24,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 8,
+                  }}
+                >
+                  {serp.top_results.map((r) => (
+                    <li key={r.url ?? r.rank} style={{ minWidth: 0 }}>
+                      <a
+                        href={r.url}
+                        target="_blank"
+                        rel="noopener"
+                        style={{
+                          color: "var(--ink-1)",
+                          fontWeight: 600,
+                          textDecoration: "none",
+                        }}
+                      >
+                        {r.title ?? r.url}
+                      </a>{" "}
+                      <span style={{ color: "var(--ink-3)" }}>
+                        ({r.domain ?? "—"})
+                      </span>
+                      <div style={{ fontSize: 12, color: "var(--ink-3)" }}>
+                        {r.format ?? "—"} ·{" "}
+                        {r.estimated_word_count
+                          ? `~${r.estimated_word_count} words`
+                          : "length unknown"}
+                      </div>
+                      {r.topics_covered && r.topics_covered.length > 0 && (
+                        <div
+                          style={{
+                            fontSize: 12,
+                            color: "var(--ink-3)",
+                            marginTop: 2,
+                          }}
+                        >
+                          {r.topics_covered.slice(0, 8).join(" · ")}
+                        </div>
+                      )}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
+
+            {Array.isArray(serp.common_topics) && serp.common_topics.length > 0 && (
+              <div style={{ marginBottom: "var(--s-3)" }}>
+                <div
+                  style={{
+                    fontFamily: "var(--font-mono)",
+                    fontSize: 11,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
+                    color: "var(--ink-3)",
+                    marginBottom: 6,
+                  }}
+                >
+                  Topics every top-3 page covers
+                </div>
+                <div
+                  style={{ display: "flex", flexWrap: "wrap", gap: 6 }}
+                >
+                  {serp.common_topics.map((t, i) => (
+                    <span
+                      key={i}
+                      style={{
+                        padding: "3px 10px",
+                        background: "#fff",
+                        border: "1px solid var(--hairline)",
+                        borderRadius: 999,
+                        fontSize: 12,
+                        color: "var(--ink-2)",
+                      }}
+                    >
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {Array.isArray(serp.missing_topics_to_add) &&
+              serp.missing_topics_to_add.length > 0 && (
+                <div>
+                  <div
+                    style={{
+                      fontFamily: "var(--font-mono)",
+                      fontSize: 11,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.06em",
+                      color: "var(--ink-3)",
+                      marginBottom: 6,
+                    }}
+                  >
+                    Topics to add (the gap)
+                  </div>
+                  <div
+                    style={{ display: "flex", flexWrap: "wrap", gap: 6 }}
+                  >
+                    {serp.missing_topics_to_add.map((t, i) => (
+                      <span
+                        key={i}
+                        style={{
+                          padding: "3px 10px",
+                          background: "var(--volt-100)",
+                          border: "1px solid var(--volt-300)",
+                          color: "var(--ink-1)",
+                          borderRadius: 999,
+                          fontSize: 12,
+                          fontWeight: 600,
+                        }}
+                      >
+                        + {t}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+          </div>
+        ) : (
+          <p style={{ color: "var(--ink-3)", margin: 0, fontSize: "var(--t-body-s)" }}>
+            Run the analysis to see SERP format, target length, and the
+            topics worth covering.
+          </p>
         )}
       </section>
 
