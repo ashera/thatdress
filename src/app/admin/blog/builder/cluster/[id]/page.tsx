@@ -20,6 +20,11 @@ import {
   PendingButton,
   SubmitButton,
 } from "../../../../../_components/submit-button";
+import { GeneratePostDialog } from "../../../../../_components/generate-post-dialog";
+import {
+  POST_SYSTEM_PROMPT,
+  composePostUserPrompt,
+} from "@/lib/blog-post-prompt";
 
 export const dynamic = "force-dynamic";
 
@@ -185,6 +190,35 @@ export default async function ClusterReviewPage({
   const includedCount = slots.filter((s) => s?.include_in_post).length;
   const serp = cluster.serp_analysis_json;
 
+  const serpDone = Boolean(cluster.serp_analyzed_at);
+  const imagesDone = includedCount > 0;
+  const postDone = Boolean(cluster.generated_post_id);
+  const canGenerate = serpDone && imagesDone && !postDone;
+  const includedImages = slots.filter(
+    (s): s is ImageRow => s != null && s.include_in_post,
+  );
+  const postUserPrompt = composePostUserPrompt({
+    cluster: { name: cluster.name, intent: cluster.intent },
+    members: members.map((m) => ({
+      phrase: m.phrase,
+      is_primary: m.is_primary,
+    })),
+    serp,
+    images: includedImages.map((i) => ({
+      slot: i.slot,
+      photographer: i.photographer,
+      alt: i.alt,
+      source_url: i.source_url,
+    })),
+  });
+  const gateReason = postDone
+    ? "A post has already been generated for this cluster."
+    : !serpDone && !imagesDone
+      ? "Run SERP analysis and include at least one hero image first."
+      : !serpDone
+        ? "Run SERP analysis first."
+        : "Include at least one hero image first.";
+
   return (
     <div className="page admin-page" style={{ maxWidth: 880 }}>
       <Link href="/admin/blog/builder" className="back-link">
@@ -211,6 +245,107 @@ export default async function ClusterReviewPage({
           {errorMessage}
         </p>
       )}
+
+      <section
+        style={{
+          marginBottom: "var(--s-5)",
+          padding: "var(--s-4)",
+          background: canGenerate ? "var(--volt-50)" : "var(--surface-sunken)",
+          border: `1px solid ${
+            canGenerate ? "var(--volt-300)" : "var(--hairline)"
+          }`,
+          borderRadius: 12,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            gap: "var(--s-3)",
+            flexWrap: "wrap",
+            alignItems: "flex-start",
+            marginBottom: "var(--s-3)",
+          }}
+        >
+          <div>
+            <p
+              style={{
+                margin: 0,
+                fontSize: 11,
+                fontFamily: "var(--font-mono)",
+                textTransform: "uppercase",
+                letterSpacing: "0.06em",
+                color: "var(--ink-3)",
+              }}
+            >
+              Cluster status
+            </p>
+            <h2 style={{ margin: "4px 0 0", fontSize: 18 }}>
+              {postDone
+                ? "Post generated"
+                : canGenerate
+                  ? "Ready to generate"
+                  : "Pre-generation in progress"}
+            </h2>
+          </div>
+          <GeneratePostDialog
+            disabled={!canGenerate}
+            disabledReason={gateReason}
+            systemPrompt={POST_SYSTEM_PROMPT}
+            userPrompt={postUserPrompt}
+          />
+        </div>
+
+        <ol
+          style={{
+            listStyle: "none",
+            padding: 0,
+            margin: 0,
+            display: "flex",
+            flexDirection: "column",
+            gap: 6,
+          }}
+        >
+          <Step
+            done
+            title="Cluster"
+            detail={`${members.length} keywords${
+              members.find((m) => m.is_primary)
+                ? ` · primary "${members.find((m) => m.is_primary)!.phrase}"`
+                : ""
+            }`}
+          />
+          <Step
+            done={serpDone}
+            title="SERP analysis"
+            detail={
+              serpDone
+                ? `Run ${formatDate(cluster.serp_analyzed_at)}`
+                : "Not run yet"
+            }
+          />
+          <Step
+            done={imagesDone}
+            title="Hero images"
+            detail={
+              imagesDone
+                ? `${includedCount} included of ${IMAGE_SLOTS} slots`
+                : "Pick at least one image to include"
+            }
+          />
+          <Step
+            done={postDone}
+            title="Post"
+            detail={
+              postDone
+                ? "Generated"
+                : canGenerate
+                  ? "Click Generate Post to preview the prompt"
+                  : gateReason
+            }
+          />
+        </ol>
+      </section>
 
       <section className="form-card" style={{ marginBottom: "var(--s-5)" }}>
         <h2 className="card-heading">Name</h2>
@@ -931,5 +1066,61 @@ export default async function ClusterReviewPage({
         </button>
       </form>
     </div>
+  );
+}
+
+function Step({
+  done,
+  title,
+  detail,
+}: {
+  done: boolean;
+  title: string;
+  detail: string;
+}) {
+  return (
+    <li
+      style={{
+        display: "grid",
+        gridTemplateColumns: "auto 1fr",
+        gap: "var(--s-3)",
+        alignItems: "center",
+        padding: "8px 12px",
+        background: "#fff",
+        border: `1px solid ${done ? "var(--volt-300)" : "var(--hairline)"}`,
+        borderRadius: 8,
+      }}
+    >
+      <span
+        aria-hidden
+        style={{
+          width: 22,
+          height: 22,
+          borderRadius: "50%",
+          background: done ? "var(--ink-1)" : "transparent",
+          color: done ? "#fff" : "var(--ink-3)",
+          border: done ? "0" : "1px solid var(--hairline)",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: 12,
+          fontWeight: 700,
+        }}
+      >
+        {done ? "✓" : "○"}
+      </span>
+      <div style={{ minWidth: 0 }}>
+        <div
+          style={{
+            fontWeight: 600,
+            color: done ? "var(--ink-1)" : "var(--ink-2)",
+            fontSize: "var(--t-body-s)",
+          }}
+        >
+          {title}
+        </div>
+        <div style={{ fontSize: 12, color: "var(--ink-3)" }}>{detail}</div>
+      </div>
+    </li>
   );
 }
