@@ -3406,9 +3406,9 @@ textarea.input {
 .blog-banner {
   position: relative;
   width: 100%;
-  aspect-ratio: 21 / 9;
-  min-height: 320px;
-  margin: var(--s-5) 0 var(--s-8);
+  aspect-ratio: 26 / 9;
+  min-height: 256px;
+  margin: var(--s-5) 0 var(--s-7);
   border-radius: 16px;
   overflow: hidden;
   background: linear-gradient(
