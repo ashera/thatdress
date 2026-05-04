@@ -474,5 +474,6 @@ export async function publishDraftListing(formData: FormData): Promise<void> {
 
   revalidatePath("/listings");
   revalidatePath("/listings/mine");
+  revalidatePath("/");
   redirect(`/listings/${listingId}`);
 }

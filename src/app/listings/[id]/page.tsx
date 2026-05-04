@@ -483,6 +483,31 @@ export default async function ListingDetailPage({
     ? `${baseUrl}/api/listings/${l.id}/images/${primaryImageId}`
     : undefined;
   const showProductSchema = l.is_published && !l.is_draft;
+  const breadcrumbSchema = showProductSchema
+    ? {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "Home",
+            item: `${baseUrl}/`,
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: "Browse",
+            item: `${baseUrl}/listings`,
+          },
+          {
+            "@type": "ListItem",
+            position: 3,
+            name: l.title,
+          },
+        ],
+      }
+    : null;
   const productSchema = showProductSchema
     ? {
         "@context": "https://schema.org",
@@ -511,6 +536,13 @@ export default async function ListingDetailPage({
 
   return (
     <div className="page detail-page">
+      {breadcrumbSchema && (
+        <script
+          type="application/ld+json"
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+        />
+      )}
       {productSchema && (
         <script
           type="application/ld+json"

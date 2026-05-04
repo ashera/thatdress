@@ -287,6 +287,7 @@ export async function toggleListingSold(formData: FormData): Promise<void> {
   revalidatePath(`/listings/${listingId}`);
   revalidatePath(`/listings/${listingId}/edit`);
   revalidatePath(`/listings`);
+  revalidatePath(`/`);
   revalidatePath(`/listings/mine`);
 
   const next = String(formData.get("next") ?? `/listings/${listingId}`);
@@ -315,6 +316,7 @@ export async function setListingVisibility(formData: FormData): Promise<void> {
   revalidatePath(`/listings/${listingId}`);
   revalidatePath(`/listings/${listingId}/edit`);
   revalidatePath(`/listings`);
+  revalidatePath(`/`);
   revalidatePath(`/listings/mine`);
   redirect(`/listings/${listingId}/edit?vis=1`);
 }
@@ -416,6 +418,7 @@ export async function updateListing(formData: FormData): Promise<void> {
   revalidatePath(`/listings/${listingId}`);
   revalidatePath(`/listings/${listingId}/edit`);
   revalidatePath(`/listings`);
+  revalidatePath(`/`);
   redirect(`/listings/${listingId}/edit?saved=1`);
 }
 
@@ -455,6 +458,7 @@ export async function addListingImages(formData: FormData): Promise<void> {
   revalidatePath(`/listings/${listingId}`);
   revalidatePath(`/listings/${listingId}/edit`);
   revalidatePath(`/listings`);
+  revalidatePath(`/`);
   redirect(`/listings/${listingId}/edit`);
 }
 
@@ -483,6 +487,7 @@ export async function setPrimaryImage(formData: FormData): Promise<void> {
   revalidatePath(`/listings/${listingId}`);
   revalidatePath(`/listings/${listingId}/edit`);
   revalidatePath(`/listings`);
+  revalidatePath(`/`);
   redirect(`/listings/${listingId}/edit`);
 }
 
@@ -569,5 +574,6 @@ export async function deleteListingImage(formData: FormData): Promise<void> {
   revalidatePath(`/listings/${listingId}`);
   revalidatePath(`/listings/${listingId}/edit`);
   revalidatePath(`/listings`);
+  revalidatePath(`/`);
   redirect(`/listings/${listingId}/edit`);
 }

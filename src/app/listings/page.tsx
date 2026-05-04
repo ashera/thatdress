@@ -25,7 +25,9 @@ import {
 import { ViewToggle, type ListingsView } from "../_components/view-toggle";
 import { saveSearch } from "@/lib/actions/saved-searches";
 
-export const dynamic = "force-dynamic";
+// 60s ISR — see /page.tsx note. Filtered URLs (?designer_id=...) get
+// their own cache entries so popular filter combos hit DB once a minute.
+export const revalidate = 60;
 
 export async function generateMetadata(): Promise<Metadata> {
   const [r, baseUrl] = await Promise.all([

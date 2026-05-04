@@ -13,7 +13,12 @@ import {
   type ListingCardRow,
 } from "./_components/listing-card";
 
-export const dynamic = "force-dynamic";
+// 60s ISR. Pages stay dynamic in practice because they read region/user
+// cookies, but dropping force-dynamic engages Next's data-cache layer
+// and removes the explicit "always render fresh" directive. The listing
+// publish/sold/visibility/update actions all call revalidatePath('/')
+// so the home page reflects writes within seconds, not the 60s window.
+export const revalidate = 60;
 
 export async function generateMetadata(): Promise<Metadata> {
   const baseUrl = await getBaseUrl();
