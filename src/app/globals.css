@@ -230,6 +230,10 @@ input, select, textarea { font: inherit; color: inherit; }
   width: auto;
   object-fit: contain;
   display: block;
+  /* The dress icon's hem extends below the wordmark baseline, pulling the
+     image's geometric centre below its visual centre. Nudge up so the
+     wordmark aligns with the topbar stats badge. */
+  transform: translateY(-4px);
 }
 .topbar nav {
   display: flex;
