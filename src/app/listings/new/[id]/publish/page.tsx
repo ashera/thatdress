@@ -20,13 +20,14 @@ import {
 
 export const dynamic = "force-dynamic";
 
+const CURRENT_YEAR = new Date().getUTCFullYear();
+const PRICE_MAX_DOLLARS = 1_000_000;
+
 function priceDefault(cents: number | null | undefined): string {
   if (cents == null || cents <= 0) return "";
   const dollars = cents / 100;
   return Number.isInteger(dollars) ? String(dollars) : dollars.toFixed(2);
 }
-
-const CURRENT_YEAR = new Date().getUTCFullYear();
 
 function fmtAud(cents: number): string {
   return new Intl.NumberFormat("en-AU", {
@@ -41,6 +42,14 @@ type EstimatorInputsRow = {
   condition_slug: string | null;
 };
 
+type Suggestion = {
+  low: string;
+  high: string;
+  /** Pre-filled estimator URL — opens the tool with the draft's data
+   *  and a from=wizard handshake so the tool's CTAs return here. */
+  estimatorUrl: string;
+};
+
 async function buildSuggestion(draft: {
   id: string;
   designer_id: string | null;
@@ -49,7 +58,7 @@ async function buildSuggestion(draft: {
   original_retail_cents: number | null;
   has_original_receipt: boolean | null;
   alterations_text: string | null;
-}): Promise<{ low: string; high: string } | null> {
+}): Promise<Suggestion | null> {
   if (
     !draft.designer_id ||
     !draft.condition_id ||
@@ -91,10 +100,35 @@ async function buildSuggestion(draft: {
     hasAlterations: !!(draft.alterations_text && draft.alterations_text.trim()),
   });
 
+  // Compose the deep-link to the estimator with everything pre-filled.
+  const params = new URLSearchParams();
+  params.set("designer", draft.designer_id);
+  params.set("retail", (draft.original_retail_cents / 100).toString());
+  params.set("condition", conditionSlug);
+  if (draft.year != null) params.set("year", String(draft.year));
+  if (draft.has_original_receipt) params.set("receipt", "1");
+  if (draft.alterations_text && draft.alterations_text.trim()) {
+    params.set("alterations", "1");
+  }
+  params.set("from", "wizard");
+  params.set("listingId", draft.id);
+
   return {
     low: fmtAud(result.lowCents),
     high: fmtAud(result.highCents),
+    estimatorUrl: `/tools/value-estimator?${params.toString()}`,
   };
+}
+
+function parsePriceParam(raw: string | string[] | undefined): string | null {
+  if (raw === undefined) return null;
+  const v = Array.isArray(raw) ? raw[0] : raw;
+  if (!v) return null;
+  // Accept a positive number with up to 2 decimal places.
+  if (!/^\d+(\.\d{1,2})?$/.test(v)) return null;
+  const n = Number.parseFloat(v);
+  if (!Number.isFinite(n) || n <= 0 || n > PRICE_MAX_DOLLARS) return null;
+  return v;
 }
 
 export default async function WizardPublishPage({
@@ -102,10 +136,10 @@ export default async function WizardPublishPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; price?: string | string[] }>;
 }) {
   const { id } = await params;
-  const { error } = await searchParams;
+  const { error, price } = await searchParams;
   const errorMessage = error ? STEP_ERRORS[error] ?? null : null;
 
   const [{ draft }, refs] = await Promise.all([
@@ -114,6 +148,12 @@ export default async function WizardPublishPage({
   ]);
 
   const suggestion = await buildSuggestion(draft);
+
+  // Price input default: explicit ?price=... wins (came back from the
+  // estimator), then the saved draft price, then empty.
+  const priceFromUrl = parsePriceParam(price);
+  const priceInputDefault = priceFromUrl ?? priceDefault(draft.price_cents);
+  const priceCameFromEstimator = priceFromUrl !== null;
 
   return (
     <WizardShell
@@ -177,17 +217,32 @@ export default async function WizardPublishPage({
                 {suggestion.low} – {suggestion.high}
               </div>
               <div style={{ marginTop: 4 }}>
-                Based on the designer, condition, age, and original
-                retail price you&rsquo;ve already entered. Listings priced
-                inside this range typically sell faster.{" "}
+                Based on the designer, condition, age, and original retail
+                price you&rsquo;ve already entered. Listings priced inside
+                this range typically sell faster.{" "}
                 <a
-                  href="/tools/value-estimator"
-                  style={{ color: "var(--ink-1)", textDecoration: "underline" }}
+                  href={suggestion.estimatorUrl}
+                  style={{
+                    color: "var(--ink-1)",
+                    textDecoration: "underline",
+                  }}
                 >
-                  How this works →
+                  Open the full estimator →
                 </a>
               </div>
             </div>
+          )}
+
+          {priceCameFromEstimator && (
+            <p
+              className="form-success"
+              style={{
+                margin: "0 0 var(--s-4)",
+                fontSize: "var(--t-body-s)",
+              }}
+            >
+              Price filled in from the estimator. Edit if you want to.
+            </p>
           )}
 
           <div className="grid-2">
@@ -199,7 +254,7 @@ export default async function WizardPublishPage({
                 name="price"
                 required
                 pattern="^\d+(\.\d{1,2})?$"
-                defaultValue={priceDefault(draft.price_cents)}
+                defaultValue={priceInputDefault}
               />
             </Field>
             <Field label="Postal code / location" htmlFor="location_postal">

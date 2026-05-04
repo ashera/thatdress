@@ -51,6 +51,10 @@ type RawParams = {
   year?: string | string[];
   receipt?: string | string[];
   alterations?: string | string[];
+  /** Set to "wizard" when the user came from the listing publish step. */
+  from?: string | string[];
+  /** Numeric listing id paired with from=wizard. */
+  listingId?: string | string[];
 };
 
 function scalar(v: string | string[] | undefined): string | undefined {
@@ -131,14 +135,28 @@ function fmtPct(p: number): string {
   return `${Math.round(p * 100)}%`;
 }
 
+function priceDollars(cents: number): string {
+  // Whole-dollar string suitable for the publish-page ?price= param.
+  return Math.round(cents / 100).toString();
+}
+
 function ResultCard({
   result,
   designer,
+  wizardListingId,
 }: {
   result: EstimatorResult;
   designer: DesignerRow;
+  /** When set, swap the marketing CTAs for "use this price" return links
+   *  back into the listing publish step. */
+  wizardListingId?: string;
 }) {
   const b = result.breakdown;
+  // Mid is the simple arithmetic midpoint, rounded to the same $10 grain
+  // estimateValue() uses internally. Gives the user a sensible default
+  // between aggressive and ambitious pricing.
+  const midCents =
+    Math.round((result.lowCents + result.highCents) / 2 / 1000) * 1000;
   return (
     <section
       className="form-card"
@@ -224,28 +242,66 @@ function ResultCard({
         condition notes typically land in the upper half of the range.
       </p>
 
-      <div
-        style={{
-          display: "flex",
-          gap: "var(--s-3)",
-          marginTop: "var(--s-6)",
-          flexWrap: "wrap",
-        }}
-      >
-        <ButtonLink
-          href="/listings/new"
-          variant="primary"
-          iconRight="arrow"
+      {wizardListingId ? (
+        <div style={{ marginTop: "var(--s-6)" }}>
+          <p
+            style={{
+              margin: "0 0 var(--s-3)",
+              color: "var(--ink-2)",
+              fontSize: "var(--t-body-s)",
+              fontWeight: 600,
+            }}
+          >
+            Pick a price to use back in your listing:
+          </p>
+          <div
+            style={{
+              display: "flex",
+              gap: "var(--s-3)",
+              flexWrap: "wrap",
+            }}
+          >
+            <ButtonLink
+              href={`/listings/new/${wizardListingId}/publish?price=${priceDollars(result.lowCents)}`}
+              variant="ghost"
+            >
+              Use {fmtAud(result.lowCents)} (low)
+            </ButtonLink>
+            <ButtonLink
+              href={`/listings/new/${wizardListingId}/publish?price=${priceDollars(midCents)}`}
+              variant="primary"
+              iconRight="arrow"
+            >
+              Use {fmtAud(midCents)} (mid)
+            </ButtonLink>
+            <ButtonLink
+              href={`/listings/new/${wizardListingId}/publish?price=${priceDollars(result.highCents)}`}
+              variant="ghost"
+            >
+              Use {fmtAud(result.highCents)} (high)
+            </ButtonLink>
+          </div>
+        </div>
+      ) : (
+        <div
+          style={{
+            display: "flex",
+            gap: "var(--s-3)",
+            marginTop: "var(--s-6)",
+            flexWrap: "wrap",
+          }}
         >
-          List your dress on frockd
-        </ButtonLink>
-        <ButtonLink
-          href={`/listings?designer_id=${designer.id}`}
-          variant="ghost"
-        >
-          See similar listings
-        </ButtonLink>
-      </div>
+          <ButtonLink href="/listings/new" variant="primary" iconRight="arrow">
+            List your dress on frockd
+          </ButtonLink>
+          <ButtonLink
+            href={`/listings?designer_id=${designer.id}`}
+            variant="ghost"
+          >
+            See similar listings
+          </ButtonLink>
+        </div>
+      )}
     </section>
   );
 }
@@ -289,6 +345,15 @@ export default async function ValueEstimatorPage({
       })
     : null;
 
+  // Wizard handoff: came from /listings/new/{id}/publish, so the result
+  // panel offers "use this price" return links instead of marketing CTAs.
+  const fromWizard = scalar(sp.from) === "wizard";
+  const listingIdRaw = scalar(sp.listingId);
+  const wizardListingId =
+    fromWizard && listingIdRaw && /^\d+$/.test(listingIdRaw)
+      ? listingIdRaw
+      : null;
+
   const formDefaults = {
     designer: scalar(sp.designer) ?? "",
     retail: scalar(sp.retail) ?? "",
@@ -301,16 +366,29 @@ export default async function ValueEstimatorPage({
   return (
     <div className="page page--pad">
       <main style={{ maxWidth: 720, margin: "0 auto" }}>
-        <Link
-          href="/tools"
-          style={{
-            color: "var(--ink-3)",
-            fontSize: "var(--t-body-s)",
-            textDecoration: "none",
-          }}
-        >
-          ← All tools
-        </Link>
+        {wizardListingId ? (
+          <Link
+            href={`/listings/new/${wizardListingId}/publish`}
+            style={{
+              color: "var(--ink-3)",
+              fontSize: "var(--t-body-s)",
+              textDecoration: "none",
+            }}
+          >
+            ← Back to your listing
+          </Link>
+        ) : (
+          <Link
+            href="/tools"
+            style={{
+              color: "var(--ink-3)",
+              fontSize: "var(--t-body-s)",
+              textDecoration: "none",
+            }}
+          >
+            ← All tools
+          </Link>
+        )}
 
         <header style={{ margin: "var(--s-5) 0 var(--s-7)" }}>
           <p className="eyebrow" style={{ margin: 0, color: "var(--ink-3)" }}>
@@ -353,6 +431,16 @@ export default async function ValueEstimatorPage({
             marginBottom: "var(--s-5)",
           }}
         >
+          {wizardListingId && (
+            <>
+              <input type="hidden" name="from" value="wizard" />
+              <input
+                type="hidden"
+                name="listingId"
+                value={wizardListingId}
+              />
+            </>
+          )}
           <section className="form-card">
             <h2 className="card-heading">Tell us about the dress</h2>
             <p className="card-sub">All required.</p>
@@ -466,7 +554,11 @@ export default async function ValueEstimatorPage({
         </form>
 
         {result && parsed && (
-          <ResultCard result={result} designer={parsed.designer} />
+          <ResultCard
+            result={result}
+            designer={parsed.designer}
+            wizardListingId={wizardListingId ?? undefined}
+          />
         )}
       </main>
     </div>
