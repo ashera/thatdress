@@ -729,6 +729,27 @@ ALTER TABLE blog_cluster_images
 
 DROP TABLE IF EXISTS blog_keyword_images;
 
+-- Blog Builder: tunable prompt budgets so admins can dial the per-call
+-- token usage from the UI to stay under their Anthropic ITPM cap. Single
+-- row keyed at id=1; values are characters for the markdown reference
+-- budgets (clipped to the nearest paragraph break in the prompt) and
+-- tokens for the per-call max_tokens reservations.
+CREATE TABLE IF NOT EXISTS blog_builder_settings (
+  id                 INTEGER     PRIMARY KEY CHECK (id = 1),
+  voice_budget       INTEGER     NOT NULL DEFAULT 1500,
+  humour_budget      INTEGER     NOT NULL DEFAULT 1500,
+  opinions_budget    INTEGER     NOT NULL DEFAULT 1200,
+  stats_budget       INTEGER     NOT NULL DEFAULT 1500,
+  stories_budget     INTEGER     NOT NULL DEFAULT 1200,
+  post_max_tokens    INTEGER     NOT NULL DEFAULT 3000,
+  serp_max_tokens    INTEGER     NOT NULL DEFAULT 3500,
+  cluster_max_tokens INTEGER     NOT NULL DEFAULT 1500,
+  updated_at         TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+INSERT INTO blog_builder_settings (id) VALUES (1)
+ON CONFLICT (id) DO NOTHING;
+
 -- Backfill existing accounts as verified — pre-rollout users shouldn't be
 -- nagged after the fact.
 UPDATE users SET email_verified_at = COALESCE(email_verified_at, created_at);

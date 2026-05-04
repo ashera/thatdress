@@ -63,6 +63,7 @@ const SUBMIT_POST_TOOL = {
   },
 } as const;
 import { searchPexels } from "@/lib/pexels";
+import { loadBlogBuilderSettings } from "@/lib/blog-builder-settings";
 import {
   composePostSystemPrompt,
   composePostUserPrompt,
@@ -301,10 +302,11 @@ export async function generateClusterFromKeyword(
     "Return the JSON cluster now.",
   ].join("\n");
 
+  const settings = await loadBlogBuilderSettings();
   const result = await callClaude({
     system: CLUSTER_SYSTEM_PROMPT,
     messages: [{ role: "user", content: userPrompt }],
-    maxTokens: 1500,
+    maxTokens: settings.clusterMaxTokens,
   });
   if (!result.ok) {
     const code = result.error.includes("ANTHROPIC_API_KEY")
@@ -541,6 +543,7 @@ export async function runSerpAnalysis(formData: FormData): Promise<void> {
   if (!phrase)
     redirect(`/admin/blog/builder/cluster/${clusterId}?error=missing-root`);
 
+  const settings = await loadBlogBuilderSettings();
   const result = await callClaude({
     system: SERP_SYSTEM_PROMPT,
     messages: [
@@ -550,7 +553,7 @@ export async function runSerpAnalysis(formData: FormData): Promise<void> {
       },
     ],
     tools: [WEB_SEARCH_TOOL, WEB_FETCH_TOOL],
-    maxTokens: 4096,
+    maxTokens: settings.serpMaxTokens,
   });
   if (!result.ok) {
     const code = result.error.includes("ANTHROPIC_API_KEY")
@@ -1194,7 +1197,15 @@ export async function generateBlogPostFromCluster(
     availableTagsRes.rows.map((r) => [r.label.toLowerCase(), r.id]),
   );
 
-  const systemPrompt = composePostSystemPrompt(references);
+  const settings = await loadBlogBuilderSettings();
+  const referenceBudgets = {
+    voice: settings.voiceBudget,
+    humour: settings.humourBudget,
+    opinions: settings.opinionsBudget,
+    stats: settings.statsBudget,
+    stories: settings.storiesBudget,
+  };
+  const systemPrompt = composePostSystemPrompt(references, referenceBudgets);
   const userPrompt = composePostUserPrompt({
     cluster: { name: guard.name, intent: guard.intent },
     members: membersRes.rows.map((r) => ({
@@ -1211,6 +1222,7 @@ export async function generateBlogPostFromCluster(
     references,
     existingPosts,
     availableTags,
+    budgets: referenceBudgets,
   });
 
   const result = await callClaude({
@@ -1228,10 +1240,10 @@ export async function generateBlogPostFromCluster(
       },
     ],
     messages: [{ role: "user", content: userPrompt }],
-    // 4000 fits a ~2500-word post with the tool-call wrapping; tier-1
-    // ITPM is 10k and Anthropic reserves max_tokens against the limit
-    // up-front, so we keep this tight.
-    maxTokens: 4000,
+    // Configurable via /admin/blog/builder/budgets — Anthropic reserves
+    // max_tokens against the per-minute ITPM cap up-front, so this is
+    // the biggest lever for staying under tier-1 limits.
+    maxTokens: settings.postMaxTokens,
     tools: [SUBMIT_POST_TOOL],
     // Force the model to call submit_post — no free-text fallback.
     toolChoice: { type: "tool", name: "submit_post" },

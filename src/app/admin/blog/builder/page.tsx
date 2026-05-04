@@ -300,6 +300,9 @@ export default async function BlogBuilderListPage({
         <ButtonLink href="/admin/blog/builder/references" variant="ghost">
           References
         </ButtonLink>
+        <ButtonLink href="/admin/blog/builder/budgets" variant="ghost">
+          Budgets
+        </ButtonLink>
       </div>
 
       <form

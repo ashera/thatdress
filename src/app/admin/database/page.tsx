@@ -154,6 +154,10 @@ const TABLE_DESCRIPTIONS: Record<string, TableMeta> = {
     group: "Blog Builder",
     desc: "Pexels image candidates per cluster (primary + custom-keyword extras).",
   },
+  blog_builder_settings: {
+    group: "Blog Builder",
+    desc: "Tunable prompt budgets and max_tokens caps used during blog generation. Single-row table managed at /admin/blog/builder/budgets.",
+  },
 };
 
 const GROUP_ORDER = [

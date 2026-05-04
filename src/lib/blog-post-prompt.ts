@@ -54,19 +54,32 @@ export type PostPromptReferences = {
   stories: string | null;
 };
 
-// Character budgets for reference content sent in the prompt. The full
-// markdown files stay in references/ for the library viewer; only the
-// copy injected into the system/user prompt is clipped. Sized to keep
-// input + max_tokens under the 10k tier-1 rate limit (Anthropic
-// reserves max_tokens up-front against ITPM, so input alone can't fill
-// the budget). At ~4 chars/token, total ref content here is ~2k tokens.
-const REFERENCE_BUDGETS = {
-  voice: 2000,
-  humour: 2000,
-  opinions: 1500,
+/**
+ * Character budgets for the editorial reference content injected into
+ * the prompt. The full markdown files live in `references/` for the
+ * library viewer; only the copy that actually goes to Claude is clipped.
+ *
+ * Tunable via the admin Prompt Budgets page (writes to the
+ * `blog_builder_settings` table). Defaults are sized to keep one
+ * post-generation call comfortably under the Anthropic tier-1 ITPM cap
+ * of 10,000 tokens (Anthropic reserves max_tokens up-front against the
+ * cap, so input alone can't fill the budget). ~4 chars per token.
+ */
+export type ReferenceBudgets = {
+  voice: number;
+  humour: number;
+  opinions: number;
+  stats: number;
+  stories: number;
+};
+
+export const DEFAULT_REFERENCE_BUDGETS: ReferenceBudgets = {
+  voice: 1500,
+  humour: 1500,
+  opinions: 1200,
   stats: 1500,
-  stories: 1500,
-} as const;
+  stories: 1200,
+};
 
 function clipForPrompt(body: string | null, maxChars: number): string | null {
   if (!body) return null;
@@ -104,15 +117,18 @@ Rules:
 
 Submit your post by calling the submit_post tool exactly once with all fields filled in. Do not write any free-text response — call the tool and stop.`;
 
-export function composePostSystemPrompt(refs: PostPromptReferences): string {
+export function composePostSystemPrompt(
+  refs: PostPromptReferences,
+  budgets: ReferenceBudgets = DEFAULT_REFERENCE_BUDGETS,
+): string {
   const parts: string[] = [POST_SYSTEM_BASE];
-  const voice = clipForPrompt(refs.voice, REFERENCE_BUDGETS.voice);
+  const voice = clipForPrompt(refs.voice, budgets.voice);
   if (voice) {
     parts.push("");
     parts.push("=== VOICE GUIDE ===");
     parts.push(voice);
   }
-  const humour = clipForPrompt(refs.humour, REFERENCE_BUDGETS.humour);
+  const humour = clipForPrompt(refs.humour, budgets.humour);
   if (humour) {
     parts.push("");
     parts.push("=== HUMOUR GUIDE ===");
@@ -135,8 +151,18 @@ export function composePostUserPrompt(opts: {
   references: PostPromptReferences;
   existingPosts: PostPromptExistingPost[];
   availableTags: string[];
+  budgets?: ReferenceBudgets;
 }): string {
-  const { cluster, members, serp, images, references, existingPosts, availableTags } = opts;
+  const {
+    cluster,
+    members,
+    serp,
+    images,
+    references,
+    existingPosts,
+    availableTags,
+    budgets = DEFAULT_REFERENCE_BUDGETS,
+  } = opts;
   const primary = members.find((m) => m.is_primary);
   const secondary = members.filter((m) => !m.is_primary);
 
@@ -254,7 +280,7 @@ export function composePostUserPrompt(opts: {
   lines.push("");
   lines.push("=== OPINIONS (pick 1–2 and bake in as editorial stances) ===");
   lines.push(
-    clipForPrompt(references.opinions, REFERENCE_BUDGETS.opinions) ??
+    clipForPrompt(references.opinions, budgets.opinions) ??
       "(opinions reference missing)",
   );
   lines.push("");
@@ -262,13 +288,13 @@ export function composePostUserPrompt(opts: {
     "=== STATS (use verbatim — never round, paraphrase, or invent) ===",
   );
   lines.push(
-    clipForPrompt(references.stats, REFERENCE_BUDGETS.stats) ??
+    clipForPrompt(references.stats, budgets.stats) ??
       "(stats reference missing)",
   );
   lines.push("");
   lines.push("=== STORIES (adapt 1–2 to fit the article) ===");
   lines.push(
-    clipForPrompt(references.stories, REFERENCE_BUDGETS.stories) ??
+    clipForPrompt(references.stories, budgets.stories) ??
       "(stories reference missing)",
   );
   lines.push("");
