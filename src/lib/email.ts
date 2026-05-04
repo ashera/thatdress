@@ -53,10 +53,15 @@ export async function sendEmail(opts: {
   }
 }
 
-/** Resolve the public base URL for building absolute links inside emails. */
+/** Resolve the public base URL for building absolute links inside emails.
+ *  Normalises bare-hostname env values (e.g. Railway's
+ *  "frockd-production.up.railway.app") into a full URL with protocol. */
 export async function getBaseUrl(): Promise<string> {
-  const explicit = process.env.APP_URL?.replace(/\/+$/, "");
-  if (explicit) return explicit;
+  const raw = process.env.APP_URL?.trim().replace(/\/+$/, "");
+  if (raw) {
+    if (/^https?:\/\//i.test(raw)) return raw;
+    return `https://${raw}`;
+  }
   try {
     const h = await headers();
     const proto = h.get("x-forwarded-proto") ?? "https";

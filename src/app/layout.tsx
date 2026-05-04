@@ -28,7 +28,16 @@ const jetbrainsMono = JetBrains_Mono({
 // metadataBase resolves all relative OG / Twitter image URLs in pages
 // that don't override it. APP_URL is set on the deployed services;
 // the fallback is the production domain so dev/preview also work.
-const SITE_URL = process.env.APP_URL ?? "https://www.frockd.com.au";
+// Normalises bare-hostname values (e.g. Railway sets APP_URL as
+// "frockd-production.up.railway.app" without a protocol) into a full
+// URL so new URL(SITE_URL) doesn't throw at build time.
+function resolveSiteUrl(): string {
+  const raw = process.env.APP_URL?.trim().replace(/\/+$/, "");
+  if (!raw) return "https://www.frockd.com.au";
+  if (/^https?:\/\//i.test(raw)) return raw;
+  return `https://${raw}`;
+}
+const SITE_URL = resolveSiteUrl();
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
