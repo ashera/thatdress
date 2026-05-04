@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og";
-import { headers } from "next/headers";
+import sharp from "sharp";
 import { query } from "@/lib/db";
 
 export const runtime = "nodejs";
@@ -19,8 +19,37 @@ type Row = {
   size_label: string | null;
   color: string | null;
   condition_label: string | null;
-  primary_image_id: string | null;
+  primary_image_bytes: Buffer | null;
+  primary_image_mime: string | null;
 };
+
+/**
+ * Next's ImageResponse uses Satori, which only renders PNG, JPEG, and
+ * SVG bitmaps. Listing photos are commonly uploaded as WebP, which
+ * Satori silently drops — leaving the photo half blank. Convert the
+ * primary image to a downsized JPEG and embed it as a data URL so
+ * the OG card always has the photo, regardless of source format.
+ */
+async function imageDataUrl(
+  bytes: Buffer | null,
+  mime: string | null,
+): Promise<string | null> {
+  if (!bytes || !mime) return null;
+  try {
+    // Resize to the photo-half dimensions (with cover crop) so we ship
+    // ~30-100KB of image data instead of the full upload.
+    const jpeg = await sharp(bytes)
+      .resize(600, 630, { fit: "cover", position: "centre" })
+      .jpeg({ quality: 80, mozjpeg: true })
+      .toBuffer();
+    return `data:image/jpeg;base64,${jpeg.toString("base64")}`;
+  } catch (err) {
+    // Fall back to no image rather than throwing during OG generation.
+    // eslint-disable-next-line no-console
+    console.warn("[og-image] sharp conversion failed:", err);
+    return null;
+  }
+}
 
 function priceLabel(cents: number): string {
   return new Intl.NumberFormat("en-AU", {
@@ -28,26 +57,6 @@ function priceLabel(cents: number): string {
     currency: "AUD",
     maximumFractionDigits: 0,
   }).format(cents / 100);
-}
-
-async function resolveOrigin(): Promise<string> {
-  // ImageResponse runs server-side; the image fetch needs an absolute
-  // URL. Prefer the request's own host so the embedded image URL
-  // matches the social card's referer.
-  try {
-    const h = await headers();
-    const proto = h.get("x-forwarded-proto") ?? "https";
-    const host = h.get("host");
-    if (host) return `${proto}://${host}`;
-  } catch {
-    // Fall through.
-  }
-  const raw = process.env.APP_URL?.trim().replace(/\/+$/, "");
-  if (raw) {
-    if (/^https?:\/\//i.test(raw)) return raw;
-    return `https://${raw}`;
-  }
-  return "https://www.frockd.com.au";
 }
 
 export default async function OgImage({
@@ -70,18 +79,21 @@ export default async function OgImage({
               ds.label AS size_label,
               l.color,
               cg.label AS condition_label,
-              (
-                SELECT li.id::text FROM listing_images li
-                  WHERE li.listing_id = l.id
-                  ORDER BY li.is_primary DESC, li.position, li.id
-                  LIMIT 1
-              ) AS primary_image_id
+              img.bytes     AS primary_image_bytes,
+              img.mime_type AS primary_image_mime
          FROM listings l
          LEFT JOIN designers        d  ON d.id  = l.designer_id
          LEFT JOIN occasions        o  ON o.id  = l.occasion_id
          LEFT JOIN silhouettes      s  ON s.id  = l.silhouette_id
          LEFT JOIN dress_sizes      ds ON ds.id = l.size_id
          LEFT JOIN condition_grades cg ON cg.id = l.condition_id
+         LEFT JOIN LATERAL (
+           SELECT bytes, mime_type
+             FROM listing_images
+            WHERE listing_id = l.id
+            ORDER BY is_primary DESC, position, id
+            LIMIT 1
+         ) img ON TRUE
         WHERE l.id = $1::bigint
         LIMIT 1`,
       [id],
@@ -91,11 +103,9 @@ export default async function OgImage({
     row = null;
   }
 
-  const origin = await resolveOrigin();
-  const photoUrl =
-    row?.primary_image_id
-      ? `${origin}/api/listings/${id}/images/${row.primary_image_id}`
-      : null;
+  const photoUrl = row
+    ? await imageDataUrl(row.primary_image_bytes, row.primary_image_mime)
+    : null;
 
   const title = row?.title ?? "frockd listing";
   const price = row ? priceLabel(row.price_cents) : "";
