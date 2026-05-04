@@ -222,7 +222,7 @@ export default async function BlogPostPage({
               display: "flex",
               flexWrap: "wrap",
               gap: 8,
-              margin: "var(--s-5) 0 var(--s-7)",
+              margin: "0 0 var(--s-8)",
             }}
           >
             <span

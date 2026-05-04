@@ -3408,7 +3408,7 @@ textarea.input {
   width: 100%;
   aspect-ratio: 21 / 9;
   min-height: 320px;
-  margin: var(--s-5) 0 0;
+  margin: var(--s-5) 0 var(--s-8);
   border-radius: 16px;
   overflow: hidden;
   background: linear-gradient(
@@ -3493,7 +3493,7 @@ textarea.input {
   line-height: 1.65;
   font-size: 17px;
 }
-.prose > * + * { margin-top: var(--s-6); }
+.prose > * + * { margin-top: var(--s-7); }
 .prose h2 {
   font-family: var(--font-display);
   font-size: 28px;
