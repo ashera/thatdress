@@ -82,7 +82,7 @@ function clipForPrompt(body: string | null, maxChars: number): string | null {
   return slice.replace(/\s+\S*$/, "").trimEnd();
 }
 
-const POST_SYSTEM_BASE = `You are a senior content writer for ebikeflip, a peer-to-peer marketplace for buying and selling used electric bikes (eBikes).
+const POST_SYSTEM_BASE = `You are a senior content writer for frockd, a peer-to-peer marketplace for buying and selling pre-loved formal dresses and gowns.
 
 Given a keyword cluster, a SERP landscape analysis, hero images, and editorial reference materials, write a single complete blog post that targets the cluster's primary keyword while naturally covering its related queries.
 

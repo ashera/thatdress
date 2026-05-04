@@ -1,96 +1,109 @@
 # Stats & Real Numbers
 
-> Canonical industry numbers for ebikeflip blog content. Use these exactly. Don't round them, don't invent new ones.
+> Canonical industry numbers for frockd blog content. Use these exactly. Don't round them, don't invent new ones.
 > When a blog post needs a statistic, it comes from this file.
 
-## Australian eBike laws (federal baseline)
+## Australian wedding & event spend (recent industry surveys)
 
-- **Pedelec power limit:** 250W continuous (rated) output
-- **Pedelec speed cutoff:** 25 km/h — motor must stop assisting above this speed
-- **Walk-assist throttle limit:** 6 km/h (walk-assist mode only) on EPAC-compliant pedelecs
-- **Throttle-only riding:** not road-legal at any speed for EPAC pedelecs (some older 200W classes allow it — check your state)
-- **Helmet:** mandatory, all states
-- **Registration:** not required for compliant pedelecs
-- **Licence:** not required for compliant pedelecs
-- **Speed pedelecs (45 km/h cutoff, common in Europe):** not road-legal in any Australian state — buy these for off-road use only
+- **Average Australian wedding budget (2024 IBISWorld / Easy Weddings):** $36,000–$40,000
+- **Average bridesmaid all-in cost per wedding (Australia):** $850–$1,200 (dress + alterations + shoes + hair + makeup)
+- **Average wedding-guest spend on a single dress:** $250–$600
+- **Average mother-of-the-bride/groom dress spend:** $400–$900
+- **Average debutante / formal / prom dress spend (Australia):** $300–$700
+- **Number of weddings per year (Australia, ABS 2023):** ~120,000
+- **Average guest list size:** 80–110 people
 
-## Battery facts
+## Designer-dress original retail (RRP ranges)
 
-- **Nominal voltages:** 36V (10 cells in series), 48V (13S), 52V (14S) — these are the three you'll encounter
-- **Cycle life to 80% capacity:** 500–1,000 charge cycles for quality Li-ion packs
-- **Annual cycles for daily commuter:** 150–250 (depending on whether they charge every 1 or 2 days)
-- **Useful battery life:** 2–4 years for daily commuters, 5–7 years for occasional riders
-- **Storage charge level:** 40–60% — not full, not empty
-- **Daily-use charge target:** 80% — adds 30%+ to long-term cycle life vs charging to 100% every time
-- **Replacement battery cost (name-brand: Bosch, Shimano, Yamaha):** $700–$1,500
-- **Replacement battery cost (no-name / aftermarket):** $400–$800 — verify cell brand before buying
+- **Self-Portrait midi:** $400–$700
+- **Reformation gown:** $300–$500
+- **Rixo midi:** $400–$650
+- **Camilla & Marc gown:** $700–$1,400
+- **Carolina Herrera gown:** $3,500–$8,000
+- **Vera Wang bridal:** $4,500–$15,000
+- **Marchesa gown:** $4,000–$10,000
+- **Monique Lhuillier ML diffusion:** $1,500–$3,500
+- **Oscar de la Renta cocktail:** $2,500–$6,000
+- **Reem Acra:** $4,000–$12,000
 
-## Voltage spot-check (multimeter on a full charge)
-
-| Nominal | Full charge | Worry below |
-|---------|------------|-------------|
-| 36V | 42.0V | 39.5V |
-| 48V | 54.6V | 51.5V |
-| 52V | 58.8V | 55.5V |
-
-If a battery doesn't reach its "full charge" voltage right off the charger, the cells are tired. 30 seconds with a $25 multimeter saves you from a $1,000 mistake.
-
-## Power consumption & range
-
-- **Average power draw on moderate PAS:** 8–12 Wh per km
-- **Average power draw on max PAS or throttle:** 15–25 Wh per km
-- **Typical range — 360 Wh battery (36V × 10Ah):** 30–50 km
-- **Typical range — 500 Wh battery:** 40–70 km
-- **Typical range — 672 Wh battery (48V × 14Ah):** 50–80 km
-- **Range varies with:** rider weight, terrain, assist level, headwind, tyre pressure — basically every factor
-
-## Charge times
-
-- **Standard 2A charger (typical stock):** ~5–6 hours for 360 Wh; ~7 hours for 500 Wh
-- **Fast 4A charger:** ~3 hours for 360 Wh
-- **Fast 6A+ charger:** ~2 hours, but accelerates cell wear if used daily
-- **Cell-friendly upper limit:** 0.5C charge rate (e.g. 5A on a 10Ah battery)
-
-## Mid-drive vs hub motor
-
-- **Hill efficiency (12% gradient, mid-drive vs hub):** 20–30% less battery use on the mid-drive
-- **Mid-drive motor lifespan:** 15,000–30,000 km before major service
-- **Hub motor lifespan:** 20,000–40,000 km — but controller and display often fail first
-- **Mid-drive full service interval:** ~10,000 km
-- **Hub motor service interval:** 20,000+ km (sealed, harder to open and service)
-
-## Component lifespans (daily eBike commute)
-
-- **Chain:** 3,000–5,000 km (faster wear than non-electric due to motor torque)
-- **Cassette / cogs:** 6,000–10,000 km
-- **Brake pads:** 1,500–3,000 km (heavier bike, more frequent replacement)
-- **Tyres:** 5,000–8,000 km depending on compound
-- **Battery cells:** 500–1,000 cycles before significant capacity loss
-
-## Cost vs car (Australia, daily 10–20 km commute)
-
-- **Average annual cost of small-to-medium car ownership (RACV 2024):** $14,000–$18,000
-- **eBike electricity (250 charges × 360 Wh @ $0.30/kWh):** ~$27/year
-- **eBike consumables (chain, brakes, tyres) annualised:** $150–$250/year
-- **eBike battery amortised (~$1,000 every 4 years):** ~$250/year
-- **eBike total annual running cost:** $400–$600/year — roughly 3% of equivalent car cost
-- **eBike registration:** $0
-- **eBike insurance (optional theft cover):** $50–$150/year
-
-## Used market depreciation (peer-to-peer rule of thumb)
+## Resale market (peer-to-peer rule of thumb)
 
 These are guidance ranges drawn from peer-to-peer listing patterns, not guaranteed numbers.
 
-- **Premium brands (Specialized, Riese & Müller, Tern):** retain 50–70% of new after 5 years (with healthy battery)
-- **Mid-tier brands:** retain 30–50% of new after 5 years
-- **No-name / direct-to-consumer:** retain 20–35% of new after 5 years
-- **Battery health impact:** a fresh replacement battery on a 5-year-old bike adds $700–$1,400 to fair sale value
-- **Asking price vs sold price (peer-to-peer):** asking lands 15–25% above what bikes actually transact for
+- **Premium designer (Vera Wang, Marchesa, Carolina Herrera):** retain 35–55% of RRP after one wear
+- **Mid-tier contemporary (Self-Portrait, Camilla & Marc, Rixo):** retain 40–60% of RRP after one wear
+- **Fast-fashion / direct-to-consumer:** retain 15–30% of RRP after one wear
+- **Bridesmaid dresses (any tier):** retain 25–40% of RRP — small market, dye-lot constraints, narrow window
+- **Asking price vs sold price (peer-to-peer):** asking lands 20–40% above what dresses actually transact for
+- **Time on market — well-priced resale formal:** 7–28 days
+- **Time on market — overpriced resale formal:** 60–180+ days, often unsold
+
+## Cost-per-wear maths
+
+- **A $1,200 wedding-guest dress worn once, then resold for $480:** net cost $720 → cost-per-wear $720
+- **The same dress worn once, kept, never re-worn:** cost-per-wear $1,200
+- **A $480 resale dress worn once, resold for $300:** net cost $180 → cost-per-wear $180
+- **The cost-per-wear breakeven for a "keeper" dress:** ~5–7 wears at retail, ~2–3 wears on resale
+- **Australian women's average formal events per year:** 2–4 (weddings, galas, work events, prom-equivalents)
+
+## Sizing reality check (Australian women's formalwear)
+
+| Australian | US | UK | EU | Bust (cm) | Waist (cm) | Hip (cm) |
+|------------|-------|-----|-----|------------|-------------|-----------|
+| 8 | 4 | 8 | 36 | 84 | 65 | 90 |
+| 10 | 6 | 10 | 38 | 89 | 70 | 95 |
+| 12 | 8 | 12 | 40 | 94 | 75 | 100 |
+| 14 | 10 | 14 | 42 | 99 | 80 | 105 |
+| 16 | 12 | 16 | 44 | 104 | 85 | 110 |
+
+Designer vanity sizing varies by 1–2 sizes against this baseline. Self-Portrait, Reformation, and Rixo run small; Camilla & Marc, BHLDN, and Carolina Herrera run roughly true; some US labels run 1–2 sizes generous. **Always trust the measurements over the label number.**
+
+## Alterations cost (Australia, metro)
+
+- **Hem shortening (chiffon, simple):** $40–$70
+- **Hem shortening (lined, beaded):** $80–$160
+- **Bust take-in or let-out (1–2 sizes):** $80–$180
+- **Adding a bra cup:** $40–$80
+- **Adding straps to a strapless bodice:** $60–$140
+- **Full bodice rebuild:** $200–$500 — at this point, buy a different dress
+- **Bead-thread repair (per pulled section):** $40–$120 per area
+
+## Fabric care safe limits
+
+| Fabric | Iron temp | Steam | Dry clean | Wash at home |
+|--------|-----------|-------|-----------|--------------|
+| Silk | Cool only | Yes | Sparingly | No (unless "washable silk") |
+| Satin (silk-back) | Never | Yes | Yes | No |
+| Satin (poly-back) | Cool | Yes | Yes | Cold gentle, mesh bag |
+| Chiffon | Never | Yes | Sparingly — shrinks | Hand-wash cool |
+| Tulle | Never | Light steam from distance | Spot only | Spot only |
+| Lace | Never direct | Reverse-side steam | Yes | Hand-wash cold |
+| Velvet | Never | Steam vertical only | Yes | No |
+| Sequined / beaded | Never | No (loosens threads) | Sparingly | No |
+
+## Resale-listing photo conventions
+
+- **Minimum photos for a serious listing:** 5
+  1. Hero (front, on a hanger or model, full length)
+  2. Back (the photo every buyer looks for second)
+  3. Detail (neckline, beading, fabric texture)
+  4. Lining / inside-out (the truth-telling shot)
+  5. Original tag, label, or receipt
+- **Image dimensions:** 1500px on the long edge minimum
+- **Background:** plain wall, ideally cream or white; avoid carpet shots and bedroom mirror selfies for over-$300 listings
+
+## Wedding-guest dress code decoder (Australia)
+
+- **White-tie:** floor-length gown only, mandatory gloves traditional but rarely enforced
+- **Black-tie:** floor-length gown or formal cocktail (knee-or-below)
+- **Black-tie optional / formal:** cocktail length acceptable; floor-length still safer
+- **Cocktail:** knee-length or midi; no floor-length
+- **Semi-formal:** midi or knee-length, dressier fabrics (silk, lace, satin)
+- **Smart casual:** anything sundress-and-up; not formal-dress territory
 
 ## How to use these numbers in content
 
-- **Always specific, never rounded.** "42V at full charge", not "around 42V".
-- **Quote the source range, not a single point.** "$700–$1,500 for a name-brand replacement battery" is more honest than "$1,000."
-- **Pair every number with a "why it matters" sentence.** "A 36V battery should hit 42V right off the charger; 39V or lower means the cells are tired and you're looking at a $1,000 replacement within a year."
-- **Australian law numbers are non-negotiable.** 250W continuous, 25 km/h cutoff. Don't soften, don't fudge.
-- **This file is industry stats only.** Business-specific numbers (listings sold, members, founding date, contact) will live elsewhere once ebikeflip has a track record worth citing.
+- **Always specific, never rounded.** "$1,200 retail, $480 on resale," not "around a thousand dollars."
+- **Quote the source range, not a single point.** "$850–$1,200 all-in for an Australian bridesmaid" is more honest than "$1,000."
+- **Pair every number with a "why it matters" sentence.** "Self-Portrait pre-2018 dresses run a full size small at the bust — a 'size 10' on the listing fits an Australian 8 to 10. Always check the actual centimetres, not the label number."
+- **This file is industry stats only.** Business-specific numbers (listings sold, members, founding date, contact) will live elsewhere once frockd has a track record worth citing.
