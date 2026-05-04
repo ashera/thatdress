@@ -192,55 +192,29 @@ export default async function BlogPostPage({
           </p>
         )}
 
-        <header style={{ margin: "var(--s-5) 0 var(--s-7)" }}>
-          <p className="eyebrow" style={{ margin: 0, color: "var(--ink-3)" }}>
-            {post.published_at
-              ? `${formatDate(post.published_at)} · ${authorLabel(post)}`
-              : `Draft · ${authorLabel(post)}`}
-          </p>
-          <h1
-            style={{
-              fontFamily: "var(--font-display)",
-              fontSize: "var(--t-h1)",
-              color: "var(--ink-1)",
-              margin: "var(--s-2) 0 var(--s-3)",
-              letterSpacing: "-0.02em",
-              lineHeight: 1.05,
-            }}
-          >
-            {post.title}
-          </h1>
-          {post.excerpt && (
-            <p
-              style={{
-                color: "var(--ink-2)",
-                fontSize: 18,
-                margin: 0,
-                lineHeight: 1.5,
-              }}
-            >
-              {post.excerpt}
-            </p>
+        <header
+          className={`blog-banner ${post.hero_image_id ? "has-image" : ""}`}
+        >
+          {post.hero_image_id && (
+            <img
+              className="blog-banner-img"
+              src={`/api/blog/posts/${post.id}/hero`}
+              alt=""
+            />
           )}
+          <div className="blog-banner-scrim" aria-hidden />
+          <div className="blog-banner-content">
+            <p className="blog-banner-eyebrow">
+              {post.published_at
+                ? `${formatDate(post.published_at)} · ${authorLabel(post)}`
+                : `Draft · ${authorLabel(post)}`}
+            </p>
+            <h1 className="blog-banner-title">{post.title}</h1>
+            {post.excerpt && (
+              <p className="blog-banner-excerpt">{post.excerpt}</p>
+            )}
+          </div>
         </header>
-
-        {post.hero_image_id && (
-          <img
-            src={`/api/blog/posts/${post.id}/hero`}
-            alt=""
-            style={{
-              width: "100%",
-              borderRadius: 12,
-              display: "block",
-              marginBottom: "var(--s-7)",
-            }}
-          />
-        )}
-
-        <div
-          className="prose"
-          dangerouslySetInnerHTML={{ __html: html }}
-        />
 
         {tags.length > 0 && (
           <div
@@ -248,9 +222,7 @@ export default async function BlogPostPage({
               display: "flex",
               flexWrap: "wrap",
               gap: 8,
-              marginTop: "var(--s-7)",
-              paddingTop: "var(--s-5)",
-              borderTop: "1px solid var(--hairline)",
+              margin: "var(--s-5) 0 var(--s-7)",
             }}
           >
             <span
@@ -282,6 +254,11 @@ export default async function BlogPostPage({
             ))}
           </div>
         )}
+
+        <div
+          className="prose"
+          dangerouslySetInnerHTML={{ __html: html }}
+        />
 
         <script
           type="application/ld+json"

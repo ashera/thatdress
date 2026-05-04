@@ -3400,6 +3400,94 @@ textarea.input {
 /* =========================================================
    BLOG / PROSE
    ========================================================= */
+/* Blog post banner — hero image with title/eyebrow/excerpt overlaid
+   at the bottom-left. Falls back to a soft gradient when no hero is
+   uploaded (preview drafts, sparse posts). */
+.blog-banner {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 21 / 9;
+  min-height: 320px;
+  margin: var(--s-5) 0 0;
+  border-radius: 16px;
+  overflow: hidden;
+  background: linear-gradient(
+    135deg,
+    var(--volt-100) 0%,
+    var(--surface-sunken) 100%
+  );
+  isolation: isolate;
+}
+.blog-banner-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+.blog-banner-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0) 0%,
+    rgba(0, 0, 0, 0) 35%,
+    rgba(0, 0, 0, 0.55) 80%,
+    rgba(0, 0, 0, 0.78) 100%
+  );
+  pointer-events: none;
+}
+.blog-banner:not(.has-image) .blog-banner-scrim { display: none; }
+.blog-banner-content {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  padding: var(--s-6) var(--s-7);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  color: #fff;
+}
+.blog-banner:not(.has-image) .blog-banner-content { color: var(--ink-1); }
+.blog-banner-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  margin: 0;
+  opacity: 0.92;
+}
+.blog-banner-title {
+  font-family: var(--font-display);
+  font-size: clamp(28px, 4.4vw, 56px);
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  margin: 0;
+  text-wrap: balance;
+}
+.blog-banner-excerpt {
+  font-size: clamp(15px, 1.4vw, 18px);
+  line-height: 1.45;
+  margin: 0;
+  max-width: 60ch;
+  opacity: 0.94;
+}
+@media (max-width: 640px) {
+  .blog-banner {
+    aspect-ratio: 4 / 3;
+    min-height: 280px;
+    border-radius: 12px;
+  }
+  .blog-banner-content {
+    padding: var(--s-5) var(--s-4);
+  }
+  .blog-banner-eyebrow { font-size: 11px; letter-spacing: 0.12em; }
+}
+
 .prose {
   color: var(--ink-2);
   line-height: 1.65;
