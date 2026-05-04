@@ -25,19 +25,23 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
-// metadataBase resolves all relative OG / Twitter image URLs in pages
-// that don't override it. APP_URL is set on the deployed services;
-// the fallback is the production domain so dev/preview also work.
-// Normalises bare-hostname values (e.g. Railway sets APP_URL as
-// "frockd-production.up.railway.app" without a protocol) into a full
-// URL so new URL(SITE_URL) doesn't throw at build time.
-function resolveSiteUrl(): string {
-  const raw = process.env.APP_URL?.trim().replace(/\/+$/, "");
+// metadataBase resolves relative OG / Twitter image URLs (including the
+// auto-generated /opengraph-image routes) into absolute URLs. This MUST
+// be the canonical public domain — not APP_URL, which on Railway is
+// the internal hostname (something.up.railway.app). Using APP_URL here
+// caused og:image to be served from the Railway hostname even when
+// pages were fetched via www.frockd.com.au, which broke social previews.
+//
+// Override via CANONICAL_URL only when running behind a different
+// public domain (e.g. preview/staging). APP_URL stays separate and
+// drives the email/cron base URL where there's no request context.
+function resolveCanonicalUrl(): string {
+  const raw = process.env.CANONICAL_URL?.trim().replace(/\/+$/, "");
   if (!raw) return "https://www.frockd.com.au";
   if (/^https?:\/\//i.test(raw)) return raw;
   return `https://${raw}`;
 }
-const SITE_URL = resolveSiteUrl();
+const SITE_URL = resolveCanonicalUrl();
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
