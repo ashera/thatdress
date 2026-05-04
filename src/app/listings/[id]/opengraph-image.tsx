@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import sharp from "sharp";
 import { query } from "@/lib/db";
@@ -22,6 +24,24 @@ type Row = {
   primary_image_bytes: Buffer | null;
   primary_image_mime: string | null;
 };
+
+/**
+ * Read the brand logo from /public once and cache the data URL across
+ * requests. Embedding as a data URL avoids a second HTTP fetch from
+ * inside the OG renderer (which can be flaky in serverless contexts).
+ */
+let cachedLogoDataUrl: string | null | undefined;
+async function getLogoDataUrl(): Promise<string | null> {
+  if (cachedLogoDataUrl !== undefined) return cachedLogoDataUrl;
+  try {
+    const path = join(process.cwd(), "public", "get-frockd-logo-tr-back.png");
+    const bytes = await readFile(path);
+    cachedLogoDataUrl = `data:image/png;base64,${bytes.toString("base64")}`;
+  } catch {
+    cachedLogoDataUrl = null;
+  }
+  return cachedLogoDataUrl;
+}
 
 /**
  * Next's ImageResponse uses Satori, which only renders PNG, JPEG, and
@@ -103,9 +123,12 @@ export default async function OgImage({
     row = null;
   }
 
-  const photoUrl = row
-    ? await imageDataUrl(row.primary_image_bytes, row.primary_image_mime)
-    : null;
+  const [photoUrl, logoUrl] = await Promise.all([
+    row
+      ? imageDataUrl(row.primary_image_bytes, row.primary_image_mime)
+      : Promise.resolve(null),
+    getLogoDataUrl(),
+  ]);
 
   const title = row?.title ?? "frockd listing";
   const price = row ? priceLabel(row.price_cents) : "";
@@ -204,37 +227,24 @@ export default async function OgImage({
             padding: "56px 56px 48px",
           }}
         >
-          {/* Brand mark */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 14,
-              fontSize: 24,
-              fontWeight: 700,
-              letterSpacing: "0.04em",
-              textTransform: "uppercase",
-              color: "#3a342f",
-            }}
-          >
-            <div
-              style={{
-                width: 48,
-                height: 48,
-                borderRadius: 12,
-                background: "#1c1816",
-                color: "#ffffff",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 18,
-                fontWeight: 700,
-                letterSpacing: "-0.02em",
-              }}
-            >
-              td
-            </div>
-            frockd
+          {/* Brand mark — frockd lockup PNG embedded as data URL.
+              Source is 1839x468; rendered at 220x56 to keep aspect. */}
+          <div style={{ display: "flex", alignItems: "center" }}>
+            {logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text
+              <img src={logoUrl} width={220} height={56} />
+            ) : (
+              <div
+                style={{
+                  fontSize: 28,
+                  fontWeight: 800,
+                  letterSpacing: "-0.02em",
+                  color: "#1c1816",
+                }}
+              >
+                frockd
+              </div>
+            )}
           </div>
 
           {/* Title block */}
