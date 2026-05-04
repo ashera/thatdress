@@ -175,7 +175,7 @@ export default async function Home({
       <section className="hero">
         <div className="hero-sketch" aria-hidden>
           <Image
-            src="/dress-sketch.png"
+            src="/dress-sketch-tr-back.png"
             alt=""
             fill
             priority
