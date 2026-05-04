@@ -77,16 +77,15 @@ export async function AuthNav() {
   return (
     <header className="topbar">
       <div className="brand-row">
-        <Link href="/" className="brand">
-          <span className="brand-mark" aria-hidden>
-            <Image
-              src="/dress-sketch-tr-back.png"
-              alt=""
-              width={28}
-              height={28}
-            />
-          </span>
-          frockd
+        <Link href="/" className="brand" aria-label="frockd home">
+          <Image
+            src="/get-frockd-logo-tr-back.png"
+            alt="GET FROCKD"
+            width={2768}
+            height={1536}
+            priority
+            className="brand-logo"
+          />
         </Link>
         {(() => {
           const stats = (
