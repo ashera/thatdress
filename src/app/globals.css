@@ -226,7 +226,7 @@ input, select, textarea { font: inherit; color: inherit; }
   .topbar-stats { display: none; }
 }
 .topbar .brand-logo {
-  height: 144px;
+  height: 72px;
   width: auto;
   object-fit: contain;
   display: block;
@@ -3388,7 +3388,7 @@ textarea.input {
 
 /* Extra-narrow phones */
 @media (max-width: 380px) {
-  .topbar .brand-logo { height: 104px; }
+  .topbar .brand-logo { height: 52px; }
   .listing .body { padding: var(--s-4); }
   .hero h1 { font-size: clamp(30px, 10vw, 44px); }
 }
