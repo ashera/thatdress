@@ -192,7 +192,7 @@ export default async function Home({
                   <span className="accent">formal dress</span> marketplace.
                 </h1>
                 <p className="sub">
-                  <strong>Always free</strong> to list and buy. Connect with
+                  <strong>Free</strong> to list and buy. Connect with
                   sellers nearby — verified designers, honest condition, no
                   listing fees, no commission.
                 </p>
@@ -204,7 +204,7 @@ export default async function Home({
                   with people you can trust.
                 </h1>
                 <p className="sub">
-                  <strong>Always free</strong> to list and buy. Verified
+                  <strong>Free</strong> to list and buy. Verified
                   sellers, real measurements, honest condition — built for
                   weddings, galas, proms, and every black-tie night out.
                 </p>
