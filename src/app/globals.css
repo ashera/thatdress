@@ -3405,7 +3405,7 @@ textarea.input {
   line-height: 1.65;
   font-size: 17px;
 }
-.prose > * + * { margin-top: var(--s-4); }
+.prose > * + * { margin-top: var(--s-6); }
 .prose h2 {
   font-family: var(--font-display);
   font-size: 28px;

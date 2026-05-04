@@ -70,9 +70,9 @@ function authorLabel(p: PostRow): string {
     return p.author_first_name.trim();
   }
   if (p.author_email) {
-    return p.author_email.split("@")[0] ?? "ebikeflip";
+    return p.author_email.split("@")[0] ?? "frockd";
   }
-  return "ebikeflip";
+  return "frockd";
 }
 
 function formatDate(s: string): string {
@@ -95,7 +95,7 @@ export async function generateMetadata({
   const { slug } = await params;
   const post = await fetchPost(slug);
   if (!post || !post.published_at) {
-    return { title: "Post not found · ebikeflip" };
+    return { title: "Post not found · frockd" };
   }
   const baseUrl = await getBaseUrl();
   const description = post.excerpt ?? stripMarkdown(post.body_md, 160);
@@ -105,7 +105,7 @@ export async function generateMetadata({
   // opengraph-image.tsx convention in this folder — no need to set them
   // here (and doing so would stack two images on the post).
   return {
-    title: `${post.title} · ebikeflip blog`,
+    title: `${post.title} · frockd blog`,
     description,
     alternates: { canonical: url },
     openGraph: {
@@ -113,7 +113,7 @@ export async function generateMetadata({
       url,
       title: post.title,
       description,
-      siteName: "ebikeflip",
+      siteName: "frockd",
       publishedTime: post.published_at,
       modifiedTime: post.updated_at,
     },
@@ -159,7 +159,7 @@ export default async function BlogPostPage({
     },
     publisher: {
       "@type": "Organization",
-      name: "ebikeflip",
+      name: "frockd",
     },
     mainEntityOfPage: { "@type": "WebPage", "@id": url },
     image: post.hero_image_id

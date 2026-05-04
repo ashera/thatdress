@@ -81,9 +81,9 @@ function authorLabel(p: PostRow): string {
     return p.author_first_name.trim();
   }
   if (p.author_email) {
-    return p.author_email.split("@")[0] ?? "ebikeflip";
+    return p.author_email.split("@")[0] ?? "frockd";
   }
-  return "ebikeflip";
+  return "frockd";
 }
 
 function formatDate(s: string): string {
@@ -105,19 +105,19 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const tag = await fetchTag(slug);
-  if (!tag) return { title: "Tag not found · ebikeflip" };
+  if (!tag) return { title: "Tag not found · frockd" };
   const baseUrl = await getBaseUrl();
-  const description = `Posts tagged ${tag.label} on the ebikeflip blog.`;
+  const description = `Posts tagged ${tag.label} on the frockd blog.`;
   return {
-    title: `${tag.label} · ebikeflip blog`,
+    title: `${tag.label} · frockd blog`,
     description,
     alternates: { canonical: `${baseUrl}/blog/tag/${tag.slug}` },
     openGraph: {
       type: "website",
       url: `${baseUrl}/blog/tag/${tag.slug}`,
-      title: `${tag.label} · ebikeflip blog`,
+      title: `${tag.label} · frockd blog`,
       description,
-      siteName: "ebikeflip",
+      siteName: "frockd",
     },
   };
 }

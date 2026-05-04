@@ -107,9 +107,9 @@ function authorLabel(p: PostRow): string {
     return p.author_first_name.trim();
   }
   if (p.author_email) {
-    return p.author_email.split("@")[0] ?? "ebikeflip";
+    return p.author_email.split("@")[0] ?? "frockd";
   }
-  return "ebikeflip";
+  return "frockd";
 }
 
 function formatDate(s: string): string {
@@ -127,17 +127,17 @@ function formatDate(s: string): string {
 export async function generateMetadata(): Promise<Metadata> {
   const baseUrl = await getBaseUrl();
   const description =
-    "Buying guides, range tests, and ownership advice for the used eBike market.";
+    "Buying guides, sizing notes, and resale advice for the pre-loved formal-dress market.";
   return {
-    title: "ebikeflip blog · used eBike buying guides & advice",
+    title: "frockd blog · formal-dress buying guides & resale advice",
     description,
     alternates: { canonical: `${baseUrl}/blog` },
     openGraph: {
       type: "website",
       url: `${baseUrl}/blog`,
-      title: "ebikeflip blog",
+      title: "frockd blog",
       description,
-      siteName: "ebikeflip",
+      siteName: "frockd",
     },
   };
 }
@@ -158,7 +158,7 @@ export default async function BlogIndexPage({
   return (
     <div className="page page--pad">
       <main style={{ maxWidth: 1024, margin: "0 auto" }}>
-        <p className="eyebrow">The ebikeflip blog</p>
+        <p className="eyebrow">The frockd blog</p>
         <h1
           style={{
             fontFamily: "var(--font-display)",
@@ -169,7 +169,7 @@ export default async function BlogIndexPage({
             lineHeight: 1.05,
           }}
         >
-          Stories from the secondhand eBike market
+          Stories from the pre-loved formal-dress market
         </h1>
         <p
           style={{
@@ -178,8 +178,8 @@ export default async function BlogIndexPage({
             maxWidth: 60 + "ch",
           }}
         >
-          Buying guides, range tests, and ownership advice — written for
-          riders kicking the tires on a used bike.
+          Buying guides, sizing notes, and resale advice — written for
+          weddings, galas, proms, and the dresses that deserve a second wear.
         </p>
 
         {tags.length > 0 && (

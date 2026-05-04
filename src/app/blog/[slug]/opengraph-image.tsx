@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 import { query } from "@/lib/db";
 
 export const runtime = "nodejs";
-export const alt = "ebikeflip blog";
+export const alt = "frockd blog";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -18,9 +18,9 @@ function authorLabel(r: Row): string {
     return r.author_first_name.trim();
   }
   if (r.author_email) {
-    return r.author_email.split("@")[0] ?? "ebikeflip";
+    return r.author_email.split("@")[0] ?? "frockd";
   }
-  return "ebikeflip";
+  return "frockd";
 }
 
 function formatDate(s: string | null): string {
@@ -59,10 +59,10 @@ export default async function OgImage({
     row = null;
   }
 
-  const title = row?.title ?? "ebikeflip blog";
+  const title = row?.title ?? "frockd blog";
   const meta = row
     ? `${authorLabel(row)} · ${formatDate(row.published_at)}`
-    : "Stories from the secondhand eBike market";
+    : "Stories from the pre-loved formal-dress market";
 
   return new ImageResponse(
     (
@@ -107,9 +107,9 @@ export default async function OgImage({
               letterSpacing: "-0.02em",
             }}
           >
-            eb
+            td
           </div>
-          ebikeflip
+          frockd
         </div>
 
         <div
@@ -152,8 +152,8 @@ export default async function OgImage({
             paddingTop: 24,
           }}
         >
-          <div>The peer-to-peer eBike marketplace</div>
-          <div style={{ fontWeight: 600 }}>ebikeflip.com</div>
+          <div>The peer-to-peer formal-dress marketplace</div>
+          <div style={{ fontWeight: 600 }}>frockd.com.au</div>
         </div>
       </div>
     ),
