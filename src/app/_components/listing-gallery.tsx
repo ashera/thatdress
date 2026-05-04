@@ -8,7 +8,13 @@ export type GalleryImage = {
   isPrimary: boolean;
 };
 
-export function ListingGallery({ images }: { images: GalleryImage[] }) {
+export function ListingGallery({
+  images,
+  title,
+}: {
+  images: GalleryImage[];
+  title?: string;
+}) {
   const [index, setIndex] = useState(0);
   const [zoomed, setZoomed] = useState(false);
   const count = images.length;
@@ -65,7 +71,11 @@ export function ListingGallery({ images }: { images: GalleryImage[] }) {
           onClick={() => setZoomed(true)}
           aria-label="Open photo full size"
         >
-          <img src={current.src} alt={`Photo ${index + 1} of ${count}`} />
+          <img src={current.src} alt={
+              title
+                ? `${title} — photo ${index + 1} of ${count}`
+                : `Photo ${index + 1} of ${count}`
+            } />
         </button>
         {count > 1 && (
           <>
@@ -103,7 +113,10 @@ export function ListingGallery({ images }: { images: GalleryImage[] }) {
               aria-selected={i === index}
               aria-label={`Show photo ${i + 1}`}
             >
-              <img src={img.src} alt="" />
+              <img
+                src={img.src}
+                alt={title ? `${title} thumbnail` : ""}
+              />
               {img.isPrimary && (
                 <span className="primary-dot" aria-label="Primary" />
               )}
@@ -133,7 +146,11 @@ export function ListingGallery({ images }: { images: GalleryImage[] }) {
           </button>
           <img
             src={current.src}
-            alt={`Photo ${index + 1} of ${count}`}
+            alt={
+              title
+                ? `${title} — photo ${index + 1} of ${count}`
+                : `Photo ${index + 1} of ${count}`
+            }
             className="lightbox-img"
           />
           {count > 1 && (

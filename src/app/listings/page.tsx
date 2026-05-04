@@ -1,8 +1,14 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { query } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { getBaseUrl } from "@/lib/email";
 import { findRefTable, listActiveRefOptions } from "@/lib/ref-data";
-import { getCurrentRegionId } from "@/lib/regions";
+import {
+  getCurrentRegionId,
+  resolveCurrentRegion,
+  regionShortName,
+} from "@/lib/regions";
 import { getShortlistIds } from "@/lib/shortlist";
 import { Button, ButtonLink, Input } from "../_components/ui";
 import {
@@ -20,6 +26,39 @@ import { ViewToggle, type ListingsView } from "../_components/view-toggle";
 import { saveSearch } from "@/lib/actions/saved-searches";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const [r, baseUrl] = await Promise.all([
+    resolveCurrentRegion(),
+    getBaseUrl(),
+  ]);
+  const region =
+    r.kind === "selected" || r.kind === "auto" ? r.region : null;
+  const regionShort = region ? regionShortName(region) : null;
+  const title = regionShort
+    ? `Browse pre-loved formal dresses in ${regionShort}`
+    : "Browse pre-loved formal dresses";
+  const description = regionShort
+    ? `Wedding-guest, black-tie, cocktail and bridesmaid dresses in ${regionShort} from real wardrobes — designer brands, honest condition, no listing fees.`
+    : "Wedding-guest, black-tie, cocktail and bridesmaid dresses from real Australian wardrobes — designer brands, honest condition, no listing fees.";
+  return {
+    title,
+    description,
+    alternates: { canonical: `${baseUrl}/listings` },
+    openGraph: {
+      type: "website",
+      url: `${baseUrl}/listings`,
+      title,
+      description,
+      siteName: "frockd",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+    },
+  };
+}
 
 type RawSearchParams = {
   q?: string | string[];

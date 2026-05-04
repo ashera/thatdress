@@ -221,11 +221,9 @@ export async function generateMetadata({
 
   const baseUrl = await getBaseUrl();
   const url = `${baseUrl}/listings/${l.id}`;
-  const primaryImageId = result.images[0]?.id ?? null;
-  const imageUrl = primaryImageId
-    ? `${baseUrl}/api/listings/${l.id}/images/${primaryImageId}`
-    : undefined;
-
+  // Note: og:image / twitter:image come from opengraph-image.tsx and
+  // twitter-image.tsx in this folder — Next.js wires them automatically,
+  // so we deliberately don't set images here (would stack two cards).
   return {
     title,
     description,
@@ -236,13 +234,11 @@ export async function generateMetadata({
       title,
       description,
       siteName: "frockd",
-      images: imageUrl ? [imageUrl] : undefined,
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: imageUrl ? [imageUrl] : undefined,
     },
   };
 }
@@ -562,7 +558,7 @@ export default async function ListingDetailPage({
       )}
 
       <article className="detail">
-        <ListingGallery images={result.images} />
+        <ListingGallery images={result.images} title={l.title} />
 
         <div className="detail-body">
           <p className="eyebrow">
