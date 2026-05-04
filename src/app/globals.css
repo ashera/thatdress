@@ -1287,20 +1287,8 @@ textarea.input {
   aspect-ratio: 3 / 4;
   z-index: -1;
   pointer-events: none;
-  opacity: 0.95;
-  filter: drop-shadow(0 16px 28px oklch(20% 0.02 350 / 0.08));
-  mask-image: linear-gradient(
-    to right,
-    transparent 0%,
-    black 18%,
-    black 100%
-  );
-  -webkit-mask-image: linear-gradient(
-    to right,
-    transparent 0%,
-    black 18%,
-    black 100%
-  );
+  opacity: 0.45;
+  filter: drop-shadow(0 16px 28px oklch(20% 0.02 350 / 0.06));
 }
 .hero-sketch img {
   object-fit: contain;
@@ -1318,10 +1306,6 @@ textarea.input {
   grid-template-columns: minmax(0, 1.2fr);
   gap: var(--s-9);
   align-items: end;
-  max-width: 56%;
-}
-@media (max-width: 900px) {
-  .hero-grid { max-width: 100%; }
 }
 .hero h1 {
   font-family: var(--font-display);
