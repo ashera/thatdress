@@ -37,7 +37,7 @@ export function RegionPicker({ detected, regions, next = "/" }: Props) {
             </p>
 
             <p className="region-gate-prompt">
-              thatdress is currently exclusive to these regions. Pick the one
+              frockd is currently exclusive to these regions. Pick the one
               that fits — you can change it later from the menu.
             </p>
 

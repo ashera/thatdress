@@ -1,7 +1,7 @@
 import "server-only";
 import { headers } from "next/headers";
 
-const FROM_DEFAULT = "thatdress <noreply@thatdress.com>";
+const FROM_DEFAULT = "frockd <noreply@frockd.com.au>";
 
 export type SendEmailResult = { ok: true } | { ok: false; error: string };
 
@@ -65,7 +65,7 @@ export async function getBaseUrl(): Promise<string> {
   } catch {
     // Fall through.
   }
-  return "https://thatdress.com";
+  return "https://www.frockd.com.au";
 }
 
 /** Wrap a fragment of inner HTML with a minimal email shell. */
@@ -90,7 +90,7 @@ export function emailLayout(opts: {
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:12px;border:1px solid #e9e5df;padding:32px;">
           <tr>
             <td style="padding-bottom:8px;font-size:13px;color:#867f76;font-family:'Courier New',monospace;letter-spacing:0.08em;text-transform:uppercase;">
-              thatdress
+              frockd
             </td>
           </tr>
           <tr>
@@ -105,7 +105,7 @@ export function emailLayout(opts: {
           </tr>
           <tr>
             <td style="padding-top:32px;font-size:12px;color:#a39d96;border-top:1px solid #e9e5df;margin-top:24px;">
-              thatdress &middot; peer-to-peer formal-dress marketplace
+              frockd &middot; peer-to-peer formal-dress marketplace
             </td>
           </tr>
         </table>

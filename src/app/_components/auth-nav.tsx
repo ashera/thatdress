@@ -86,7 +86,7 @@ export async function AuthNav() {
               height={28}
             />
           </span>
-          thatdress
+          frockd
         </Link>
         {(() => {
           const stats = (

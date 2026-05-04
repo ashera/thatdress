@@ -47,12 +47,12 @@ export async function dispatchEmailChangeRequest(
 
   const send = await sendEmail({
     to: newEmail,
-    subject: "Confirm your new thatdress email",
+    subject: "Confirm your new frockd email",
     html: emailLayout({
-      preheader: "Confirm the new email on your thatdress account.",
+      preheader: "Confirm the new email on your frockd account.",
       heading: "Confirm your new email",
       body: `
-        <p>You asked to change your thatdress login email from <strong>${escapeHtml(currentEmail)}</strong> to <strong>${escapeHtml(newEmail)}</strong>. Click the button below to make the switch — the link expires in 24 hours.</p>
+        <p>You asked to change your frockd login email from <strong>${escapeHtml(currentEmail)}</strong> to <strong>${escapeHtml(newEmail)}</strong>. Click the button below to make the switch — the link expires in 24 hours.</p>
         <p style="margin:24px 0;">
           <a href="${url}" style="display:inline-block;background:#1c1816;color:#ffffff;padding:12px 24px;border-radius:999px;text-decoration:none;font-weight:600;">Confirm new email</a>
         </p>
@@ -62,7 +62,7 @@ export async function dispatchEmailChangeRequest(
         <p style="font-size:13px;color:#7a7470;">If you didn&rsquo;t request this, you can ignore the message — your login email won&rsquo;t change.</p>
       `,
     }),
-    text: `Confirm your new thatdress email by visiting: ${url}\n\nThe link expires in 24 hours. If you didn't request this, ignore the message.`,
+    text: `Confirm your new frockd email by visiting: ${url}\n\nThe link expires in 24 hours. If you didn't request this, ignore the message.`,
   });
 
   if (!send.ok) {

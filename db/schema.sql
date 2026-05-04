@@ -1,4 +1,4 @@
--- Initial schema for thatdress.
+-- Initial schema for frockd.
 -- Apply with: psql "$DATABASE_URL" -f db/schema.sql
 -- (or `npm run db:setup`, which also seeds.)
 

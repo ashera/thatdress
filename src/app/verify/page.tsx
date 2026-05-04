@@ -31,7 +31,7 @@ export default async function VerifyResultPage({
                 style={{ marginTop: 8, marginBottom: "var(--s-5)" }}
               >
                 Thanks for confirming. You&rsquo;re ready to use everything
-                thatdress has to offer.
+                frockd has to offer.
               </p>
               <ButtonLink href="/listings" variant="primary" iconRight="arrow">
                 Browse listings

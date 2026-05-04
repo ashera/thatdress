@@ -26,7 +26,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "thatdress — buy & sell formal dresses",
+  title: "frockd — buy & sell formal dresses",
   description: "A peer-to-peer marketplace for pre-loved formal dresses and gowns.",
 };
 

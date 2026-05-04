@@ -55,7 +55,7 @@ export async function middleware(req: NextRequest) {
   try {
     const r = await fetch(
       `https://ipapi.co/${encodeURIComponent(ip)}/json/`,
-      { headers: { "User-Agent": "thatdress/1.0" } },
+      { headers: { "User-Agent": "frockd/1.0" } },
     );
     if (r.ok) {
       const data = (await r.json()) as IpapiResponse;

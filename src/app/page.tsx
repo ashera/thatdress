@@ -169,7 +169,7 @@ export default async function Home({
             textAlign: "center",
           }}
         >
-          Your account has been deleted. Thanks for trying thatdress.
+          Your account has been deleted. Thanks for trying frockd.
         </div>
       )}
       <section className="hero">

@@ -1,4 +1,4 @@
-# thatdress
+# frockd
 
 Peer-to-peer marketplace for pre-loved formal dresses. Next.js + Node + PostgreSQL.
 

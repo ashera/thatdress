@@ -58,7 +58,7 @@ export async function suggestLocationFromIp(): Promise<IpLocation | null> {
 
   try {
     const res = await fetch(`https://ipapi.co/${encodeURIComponent(ip)}/json/`, {
-      headers: { "User-Agent": "thatdress/1.0" },
+      headers: { "User-Agent": "frockd/1.0" },
       // Cache by URL (per IP) for a day to stay well under the free quota.
       next: { revalidate: 86400 },
     });
