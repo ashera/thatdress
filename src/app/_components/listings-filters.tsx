@@ -6,23 +6,23 @@ export type VisibilityFilter = "all" | "published" | "hidden";
 
 export type ActiveFilters = {
   q?: string;
-  make_id?: string[];
-  bike_class_id?: string[];
-  bike_category_id?: string[];
+  designer_id?: string[];
+  occasion_id?: string[];
+  silhouette_id?: string[];
+  size_id?: string[];
   condition_id?: string[];
   min_price?: string;
   max_price?: string;
-  min_year?: string;
-  max_year?: string;
   visibility?: VisibilityFilter;
 };
 
 type Props = {
   active: ActiveFilters;
   options: {
-    makes: RefOption[];
-    classes: RefOption[];
-    categories: RefOption[];
+    designers: RefOption[];
+    occasions: RefOption[];
+    silhouettes: RefOption[];
+    sizes: RefOption[];
     conditions: RefOption[];
   };
   isAdmin?: boolean;
@@ -31,14 +31,13 @@ type Props = {
 export function activeFilterCount(f: ActiveFilters): number {
   let n = 0;
   if (f.q) n++;
-  if (f.make_id?.length) n++;
-  if (f.bike_class_id?.length) n++;
-  if (f.bike_category_id?.length) n++;
+  if (f.designer_id?.length) n++;
+  if (f.occasion_id?.length) n++;
+  if (f.silhouette_id?.length) n++;
+  if (f.size_id?.length) n++;
   if (f.condition_id?.length) n++;
   if (f.min_price) n++;
   if (f.max_price) n++;
-  if (f.min_year) n++;
-  if (f.max_year) n++;
   if (f.visibility && f.visibility !== "all") n++;
   return n;
 }
@@ -84,42 +83,51 @@ export function ListingsFilters({ active, options, isAdmin }: Props) {
         <Field
           label="Search"
           htmlFor="q"
-          help="Matches title, model, make, and description."
+          help="Matches title, model, designer, and description."
         >
           <Input
             id="q"
             name="q"
             type="search"
-            placeholder="e.g. Specialized commuter, Bosch, cargo…"
+            placeholder="e.g. Vera Wang, lace, midi…"
             defaultValue={active.q ?? ""}
             maxLength={120}
           />
         </Field>
 
         <fieldset className="filter-fieldset">
-          <legend>Make</legend>
+          <legend>Designer</legend>
           <ChipGroup
-            name="make_id"
-            options={options.makes}
-            selected={active.make_id}
+            name="designer_id"
+            options={options.designers}
+            selected={active.designer_id}
           />
         </fieldset>
 
         <fieldset className="filter-fieldset">
-          <legend>Class</legend>
+          <legend>Occasion</legend>
           <ChipGroup
-            name="bike_class_id"
-            options={options.classes}
-            selected={active.bike_class_id}
+            name="occasion_id"
+            options={options.occasions}
+            selected={active.occasion_id}
           />
         </fieldset>
 
         <fieldset className="filter-fieldset">
-          <legend>Category</legend>
+          <legend>Silhouette</legend>
           <ChipGroup
-            name="bike_category_id"
-            options={options.categories}
-            selected={active.bike_category_id}
+            name="silhouette_id"
+            options={options.silhouettes}
+            selected={active.silhouette_id}
+          />
+        </fieldset>
+
+        <fieldset className="filter-fieldset">
+          <legend>Size</legend>
+          <ChipGroup
+            name="size_id"
+            options={options.sizes}
+            selected={active.size_id}
           />
         </fieldset>
 
@@ -170,26 +178,6 @@ export function ListingsFilters({ active, options, isAdmin }: Props) {
               min={0}
               defaultValue={active.max_price ?? ""}
               placeholder="∞"
-            />
-          </Field>
-          <Field label="Min year" htmlFor="min_year">
-            <Input
-              id="min_year"
-              name="min_year"
-              type="number"
-              min={1990}
-              defaultValue={active.min_year ?? ""}
-              placeholder="1990"
-            />
-          </Field>
-          <Field label="Max year" htmlFor="max_year">
-            <Input
-              id="max_year"
-              name="max_year"
-              type="number"
-              min={1990}
-              defaultValue={active.max_year ?? ""}
-              placeholder="now"
             />
           </Field>
         </div>

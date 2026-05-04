@@ -11,8 +11,8 @@ type IconName = ComponentProps<typeof Icon>["name"];
 
 export type WizardStep =
   | "photos"
-  | "frame"
-  | "motor"
+  | "style"
+  | "measurements"
   | "condition"
   | "publish";
 
@@ -25,44 +25,32 @@ export type DraftRow = {
   description: string | null;
   price_cents: number;
   region_id: string | null;
-  make_id: string | null;
+  designer_id: string | null;
   model: string | null;
   year: number | null;
   condition_id: string | null;
-  bike_class_id: string | null;
-  bike_category_id: string | null;
-  location_postal: string | null;
-  frame_size: string | null;
-  frame_style_id: string | null;
-  frame_material_id: string | null;
-  gender_fit_id: string | null;
-  wheel_size_id: string | null;
-  suspension_type_id: string | null;
-  brake_type_id: string | null;
-  motor_brand_id: string | null;
-  motor_type_id: string | null;
-  motor_watts_nominal: number | null;
-  battery_wh: number | null;
-  top_speed_mph: number | null;
-  range_miles_min: number | null;
-  range_miles_max: number | null;
-  drive_mode_id: string | null;
-  mileage: number | null;
+  occasion_id: string | null;
+  silhouette_id: string | null;
+  fabric_id: string | null;
+  size_id: string | null;
+  neckline_id: string | null;
+  sleeve_style_id: string | null;
+  length_id: string | null;
   color: string | null;
-  weight_lbs: string | null;
-  has_warranty: boolean | null;
-  warranty_text: string | null;
+  bust_inches: string | null;
+  waist_inches: string | null;
+  hips_inches: string | null;
+  original_retail_cents: number | null;
+  alterations_text: string | null;
   has_original_receipt: boolean | null;
-  accessories: string | null;
-  modifications: string | null;
+  location_postal: string | null;
   offers_enabled: boolean | null;
-  body_position_id: string | null;
 };
 
 const STEPS: { key: WizardStep; label: string; n: number }[] = [
   { key: "photos", label: "Photos & basics", n: 1 },
-  { key: "frame", label: "Frame", n: 2 },
-  { key: "motor", label: "Motor & battery", n: 3 },
+  { key: "style", label: "Style", n: 2 },
+  { key: "measurements", label: "Size & fit", n: 3 },
   { key: "condition", label: "Condition", n: 4 },
   { key: "publish", label: "Publish", n: 5 },
 ];
@@ -84,38 +72,26 @@ export async function loadDraft(
             description,
             price_cents,
             region_id::text,
-            make_id::text,
+            designer_id::text,
             model,
             year,
             condition_id::text,
-            bike_class_id::text,
-            bike_category_id::text,
-            location_postal,
-            frame_size,
-            frame_style_id::text,
-            frame_material_id::text,
-            gender_fit_id::text,
-            wheel_size_id::text,
-            suspension_type_id::text,
-            brake_type_id::text,
-            motor_brand_id::text,
-            motor_type_id::text,
-            motor_watts_nominal,
-            battery_wh,
-            top_speed_mph,
-            range_miles_min,
-            range_miles_max,
-            drive_mode_id::text,
-            mileage,
+            occasion_id::text,
+            silhouette_id::text,
+            fabric_id::text,
+            size_id::text,
+            neckline_id::text,
+            sleeve_style_id::text,
+            length_id::text,
             color,
-            weight_lbs::text,
-            has_warranty,
-            warranty_text,
+            bust_inches::text,
+            waist_inches::text,
+            hips_inches::text,
+            original_retail_cents,
+            alterations_text,
             has_original_receipt,
-            accessories,
-            modifications,
-            offers_enabled,
-            body_position_id::text
+            location_postal,
+            offers_enabled
        FROM listings
       WHERE id = $1::bigint
       LIMIT 1`,
@@ -149,7 +125,7 @@ export function WizardShell({
   return (
     <div className="page page--pad">
       <main style={{ maxWidth: 720, margin: "0 auto" }}>
-        <p className="eyebrow">Sell your eBike — step {currentIdx + 1} of {STEPS.length}</p>
+        <p className="eyebrow">List your dress — step {currentIdx + 1} of {STEPS.length}</p>
         <h1
           style={{
             fontFamily: "var(--font-display)",
@@ -374,11 +350,10 @@ export function WizardTip({ children }: { children: ReactNode }) {
 
 export const STEP_ERRORS: Record<string, string> = {
   "invalid-title": "Give your listing a short title.",
-  "invalid-make": "Pick a make.",
-  "invalid-model": "Model is required.",
-  "invalid-year": "Year must be between 2000 and next year.",
-  "invalid-class": "Pick a bike class.",
-  "invalid-category": "Pick a bike category.",
+  "invalid-designer": "Pick a designer.",
+  "invalid-model": "Style name or model is required.",
+  "invalid-year": "Year must be between 1990 and next year.",
+  "invalid-occasion": "Pick an occasion.",
   "invalid-condition": "Pick a condition.",
   "invalid-price": "Enter a valid price.",
   "invalid-location": "Postal code or location is required.",

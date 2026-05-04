@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { query } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
@@ -13,72 +12,46 @@ import {
 
 export const dynamic = "force-dynamic";
 
-type SpecStats = {
-  range_min: number | null;
-  range_max: number | null;
-  battery_min: number | null;
-  battery_max: number | null;
-  speed_min: number | null;
-  speed_max: number | null;
-  weight_min: number | null;
-  weight_max: number | null;
+type MarketplaceStats = {
+  designer_count: number;
+  size_count: number;
+  occasion_count: number;
+  listing_count: number;
 };
 
-async function getSpecStats(regionId: string | null): Promise<SpecStats> {
+async function getMarketplaceStats(
+  regionId: string | null,
+): Promise<MarketplaceStats> {
   try {
     const r = await query<{
-      range_min: string | null;
-      range_max: string | null;
-      battery_min: string | null;
-      battery_max: string | null;
-      speed_min: string | null;
-      speed_max: string | null;
-      weight_min: string | null;
-      weight_max: string | null;
+      designer_count: string;
+      size_count: string;
+      occasion_count: string;
+      listing_count: string;
     }>(
-      `SELECT LEAST(
-                MIN(NULLIF(range_miles_min, 0)),
-                MIN(NULLIF(range_miles_max, 0))
-              )::text AS range_min,
-              GREATEST(
-                MAX(NULLIF(range_miles_min, 0)),
-                MAX(NULLIF(range_miles_max, 0))
-              )::text AS range_max,
-              MIN(NULLIF(battery_wh,    0))::text AS battery_min,
-              MAX(NULLIF(battery_wh,    0))::text AS battery_max,
-              MIN(NULLIF(top_speed_mph, 0))::text AS speed_min,
-              MAX(NULLIF(top_speed_mph, 0))::text AS speed_max,
-              MIN(NULLIF(weight_lbs,    0))::text AS weight_min,
-              MAX(NULLIF(weight_lbs,    0))::text AS weight_max
-         FROM listings
-        WHERE is_published = TRUE
-          AND sold_at IS NULL
-          ${regionId ? "AND region_id = $1::bigint" : ""}`,
+      `SELECT COUNT(DISTINCT l.designer_id)::text  AS designer_count,
+              COUNT(DISTINCT l.size_id)::text      AS size_count,
+              COUNT(DISTINCT l.occasion_id)::text  AS occasion_count,
+              COUNT(*)::text                       AS listing_count
+         FROM listings l
+        WHERE l.is_published = TRUE
+          AND l.sold_at IS NULL
+          ${regionId ? "AND l.region_id = $1::bigint" : ""}`,
       regionId ? [regionId] : [],
     );
     const row = r.rows[0];
-    const num = (s: string | null | undefined) =>
-      s == null ? null : Number(s);
     return {
-      range_min: num(row?.range_min),
-      range_max: num(row?.range_max),
-      battery_min: num(row?.battery_min),
-      battery_max: num(row?.battery_max),
-      speed_min: num(row?.speed_min),
-      speed_max: num(row?.speed_max),
-      weight_min: num(row?.weight_min),
-      weight_max: num(row?.weight_max),
+      designer_count: Number(row?.designer_count ?? 0),
+      size_count: Number(row?.size_count ?? 0),
+      occasion_count: Number(row?.occasion_count ?? 0),
+      listing_count: Number(row?.listing_count ?? 0),
     };
   } catch {
     return {
-      range_min: null,
-      range_max: null,
-      battery_min: null,
-      battery_max: null,
-      speed_min: null,
-      speed_max: null,
-      weight_min: null,
-      weight_max: null,
+      designer_count: 0,
+      size_count: 0,
+      occasion_count: 0,
+      listing_count: 0,
     };
   }
 }
@@ -105,14 +78,6 @@ async function getLatestPublishedPost(): Promise<LatestBlogPost | null> {
   }
 }
 
-function specRange(min: number | null, max: number | null): string {
-  if (min == null && max == null) return "—";
-  if (min == null) return String(max);
-  if (max == null || max === min) return String(min);
-  const [low, high] = min <= max ? [min, max] : [max, min];
-  return `${low}–${high}`;
-}
-
 async function getFeaturedListings(
   regionId: string | null,
 ): Promise<ListingCardRow[]> {
@@ -129,47 +94,35 @@ async function getFeaturedListings(
                   ORDER BY li.is_primary DESC, li.position, li.id
                   LIMIT 1
               ) AS primary_image_id,
-              mk.name   AS make_name, l.model, l.year,
+              d.name    AS designer_name, l.model, l.year,
               cg.label  AS condition_label,
-              bcl.label AS bike_class_label,
-              bcat.label AS bike_category_label,
+              o.label   AS occasion_label,
+              s.label   AS silhouette_label,
+              f.label   AS fabric_label,
+              ds.label  AS size_label,
+              n.label   AS neckline_label,
+              ss.label  AS sleeve_style_label,
+              dl.label  AS length_label,
               l.location_postal,
-              l.frame_size,
-              fs.label  AS frame_style_label,
-              fm.label  AS frame_material_label,
-              gf.label  AS gender_fit_label,
-              ws.label  AS wheel_size_label,
-              st.label  AS suspension_type_label,
-              bt.label  AS brake_type_label,
-              mb.name   AS motor_brand_name,
-              mt.label  AS motor_type_label,
-              l.motor_watts_nominal,
-              l.battery_wh,
-              l.top_speed_mph,
-              l.range_miles_min,
-              l.range_miles_max,
-              dm.label  AS drive_mode_label,
-              l.mileage,
               l.color,
-              l.weight_lbs::text,
-              l.has_warranty,
+              l.bust_inches::text,
+              l.waist_inches::text,
+              l.hips_inches::text,
+              l.original_retail_cents,
+              l.has_original_receipt,
               l.is_published,
               l.sold_at::text
          FROM listings l
-         LEFT JOIN users            u    ON u.id    = l.seller_id
-         LEFT JOIN bike_makes       mk   ON mk.id   = l.make_id
-         LEFT JOIN condition_grades cg   ON cg.id   = l.condition_id
-         LEFT JOIN bike_classes     bcl  ON bcl.id  = l.bike_class_id
-         LEFT JOIN bike_categories  bcat ON bcat.id = l.bike_category_id
-         LEFT JOIN frame_styles     fs   ON fs.id   = l.frame_style_id
-         LEFT JOIN frame_materials  fm   ON fm.id   = l.frame_material_id
-         LEFT JOIN gender_fits      gf   ON gf.id   = l.gender_fit_id
-         LEFT JOIN wheel_sizes      ws   ON ws.id   = l.wheel_size_id
-         LEFT JOIN suspension_types st   ON st.id   = l.suspension_type_id
-         LEFT JOIN brake_types      bt   ON bt.id   = l.brake_type_id
-         LEFT JOIN motor_brands     mb   ON mb.id   = l.motor_brand_id
-         LEFT JOIN motor_types      mt   ON mt.id   = l.motor_type_id
-         LEFT JOIN drive_modes      dm   ON dm.id   = l.drive_mode_id
+         LEFT JOIN users            u   ON u.id   = l.seller_id
+         LEFT JOIN designers        d   ON d.id   = l.designer_id
+         LEFT JOIN condition_grades cg  ON cg.id  = l.condition_id
+         LEFT JOIN occasions        o   ON o.id   = l.occasion_id
+         LEFT JOIN silhouettes      s   ON s.id   = l.silhouette_id
+         LEFT JOIN fabrics          f   ON f.id   = l.fabric_id
+         LEFT JOIN dress_sizes      ds  ON ds.id  = l.size_id
+         LEFT JOIN necklines        n   ON n.id   = l.neckline_id
+         LEFT JOIN sleeve_styles    ss  ON ss.id  = l.sleeve_style_id
+         LEFT JOIN dress_lengths    dl  ON dl.id  = l.length_id
         WHERE l.is_published = TRUE
           AND l.sold_at IS NULL
           ${regionId ? "AND l.region_id = $1::bigint" : ""}
@@ -198,7 +151,7 @@ export default async function Home({
   const regionShort = region ? regionShortName(region) : null;
   const regionId = region ? region.id : null;
   const [stats, featured, shortlistedIds, latestPost] = await Promise.all([
-    getSpecStats(regionId),
+    getMarketplaceStats(regionId),
     getFeaturedListings(regionId),
     user ? getShortlistIds(user.id) : Promise.resolve(new Set<string>()),
     getLatestPublishedPost(),
@@ -215,68 +168,35 @@ export default async function Home({
             textAlign: "center",
           }}
         >
-          Your account has been deleted. Thanks for trying ebikeflip.
+          Your account has been deleted. Thanks for trying thatdress.
         </div>
       )}
       <section className="hero">
-        <div className="hero-bike" aria-hidden>
-          <Image
-            src="/images/big-bike.png"
-            alt=""
-            fill
-            priority
-            sizes="(max-width: 900px) 100vw, 60vw"
-          />
-        </div>
-        <aside className="hero-toolbox" aria-label="eBike toolbox">
-          <p className="hero-toolbox-title">eBike toolbox</p>
-          <ul className="hero-toolbox-list">
-            {[
-              { href: "/tools/battery-voltage", label: "Battery check" },
-              { href: "/tools/range", label: "Range estimate" },
-              { href: "/tools/legality", label: "AU legality" },
-              { href: "/tools/cost-vs-car", label: "Cost vs car" },
-              {
-                href: "/tools/inspection-checklist",
-                label: "Inspection checklist",
-              },
-            ].map((t) => (
-              <li key={t.href}>
-                <Link href={t.href} className="hero-toolbox-link">
-                  {t.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-          <Link href="/tools" className="hero-toolbox-all">
-            All tools →
-          </Link>
-        </aside>
         <div className="hero-grid">
           <div>
-            <p className="eyebrow">Peer-to-peer eBike marketplace</p>
+            <p className="eyebrow">Peer-to-peer formal-dress marketplace</p>
             {regionShort ? (
               <>
                 <h1>
                   The <span className="accent">{regionShort}</span>{" "}
-                  <span className="accent">eBike</span> marketplace.
+                  <span className="accent">formal dress</span> marketplace.
                 </h1>
                 <p className="sub">
                   <strong>Always free</strong> to list and buy. Connect with
-                  riders nearby — verified specs, honest condition, no listing
-                  fees, no commission.
+                  sellers nearby — verified designers, honest condition, no
+                  listing fees, no commission.
                 </p>
               </>
             ) : (
               <>
                 <h1>
-                  Buy &amp; sell <span className="accent">used eBikes</span>{" "}
+                  Buy &amp; sell <span className="accent">pre-loved gowns</span>{" "}
                   with people you can trust.
                 </h1>
                 <p className="sub">
                   <strong>Always free</strong> to list and buy. Verified
-                  sellers, real specs, honest condition — built for commuters,
-                  cargo riders, and weekend cruisers.
+                  sellers, real measurements, honest condition — built for
+                  weddings, galas, proms, and every black-tie night out.
                 </p>
               </>
             )}
@@ -292,7 +212,7 @@ export default async function Home({
                 Browse listings
               </ButtonLink>
               <ButtonLink href="/listings/new" variant="ghost" size="lg" icon="plus">
-                List your bike
+                List your dress
               </ButtonLink>
             </div>
           </div>
@@ -444,7 +364,7 @@ export default async function Home({
             maxWidth: "20ch",
           }}
         >
-          Real specs. <span style={{ color: "var(--volt-500)" }}>Real bikes.</span>
+          Real designers. <span style={{ color: "var(--volt-500)" }}>Real wear.</span>
         </h2>
         <div
           style={{
@@ -454,24 +374,24 @@ export default async function Home({
           }}
         >
           <Spec
-            k="Range"
-            v={specRange(stats.range_min, stats.range_max)}
-            unit="km"
+            k="Listings"
+            v={String(stats.listing_count)}
+            unit="live"
           />
           <Spec
-            k="Battery"
-            v={specRange(stats.battery_min, stats.battery_max)}
-            unit="wh"
+            k="Designers"
+            v={String(stats.designer_count)}
+            unit="brands"
           />
           <Spec
-            k="Top speed"
-            v={specRange(stats.speed_min, stats.speed_max)}
-            unit="km/h"
+            k="Sizes"
+            v={String(stats.size_count)}
+            unit="ranges"
           />
           <Spec
-            k="Weight"
-            v={specRange(stats.weight_min, stats.weight_max)}
-            unit="kg"
+            k="Occasions"
+            v={String(stats.occasion_count)}
+            unit="types"
           />
         </div>
       </section>

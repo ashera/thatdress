@@ -19,20 +19,15 @@ export type RefTable = {
 };
 
 export const REF_TABLES: ReadonlyArray<RefTable> = [
-  { key: "bike-makes",       table: "bike_makes",       label: "Bike makes",        singular: "make",        schema: "name",       listingFk: "make_id" },
-  { key: "bike-categories",  table: "bike_categories",  label: "Bike categories",   singular: "category",    schema: "slug-label", listingFk: "bike_category_id" },
-  { key: "bike-classes",     table: "bike_classes",     label: "Bike classes",      singular: "class",       schema: "slug-label", listingFk: "bike_class_id" },
-  { key: "frame-styles",     table: "frame_styles",     label: "Frame styles",      singular: "frame style", schema: "slug-label", listingFk: "frame_style_id" },
-  { key: "frame-materials",  table: "frame_materials",  label: "Frame materials",   singular: "material",    schema: "slug-label", listingFk: "frame_material_id" },
-  { key: "wheel-sizes",      table: "wheel_sizes",      label: "Wheel sizes",       singular: "wheel size",  schema: "slug-label", listingFk: "wheel_size_id" },
-  { key: "gender-fits",      table: "gender_fits",      label: "Gender fits",       singular: "fit",         schema: "slug-label", listingFk: "gender_fit_id" },
-  { key: "motor-brands",     table: "motor_brands",     label: "Motor brands",      singular: "brand",       schema: "name",       listingFk: "motor_brand_id" },
-  { key: "motor-types",      table: "motor_types",      label: "Motor types",       singular: "type",        schema: "slug-label", listingFk: "motor_type_id" },
-  { key: "drive-modes",      table: "drive_modes",      label: "Drive modes",       singular: "mode",        schema: "slug-label", listingFk: "drive_mode_id" },
-  { key: "brake-types",      table: "brake_types",      label: "Brake types",       singular: "type",        schema: "slug-label", listingFk: "brake_type_id" },
-  { key: "suspension-types", table: "suspension_types", label: "Suspension types",  singular: "type",        schema: "slug-label", listingFk: "suspension_type_id" },
-  { key: "condition-grades", table: "condition_grades", label: "Condition grades",  singular: "grade",       schema: "slug-label", listingFk: "condition_id" },
-  { key: "body-positions",   table: "body_positions",   label: "Body positions",    singular: "position",    schema: "slug-label", listingFk: "body_position_id" },
+  { key: "designers",        table: "designers",        label: "Designers",         singular: "designer",   schema: "name",       listingFk: "designer_id" },
+  { key: "occasions",        table: "occasions",        label: "Occasions",         singular: "occasion",   schema: "slug-label", listingFk: "occasion_id" },
+  { key: "silhouettes",      table: "silhouettes",      label: "Silhouettes",       singular: "silhouette", schema: "slug-label", listingFk: "silhouette_id" },
+  { key: "fabrics",          table: "fabrics",          label: "Fabrics",           singular: "fabric",     schema: "slug-label", listingFk: "fabric_id" },
+  { key: "dress-sizes",      table: "dress_sizes",      label: "Sizes",             singular: "size",       schema: "slug-label", listingFk: "size_id" },
+  { key: "necklines",        table: "necklines",        label: "Necklines",         singular: "neckline",   schema: "slug-label", listingFk: "neckline_id" },
+  { key: "sleeve-styles",    table: "sleeve_styles",    label: "Sleeve styles",     singular: "sleeve",     schema: "slug-label", listingFk: "sleeve_style_id" },
+  { key: "dress-lengths",    table: "dress_lengths",    label: "Lengths",           singular: "length",     schema: "slug-label", listingFk: "length_id" },
+  { key: "condition-grades", table: "condition_grades", label: "Condition grades",  singular: "grade",      schema: "slug-label", listingFk: "condition_id" },
 ];
 
 export function findRefTable(key: string): RefTable | null {
@@ -147,20 +142,15 @@ export async function deleteRefRow(t: RefTable, id: string): Promise<void> {
 }
 
 export type ListingRefOptions = {
-  makes: RefOption[];
-  categories: RefOption[];
-  classes: RefOption[];
+  designers: RefOption[];
+  occasions: RefOption[];
+  silhouettes: RefOption[];
+  fabrics: RefOption[];
+  sizes: RefOption[];
+  necklines: RefOption[];
+  sleeveStyles: RefOption[];
+  lengths: RefOption[];
   conditions: RefOption[];
-  frameStyles: RefOption[];
-  frameMaterials: RefOption[];
-  wheelSizes: RefOption[];
-  genderFits: RefOption[];
-  suspensionTypes: RefOption[];
-  brakeTypes: RefOption[];
-  motorBrands: RefOption[];
-  motorTypes: RefOption[];
-  driveModes: RefOption[];
-  bodyPositions: RefOption[];
   regions: RefOption[];
 };
 
@@ -173,53 +163,38 @@ export async function loadListingRefOptions(): Promise<ListingRefOptions> {
   // Lazy import to avoid a circular dependency between ref-data and regions.
   const { listActiveRegions } = await import("@/lib/regions");
   const [
-    makes,
-    categories,
-    classes,
+    designers,
+    occasions,
+    silhouettes,
+    fabrics,
+    sizes,
+    necklines,
+    sleeveStyles,
+    lengths,
     conditions,
-    frameStyles,
-    frameMaterials,
-    wheelSizes,
-    genderFits,
-    suspensionTypes,
-    brakeTypes,
-    motorBrands,
-    motorTypes,
-    driveModes,
-    bodyPositions,
     regionRows,
   ] = await Promise.all([
-    get("bike-makes"),
-    get("bike-categories"),
-    get("bike-classes"),
+    get("designers"),
+    get("occasions"),
+    get("silhouettes"),
+    get("fabrics"),
+    get("dress-sizes"),
+    get("necklines"),
+    get("sleeve-styles"),
+    get("dress-lengths"),
     get("condition-grades"),
-    get("frame-styles"),
-    get("frame-materials"),
-    get("wheel-sizes"),
-    get("gender-fits"),
-    get("suspension-types"),
-    get("brake-types"),
-    get("motor-brands"),
-    get("motor-types"),
-    get("drive-modes"),
-    get("body-positions"),
     listActiveRegions(),
   ]);
   return {
-    makes,
-    categories,
-    classes,
+    designers,
+    occasions,
+    silhouettes,
+    fabrics,
+    sizes,
+    necklines,
+    sleeveStyles,
+    lengths,
     conditions,
-    frameStyles,
-    frameMaterials,
-    wheelSizes,
-    genderFits,
-    suspensionTypes,
-    brakeTypes,
-    motorBrands,
-    motorTypes,
-    driveModes,
-    bodyPositions,
     regions: regionRows.map((r) => ({ id: r.id, label: r.label })),
   };
 }

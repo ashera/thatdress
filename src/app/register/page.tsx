@@ -30,7 +30,7 @@ export default async function RegisterPage({
       <main style={{ width: "100%", maxWidth: 400 }}>
         <div className="form-card">
           <div>
-            <p className="eyebrow">Join ebikeflip</p>
+            <p className="eyebrow">Join thatdress</p>
             <h1>Create your account</h1>
             <p className="sub" style={{ marginTop: 8 }}>
               Already have one? <Link href="/login">Log in</Link>.

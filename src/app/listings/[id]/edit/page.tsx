@@ -31,12 +31,11 @@ const ERRORS: Record<string, string> = {
   "upload-failed": "We couldn't save those photos — please try again.",
   "long-description": "Description must be 5,000 characters or fewer.",
   "invalid-price": "Enter a valid price in dollars (e.g. 1899 or 1899.00).",
-  "invalid-make": "Pick a make.",
-  "invalid-model": "Model is required.",
-  "invalid-year": "Year must be between 2000 and next year.",
+  "invalid-designer": "Pick a designer.",
+  "invalid-model": "Style name or model is required.",
+  "invalid-year": "Year must be between 1990 and next year.",
   "invalid-condition": "Pick a condition.",
-  "invalid-class": "Pick a bike class.",
-  "invalid-category": "Pick a bike category.",
+  "invalid-occasion": "Pick an occasion.",
   "invalid-location": "A postal code or location is required.",
   "out-of-range": "One of the numeric values is outside the allowed range.",
 };
@@ -50,44 +49,25 @@ type ListingRow = {
   is_published: boolean;
   offers_enabled: boolean;
   region_id: string | null;
-  make_id: string | null;
+  designer_id: string | null;
   model: string | null;
   year: number | null;
   condition_id: string | null;
-  bike_class_id: string | null;
-  bike_category_id: string | null;
-  location_postal: string | null;
-  frame_size: string | null;
-  frame_style_id: string | null;
-  frame_material_id: string | null;
-  gender_fit_id: string | null;
-  wheel_size_id: string | null;
-  suspension_type_id: string | null;
-  brake_type_id: string | null;
-  motor_brand_id: string | null;
-  motor_type_id: string | null;
-  motor_watts_nominal: number | null;
-  motor_watts_peak: number | null;
-  motor_torque_nm: number | null;
-  battery_wh: number | null;
-  battery_voltage: number | null;
-  battery_amp_hours: string | null;
-  charge_time_hours: string | null;
-  top_speed_mph: number | null;
-  range_miles_min: number | null;
-  range_miles_max: number | null;
-  drive_mode_id: string | null;
-  mileage: number | null;
+  occasion_id: string | null;
+  silhouette_id: string | null;
+  fabric_id: string | null;
+  size_id: string | null;
+  neckline_id: string | null;
+  sleeve_style_id: string | null;
+  length_id: string | null;
   color: string | null;
-  weight_lbs: string | null;
-  display_type: string | null;
-  drivetrain: string | null;
-  accessories: string | null;
-  modifications: string | null;
-  has_warranty: boolean | null;
-  warranty_text: string | null;
+  bust_inches: string | null;
+  waist_inches: string | null;
+  hips_inches: string | null;
+  original_retail_cents: number | null;
+  alterations_text: string | null;
   has_original_receipt: boolean | null;
-  body_position_id: string | null;
+  location_postal: string | null;
 };
 
 type ImageRow = {
@@ -98,10 +78,10 @@ type ImageRow = {
   mime_type: string;
 };
 
-function nullableNumber(s: string | null): number | null {
-  if (s === null || s === undefined) return null;
-  const n = Number(s);
-  return Number.isFinite(n) ? n : null;
+function dollarsFromCents(cents: number | null | undefined): string {
+  if (cents == null || cents <= 0) return "";
+  const d = cents / 100;
+  return Number.isInteger(d) ? String(d) : d.toFixed(2);
 }
 
 export default async function EditListingPage({
@@ -124,19 +104,13 @@ export default async function EditListingPage({
     query<ListingRow>(
       `SELECT id::text, title, description, price_cents, seller_id::text,
               is_published, offers_enabled, region_id::text,
-              make_id::text, model, year, condition_id::text,
-              bike_class_id::text, bike_category_id::text, location_postal,
-              frame_size, frame_style_id::text, frame_material_id::text,
-              gender_fit_id::text, wheel_size_id::text,
-              suspension_type_id::text, brake_type_id::text,
-              motor_brand_id::text, motor_type_id::text,
-              motor_watts_nominal, motor_watts_peak, motor_torque_nm,
-              battery_wh, battery_voltage, battery_amp_hours::text,
-              charge_time_hours::text, top_speed_mph, range_miles_min,
-              range_miles_max, drive_mode_id::text, mileage, color,
-              weight_lbs::text, display_type, drivetrain, accessories,
-              modifications, has_warranty, warranty_text,
-              has_original_receipt, body_position_id::text
+              designer_id::text, model, year, condition_id::text,
+              occasion_id::text, silhouette_id::text, fabric_id::text,
+              size_id::text, neckline_id::text, sleeve_style_id::text,
+              length_id::text, color,
+              bust_inches::text, waist_inches::text, hips_inches::text,
+              original_retail_cents, alterations_text,
+              has_original_receipt, location_postal
          FROM listings
         WHERE id = $1::bigint
         LIMIT 1`,
@@ -165,44 +139,25 @@ export default async function EditListingPage({
     price_dollars: (listing.price_cents / 100).toFixed(2),
     region_id: listing.region_id,
     offers_enabled: listing.offers_enabled,
-    make_id: listing.make_id,
+    designer_id: listing.designer_id,
     model: listing.model,
     year: listing.year,
     condition_id: listing.condition_id,
-    bike_class_id: listing.bike_class_id,
-    bike_category_id: listing.bike_category_id,
-    location_postal: listing.location_postal,
-    frame_size: listing.frame_size,
-    frame_style_id: listing.frame_style_id,
-    frame_material_id: listing.frame_material_id,
-    gender_fit_id: listing.gender_fit_id,
-    wheel_size_id: listing.wheel_size_id,
-    suspension_type_id: listing.suspension_type_id,
-    brake_type_id: listing.brake_type_id,
-    motor_brand_id: listing.motor_brand_id,
-    motor_type_id: listing.motor_type_id,
-    motor_watts_nominal: listing.motor_watts_nominal,
-    motor_watts_peak: listing.motor_watts_peak,
-    motor_torque_nm: listing.motor_torque_nm,
-    battery_wh: listing.battery_wh,
-    battery_voltage: listing.battery_voltage,
-    battery_amp_hours: nullableNumber(listing.battery_amp_hours),
-    charge_time_hours: nullableNumber(listing.charge_time_hours),
-    top_speed_mph: listing.top_speed_mph,
-    range_miles_min: listing.range_miles_min,
-    range_miles_max: listing.range_miles_max,
-    drive_mode_id: listing.drive_mode_id,
-    mileage: listing.mileage,
+    occasion_id: listing.occasion_id,
+    silhouette_id: listing.silhouette_id,
+    fabric_id: listing.fabric_id,
+    size_id: listing.size_id,
+    neckline_id: listing.neckline_id,
+    sleeve_style_id: listing.sleeve_style_id,
+    length_id: listing.length_id,
     color: listing.color,
-    weight_lbs: nullableNumber(listing.weight_lbs),
-    display_type: listing.display_type,
-    drivetrain: listing.drivetrain,
-    accessories: listing.accessories,
-    modifications: listing.modifications,
-    has_warranty: !!listing.has_warranty,
-    warranty_text: listing.warranty_text,
+    bust_inches: listing.bust_inches,
+    waist_inches: listing.waist_inches,
+    hips_inches: listing.hips_inches,
+    original_retail_dollars: dollarsFromCents(listing.original_retail_cents),
+    alterations_text: listing.alterations_text,
     has_original_receipt: !!listing.has_original_receipt,
-    body_position_id: listing.body_position_id,
+    location_postal: listing.location_postal,
   };
 
   return (

@@ -61,7 +61,7 @@ export default async function WizardPhotosPage({
       <WizardHero
         icon="camera"
         headline="Lead with a great photo"
-        body="Listings with a clean hero shot get roughly twice the inquiries. Shoot the drive side in daylight, against a plain wall — no clutter, no garage door."
+        body="Listings with a clean front-on shot get roughly twice the inquiries. Hang the dress against a plain wall in soft daylight — no clutter, no hangers in frame."
       />
 
       {images.length > 0 && (
@@ -188,28 +188,29 @@ export default async function WizardPhotosPage({
             />
           </Field>
           <WizardTip>
-            Five photos beats ten blurry ones. A drive-side hero, the cockpit,
-            the motor, the battery, and any wear is plenty.
+            Five photos beats ten blurry ones. A full-length hero, the back,
+            close-ups of the bodice and any beading, and a flat-lay of the
+            label is plenty.
           </WizardTip>
         </section>
 
         <section className="form-card">
-          <h2 className="card-heading">Bike basics</h2>
+          <h2 className="card-heading">Dress basics</h2>
           <p className="card-sub">
-            All three are required. Your listing title is built automatically
-            from these — e.g. &ldquo;2024 Trek Allant+ 7&rdquo;.
+            Designer and style name are required. Your listing title is built
+            automatically from these — e.g. &ldquo;Vera Wang Hayley&rdquo;.
           </p>
 
-          <Field label="Make" htmlFor="make_id">
+          <Field label="Designer" htmlFor="designer_id">
             <select
-              id="make_id"
-              name="make_id"
+              id="designer_id"
+              name="designer_id"
               className="input"
-              defaultValue={draft.make_id ?? ""}
+              defaultValue={draft.designer_id ?? ""}
               required
             >
-              <option value="">Select a make</option>
-              {refs.makes.map((o) => (
+              <option value="">Select a designer</option>
+              {refs.designers.map((o) => (
                 <option key={o.id} value={o.id}>
                   {o.label}
                 </option>
@@ -219,9 +220,9 @@ export default async function WizardPhotosPage({
 
           <div className="grid-2">
             <Field
-              label="Model"
+              label="Style name / model"
               htmlFor="model"
-              help="Free text — e.g. Turbo Vado 4.0."
+              help='Free text — e.g. "Hayley", "Daphne", or the SKU.'
             >
               <Input
                 id="model"
@@ -231,13 +232,12 @@ export default async function WizardPhotosPage({
                 defaultValue={draft.model ?? ""}
               />
             </Field>
-            <Field label="Year" htmlFor="year">
+            <Field label="Year (optional)" htmlFor="year" help="Season or year released, if known.">
               <Input
                 id="year"
                 name="year"
                 type="number"
-                required
-                min={2000}
+                min={1990}
                 max={CURRENT_YEAR + 1}
                 defaultValue={
                   draft.year != null ? String(draft.year) : ""

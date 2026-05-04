@@ -38,22 +38,22 @@ export async function dispatchVerificationEmail(
 
     await sendEmail({
       to: email,
-      subject: "Verify your ebikeflip email",
+      subject: "Verify your thatdress email",
       html: emailLayout({
         preheader: "Confirm your email to finish setup.",
         heading: "Verify your email",
         body: `
-          <p>Welcome to ebikeflip. Click the button below to confirm <strong>${escapeHtml(email)}</strong> belongs to you. The link expires in 24 hours.</p>
+          <p>Welcome to thatdress. Click the button below to confirm <strong>${escapeHtml(email)}</strong> belongs to you. The link expires in 24 hours.</p>
           <p style="margin:24px 0;">
             <a href="${url}" style="display:inline-block;background:#1c1816;color:#ffffff;padding:12px 24px;border-radius:999px;text-decoration:none;font-weight:600;">Verify email</a>
           </p>
           <p style="font-size:13px;color:#7a7470;">Or paste this link into your browser:<br>
             <span style="word-break:break-all;">${escapeHtml(url)}</span>
           </p>
-          <p style="font-size:13px;color:#7a7470;">If you didn't sign up for ebikeflip, you can ignore this message.</p>
+          <p style="font-size:13px;color:#7a7470;">If you didn't sign up for thatdress, you can ignore this message.</p>
         `,
       }),
-      text: `Verify your ebikeflip email by visiting: ${url}\n\nThe link expires in 24 hours.`,
+      text: `Verify your thatdress email by visiting: ${url}\n\nThe link expires in 24 hours.`,
     });
   } catch (e) {
     // eslint-disable-next-line no-console

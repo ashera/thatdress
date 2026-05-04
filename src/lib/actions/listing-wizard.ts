@@ -8,6 +8,7 @@ import { getCurrentRegionId } from "@/lib/regions";
 
 const DESCRIPTION_MAX = 5000;
 const PRICE_MAX_DOLLARS = 1_000_000;
+const ALTERATIONS_MAX = 2000;
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const MAX_IMAGES_PER_LISTING = 10;
@@ -18,7 +19,7 @@ const ALLOWED_IMAGE_MIMES = new Set([
 ]);
 
 const CURRENT_YEAR = new Date().getUTCFullYear();
-const MIN_YEAR = 2000;
+const MIN_YEAR = 1990;
 const MAX_YEAR = CURRENT_YEAR + 1;
 
 function getString(formData: FormData, key: string, max?: number): string {
@@ -41,19 +42,6 @@ function getRequiredId(formData: FormData, key: string): string | null {
   const raw = String(formData.get(key) ?? "").trim();
   if (!raw || !/^\d+$/.test(raw)) return null;
   return raw;
-}
-
-function getOptionalIntInRange(
-  formData: FormData,
-  key: string,
-  min: number,
-  max: number,
-): number | null | "out-of-range" {
-  const raw = String(formData.get(key) ?? "").trim();
-  if (!raw) return null;
-  const n = Number.parseInt(raw, 10);
-  if (!Number.isFinite(n) || n < min || n > max) return "out-of-range";
-  return n;
 }
 
 function getOptionalNumberInRange(
@@ -232,16 +220,20 @@ export async function saveDraftPhotos(formData: FormData): Promise<void> {
 
   const stepUrl = `/listings/new/${listingId}/photos`;
 
-  const make_id = getRequiredId(formData, "make_id");
-  if (!make_id) redirect(`${stepUrl}?error=invalid-make`);
+  const designer_id = getRequiredId(formData, "designer_id");
+  if (!designer_id) redirect(`${stepUrl}?error=invalid-designer`);
 
   const model = getString(formData, "model", 100);
   if (!model) redirect(`${stepUrl}?error=invalid-model`);
 
   const yearRaw = getString(formData, "year");
-  const year = Number.parseInt(yearRaw, 10);
-  if (!Number.isFinite(year) || year < MIN_YEAR || year > MAX_YEAR) {
-    redirect(`${stepUrl}?error=invalid-year`);
+  let year: number | null = null;
+  if (yearRaw) {
+    const y = Number.parseInt(yearRaw, 10);
+    if (!Number.isFinite(y) || y < MIN_YEAR || y > MAX_YEAR) {
+      redirect(`${stepUrl}?error=invalid-year`);
+    }
+    year = y;
   }
 
   const files = collectImageFiles(formData);
@@ -249,21 +241,20 @@ export async function saveDraftPhotos(formData: FormData): Promise<void> {
   if (imageErr) redirect(`${stepUrl}?error=${imageErr}`);
 
   // Set the basics first, then derive the title from the row's own
-  // (now-current) columns so the make-name lookup doesn't have to share
-  // a parameter slot with year/make_id/model in two type contexts.
+  // (now-current) columns so the designer-name lookup doesn't have to share
+  // a parameter slot with designer_id/model in two type contexts.
   await query(
     `UPDATE listings
-        SET make_id = $2::bigint,
+        SET designer_id = $2::bigint,
             model = $3,
             year = $4::int
       WHERE id = $1::bigint`,
-    [listingId, make_id, model, year],
+    [listingId, designer_id, model, year],
   );
   await query(
     `UPDATE listings
         SET title = TRIM(BOTH FROM CONCAT_WS(' ',
-              year::text,
-              (SELECT name FROM bike_makes WHERE id = listings.make_id),
+              (SELECT name FROM designers WHERE id = listings.designer_id),
               model
             ))
       WHERE id = $1::bigint`,
@@ -279,10 +270,10 @@ export async function saveDraftPhotos(formData: FormData): Promise<void> {
   }
 
   revalidatePath(stepUrl);
-  redirect(`/listings/new/${listingId}/frame`);
+  redirect(`/listings/new/${listingId}/style`);
 }
 
-export async function saveDraftFrame(formData: FormData): Promise<void> {
+export async function saveDraftStyle(formData: FormData): Promise<void> {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
@@ -291,46 +282,40 @@ export async function saveDraftFrame(formData: FormData): Promise<void> {
     redirect("/listings/mine");
   }
 
-  const stepUrl = `/listings/new/${listingId}/frame`;
+  const stepUrl = `/listings/new/${listingId}/style`;
 
-  const bike_class_id = getRequiredId(formData, "bike_class_id");
-  if (!bike_class_id) redirect(`${stepUrl}?error=invalid-class`);
-  const bike_category_id = getRequiredId(formData, "bike_category_id");
-  if (!bike_category_id) redirect(`${stepUrl}?error=invalid-category`);
+  const occasion_id = getRequiredId(formData, "occasion_id");
+  if (!occasion_id) redirect(`${stepUrl}?error=invalid-occasion`);
 
   await query(
     `UPDATE listings
-        SET bike_class_id = $2::bigint,
-            bike_category_id = $3::bigint,
-            frame_size = $4,
-            frame_style_id = NULLIF($5, '')::bigint,
-            frame_material_id = NULLIF($6, '')::bigint,
-            gender_fit_id = NULLIF($7, '')::bigint,
-            wheel_size_id = NULLIF($8, '')::bigint,
-            suspension_type_id = NULLIF($9, '')::bigint,
-            brake_type_id = NULLIF($10, '')::bigint,
-            color = $11
+        SET occasion_id     = $2::bigint,
+            silhouette_id   = NULLIF($3, '')::bigint,
+            fabric_id       = NULLIF($4, '')::bigint,
+            neckline_id     = NULLIF($5, '')::bigint,
+            sleeve_style_id = NULLIF($6, '')::bigint,
+            length_id       = NULLIF($7, '')::bigint,
+            color           = $8
       WHERE id = $1::bigint`,
     [
       listingId,
-      bike_class_id,
-      bike_category_id,
-      nullableString(getString(formData, "frame_size", 32)),
-      getOptionalId(formData, "frame_style_id") ?? "",
-      getOptionalId(formData, "frame_material_id") ?? "",
-      getOptionalId(formData, "gender_fit_id") ?? "",
-      getOptionalId(formData, "wheel_size_id") ?? "",
-      getOptionalId(formData, "suspension_type_id") ?? "",
-      getOptionalId(formData, "brake_type_id") ?? "",
+      occasion_id,
+      getOptionalId(formData, "silhouette_id") ?? "",
+      getOptionalId(formData, "fabric_id") ?? "",
+      getOptionalId(formData, "neckline_id") ?? "",
+      getOptionalId(formData, "sleeve_style_id") ?? "",
+      getOptionalId(formData, "length_id") ?? "",
       nullableString(getString(formData, "color", 32)),
     ],
   );
 
   revalidatePath(stepUrl);
-  redirect(`/listings/new/${listingId}/motor`);
+  redirect(`/listings/new/${listingId}/measurements`);
 }
 
-export async function saveDraftMotor(formData: FormData): Promise<void> {
+export async function saveDraftMeasurements(
+  formData: FormData,
+): Promise<void> {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
@@ -339,50 +324,43 @@ export async function saveDraftMotor(formData: FormData): Promise<void> {
     redirect("/listings/mine");
   }
 
-  const stepUrl = `/listings/new/${listingId}/motor`;
+  const stepUrl = `/listings/new/${listingId}/measurements`;
 
-  const intRanges: Record<string, [number, number]> = {
-    motor_watts_nominal: [50, 3000],
-    battery_wh: [50, 5000],
-    top_speed_mph: [0, 100],
-    range_miles_min: [0, 600],
-    range_miles_max: [0, 600],
-    mileage: [0, 160000],
+  const measureRanges: Record<string, [number, number]> = {
+    bust_inches: [20, 70],
+    waist_inches: [18, 70],
+    hips_inches: [24, 80],
   };
-  const ints: Record<string, number | null> = {};
-  for (const [k, [min, max]] of Object.entries(intRanges)) {
-    const v = getOptionalIntInRange(formData, k, min, max);
+  const measures: Record<string, number | null> = {};
+  for (const [k, [min, max]] of Object.entries(measureRanges)) {
+    const v = getOptionalNumberInRange(formData, k, min, max);
     if (v === "out-of-range") redirect(`${stepUrl}?error=out-of-range`);
-    ints[k] = v;
+    measures[k] = v;
   }
-  const weight = getOptionalNumberInRange(formData, "weight_lbs", 0, 250);
-  if (weight === "out-of-range") redirect(`${stepUrl}?error=out-of-range`);
+
+  const retailRaw = getString(formData, "original_retail");
+  let original_retail_cents: number | null = null;
+  if (retailRaw) {
+    const cents = parsePriceToCents(retailRaw);
+    if (cents === null) redirect(`${stepUrl}?error=out-of-range`);
+    original_retail_cents = cents;
+  }
 
   await query(
     `UPDATE listings
-        SET motor_brand_id = NULLIF($2, '')::bigint,
-            motor_type_id = NULLIF($3, '')::bigint,
-            motor_watts_nominal = $4,
-            battery_wh = $5,
-            top_speed_mph = $6,
-            range_miles_min = $7,
-            range_miles_max = $8,
-            drive_mode_id = NULLIF($9, '')::bigint,
-            mileage = $10,
-            weight_lbs = $11
+        SET size_id              = NULLIF($2, '')::bigint,
+            bust_inches          = $3,
+            waist_inches         = $4,
+            hips_inches          = $5,
+            original_retail_cents = $6
       WHERE id = $1::bigint`,
     [
       listingId,
-      getOptionalId(formData, "motor_brand_id") ?? "",
-      getOptionalId(formData, "motor_type_id") ?? "",
-      ints.motor_watts_nominal,
-      ints.battery_wh,
-      ints.top_speed_mph,
-      ints.range_miles_min,
-      ints.range_miles_max,
-      getOptionalId(formData, "drive_mode_id") ?? "",
-      ints.mileage,
-      weight,
+      getOptionalId(formData, "size_id") ?? "",
+      measures.bust_inches,
+      measures.waist_inches,
+      measures.hips_inches,
+      original_retail_cents,
     ],
   );
 
@@ -406,21 +384,15 @@ export async function saveDraftCondition(formData: FormData): Promise<void> {
 
   await query(
     `UPDATE listings
-        SET condition_id = $2::bigint,
-            has_warranty = $3,
-            warranty_text = $4,
-            has_original_receipt = $5,
-            accessories = $6,
-            modifications = $7
+        SET condition_id         = $2::bigint,
+            has_original_receipt = $3,
+            alterations_text     = $4
       WHERE id = $1::bigint`,
     [
       listingId,
       condition_id,
-      getCheckbox(formData, "has_warranty"),
-      nullableString(getString(formData, "warranty_text", 500)),
       getCheckbox(formData, "has_original_receipt"),
-      nullableString(getString(formData, "accessories", 2000)),
-      nullableString(getString(formData, "modifications", 2000)),
+      nullableString(getString(formData, "alterations_text", ALTERATIONS_MAX)),
     ],
   );
 
@@ -455,30 +427,26 @@ export async function publishDraftListing(formData: FormData): Promise<void> {
   // be present on the row. Fail back to the relevant step if not.
   const r = await query<{
     title: string | null;
-    make_id: string | null;
+    designer_id: string | null;
     model: string | null;
-    year: number | null;
-    bike_class_id: string | null;
-    bike_category_id: string | null;
+    occasion_id: string | null;
     condition_id: string | null;
   }>(
     `SELECT title,
-            make_id::text,
+            designer_id::text,
             model,
-            year,
-            bike_class_id::text,
-            bike_category_id::text,
+            occasion_id::text,
             condition_id::text
        FROM listings WHERE id = $1::bigint LIMIT 1`,
     [listingId],
   );
   const row = r.rows[0];
   if (!row) redirect("/listings/mine");
-  if (!row.title || !row.make_id || !row.model || !row.year) {
+  if (!row.title || !row.designer_id || !row.model) {
     redirect(`/listings/new/${listingId}/photos?error=incomplete`);
   }
-  if (!row.bike_class_id || !row.bike_category_id) {
-    redirect(`/listings/new/${listingId}/frame?error=incomplete`);
+  if (!row.occasion_id) {
+    redirect(`/listings/new/${listingId}/style?error=incomplete`);
   }
   if (!row.condition_id) {
     redirect(`/listings/new/${listingId}/condition?error=incomplete`);

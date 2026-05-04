@@ -37,7 +37,7 @@ export function RegionPicker({ detected, regions, next = "/" }: Props) {
             </p>
 
             <p className="region-gate-prompt">
-              ebikeflip is currently exclusive to these regions. Pick the one
+              thatdress is currently exclusive to these regions. Pick the one
               that fits — you can change it later from the menu.
             </p>
 

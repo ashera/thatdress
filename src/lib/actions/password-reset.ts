@@ -53,7 +53,7 @@ export async function requestPasswordReset(formData: FormData): Promise<void> {
       const baseUrl = await getBaseUrl();
       const url = `${baseUrl}/reset/${token}`;
       const body = `
-        <p>Someone (hopefully you) asked to reset the password for the ebikeflip account at <strong>${escapeHtml(email)}</strong>.</p>
+        <p>Someone (hopefully you) asked to reset the password for the thatdress account at <strong>${escapeHtml(email)}</strong>.</p>
         <p>Click the button to set a new password. The link expires in 1 hour and can only be used once.</p>
         <p style="margin:24px 0;">
           <a href="${url}" style="display:inline-block;background:#1c1816;color:#ffffff;padding:12px 24px;border-radius:999px;text-decoration:none;font-weight:600;">Reset password</a>
@@ -66,9 +66,9 @@ export async function requestPasswordReset(formData: FormData): Promise<void> {
 
       await sendEmail({
         to: email,
-        subject: "Reset your ebikeflip password",
+        subject: "Reset your thatdress password",
         html: emailLayout({
-          preheader: "Reset your ebikeflip password",
+          preheader: "Reset your thatdress password",
           heading: "Reset your password",
           body,
         }),

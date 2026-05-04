@@ -2,9 +2,6 @@ import "server-only";
 import { query } from "@/lib/db";
 import { emailLayout, escapeHtml, sendEmail } from "@/lib/email";
 
-const CURRENT_YEAR = new Date().getUTCFullYear();
-const MAX_YEAR = CURRENT_YEAR + 1;
-
 type Params = Record<string, unknown>;
 
 function asArray(v: unknown): string[] {
@@ -51,7 +48,7 @@ export function buildSavedSearchWhere(params: Params): {
     vals.push(`%${escapeLike(q)}%`);
     const n = vals.length;
     where.push(
-      `(l.title ILIKE $${n} ESCAPE '\\' OR l.description ILIKE $${n} ESCAPE '\\' OR l.model ILIKE $${n} ESCAPE '\\' OR mk.name ILIKE $${n} ESCAPE '\\')`,
+      `(l.title ILIKE $${n} ESCAPE '\\' OR l.description ILIKE $${n} ESCAPE '\\' OR l.model ILIKE $${n} ESCAPE '\\' OR d.name ILIKE $${n} ESCAPE '\\')`,
     );
   }
 
@@ -60,9 +57,10 @@ export function buildSavedSearchWhere(params: Params): {
     vals.push(ids.map(Number));
     where.push(`${col} = ANY($${vals.length}::bigint[])`);
   };
-  addArrIn("l.make_id", validIds(asArray(params.make_id)));
-  addArrIn("l.bike_class_id", validIds(asArray(params.bike_class_id)));
-  addArrIn("l.bike_category_id", validIds(asArray(params.bike_category_id)));
+  addArrIn("l.designer_id", validIds(asArray(params.designer_id)));
+  addArrIn("l.occasion_id", validIds(asArray(params.occasion_id)));
+  addArrIn("l.silhouette_id", validIds(asArray(params.silhouette_id)));
+  addArrIn("l.size_id", validIds(asArray(params.size_id)));
   addArrIn("l.condition_id", validIds(asArray(params.condition_id)));
 
   const minPrice = validInt(asStr(params.min_price), 0, 10_000_000);
@@ -75,16 +73,6 @@ export function buildSavedSearchWhere(params: Params): {
     vals.push(maxPrice * 100);
     where.push(`l.price_cents <= $${vals.length}`);
   }
-  const minYear = validInt(asStr(params.min_year), 1990, MAX_YEAR);
-  if (minYear != null) {
-    vals.push(minYear);
-    where.push(`l.year >= $${vals.length}`);
-  }
-  const maxYear = validInt(asStr(params.max_year), 1990, MAX_YEAR);
-  if (maxYear != null) {
-    vals.push(maxYear);
-    where.push(`l.year <= $${vals.length}`);
-  }
 
   return { where, vals };
 }
@@ -93,18 +81,15 @@ export function buildSavedSearchWhere(params: Params): {
 export function describeSearch(params: Params): string {
   const parts: string[] = [];
   if (asStr(params.q)) parts.push(`"${asStr(params.q)}"`);
-  const makes = validIds(asArray(params.make_id)).length;
-  if (makes > 0) parts.push(`${makes} make${makes === 1 ? "" : "s"}`);
-  const cats = validIds(asArray(params.bike_category_id)).length;
-  if (cats > 0) parts.push(`${cats} categor${cats === 1 ? "y" : "ies"}`);
-  const cls = validIds(asArray(params.bike_class_id)).length;
-  if (cls > 0) parts.push(`${cls} class${cls === 1 ? "" : "es"}`);
+  const designers = validIds(asArray(params.designer_id)).length;
+  if (designers > 0) parts.push(`${designers} designer${designers === 1 ? "" : "s"}`);
+  const occasions = validIds(asArray(params.occasion_id)).length;
+  if (occasions > 0) parts.push(`${occasions} occasion${occasions === 1 ? "" : "s"}`);
+  const sizes = validIds(asArray(params.size_id)).length;
+  if (sizes > 0) parts.push(`${sizes} size${sizes === 1 ? "" : "s"}`);
   const minP = asStr(params.min_price);
   const maxP = asStr(params.max_price);
   if (minP || maxP) parts.push(`$${minP ?? "0"}–$${maxP ?? "any"}`);
-  const minY = asStr(params.min_year);
-  const maxY = asStr(params.max_year);
-  if (minY || maxY) parts.push(`${minY ?? "any"}–${maxY ?? "now"}`);
   if (params.mode === "sold") parts.push("sold");
   return parts.length > 0 ? parts.join(" · ") : "no filters";
 }
@@ -113,9 +98,8 @@ type Match = {
   id: string;
   title: string;
   price_cents: number;
-  make_name: string | null;
+  designer_name: string | null;
   model: string | null;
-  year: number | null;
 };
 
 export async function findNewMatches(
@@ -133,11 +117,10 @@ export async function findNewMatches(
     `SELECT l.id::text,
             l.title,
             l.price_cents,
-            mk.name AS make_name,
-            l.model,
-            l.year
+            d.name AS designer_name,
+            l.model
        FROM listings l
-       LEFT JOIN bike_makes mk ON mk.id = l.make_id
+       LEFT JOIN designers d ON d.id = l.designer_id
       WHERE ${where.join(" AND ")}
       ORDER BY l.created_at DESC
       LIMIT $${limitParam}`,
@@ -164,7 +147,7 @@ export async function emailSavedSearchDigest(opts: {
   const subject = `${matches.length} new match${matches.length === 1 ? "" : "es"} for "${searchName}"`;
   const rows = matches
     .map((m) => {
-      const sub = [m.year, m.make_name, m.model].filter(Boolean).join(" · ");
+      const sub = [m.designer_name, m.model].filter(Boolean).join(" · ");
       return `
         <tr>
           <td style="padding:12px 0;border-bottom:1px solid #e9e5df;">

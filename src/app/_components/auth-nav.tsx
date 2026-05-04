@@ -77,8 +77,8 @@ export async function AuthNav() {
     <header className="topbar">
       <div className="brand-row">
         <Link href="/" className="brand">
-          <span className="brand-mark">eb</span>
-          ebikeflip
+          <span className="brand-mark">td</span>
+          thatdress
         </Link>
         {(() => {
           const stats = (
@@ -118,7 +118,6 @@ export async function AuthNav() {
           <nav>
             <Link href="/listings">Browse</Link>
             <Link href="/listings/new">Sell</Link>
-            <Link href="/tools">Tools</Link>
             <Link href="/blog">Blog</Link>
             {user && (
               <Link href="/messages" className="nav-messages">

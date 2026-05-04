@@ -1,6 +1,6 @@
 import { loadListingRefOptions } from "@/lib/ref-data";
 import { saveDraftCondition } from "@/lib/actions/listing-wizard";
-import { Field, Input, Textarea } from "../../../../_components/ui";
+import { Field, Textarea } from "../../../../_components/ui";
 import {
   loadDraft,
   StepNav,
@@ -37,7 +37,7 @@ export default async function WizardConditionPage({
       <WizardHero
         icon="shield"
         headline="Honest beats glossy"
-        body='&ldquo;Good, with a small chainstay scuff&rdquo; outsells &ldquo;Like new&rdquo; every time. Serious buyers reward candour, and they can usually spot what a listing is hiding within ten seconds.'
+        body='&ldquo;Excellent, with a tiny snag near the hem&rdquo; outsells &ldquo;Like new&rdquo; every time. Serious buyers reward candour, and they can usually spot what a listing is hiding within ten seconds.'
       />
 
       <form
@@ -74,67 +74,38 @@ export default async function WizardConditionPage({
 
         <section className="form-card">
           <h2 className="card-heading">Provenance</h2>
-          <p className="card-sub">Optional but reassuring.</p>
+          <p className="card-sub">Optional but reassuring — original receipts massively help with authenticity.</p>
 
-          <div className="grid-2">
-            <label className="check-row">
-              <input
-                type="checkbox"
-                name="has_warranty"
-                defaultChecked={!!draft.has_warranty}
-              />
-              <span>Has remaining warranty</span>
-            </label>
-            <label className="check-row">
-              <input
-                type="checkbox"
-                name="has_original_receipt"
-                defaultChecked={!!draft.has_original_receipt}
-              />
-              <span>Has original receipt</span>
-            </label>
-          </div>
-
-          <Field label="Warranty notes" htmlFor="warranty_text">
-            <Input
-              id="warranty_text"
-              name="warranty_text"
-              maxLength={500}
-              defaultValue={draft.warranty_text ?? ""}
+          <label className="check-row">
+            <input
+              type="checkbox"
+              name="has_original_receipt"
+              defaultChecked={!!draft.has_original_receipt}
             />
-          </Field>
+            <span>Has original receipt or proof of purchase</span>
+          </label>
         </section>
 
         <section className="form-card">
-          <h2 className="card-heading">What&rsquo;s included &amp; what&rsquo;s changed</h2>
+          <h2 className="card-heading">Alterations</h2>
           <p className="card-sub">Optional.</p>
           <WizardTip>
-            List the panniers, the spare battery, the lock, the second key.
-            Bundles often beat the headline price for serious buyers.
+            Note any tailoring — hem shortened by 2&Prime;, bust taken in,
+            straps added. It&rsquo;s the first question every buyer asks.
           </WizardTip>
 
-          <Field label="Accessories" htmlFor="accessories">
+          <Field label="Alterations &amp; tailoring notes" htmlFor="alterations_text">
             <Textarea
-              id="accessories"
-              name="accessories"
+              id="alterations_text"
+              name="alterations_text"
               rows={3}
               maxLength={2000}
-              defaultValue={draft.accessories ?? ""}
-            />
-          </Field>
-
-          <Field label="Modifications" htmlFor="modifications">
-            <Textarea
-              id="modifications"
-              name="modifications"
-              rows={3}
-              maxLength={2000}
-              defaultValue={draft.modifications ?? ""}
+              defaultValue={draft.alterations_text ?? ""}
             />
           </Field>
         </section>
 
-        <StepNav prevHref={`/listings/new/${draft.id}/motor`} />
+        <StepNav prevHref={`/listings/new/${draft.id}/measurements`} />
       </form>
     </WizardShell>
   );

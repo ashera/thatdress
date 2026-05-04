@@ -8,6 +8,7 @@ import { getCurrentRegionId } from "@/lib/regions";
 
 const DESCRIPTION_MAX = 5000;
 const PRICE_MAX_DOLLARS = 1_000_000;
+const ALTERATIONS_MAX = 2000;
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const MAX_IMAGES_PER_LISTING = 10;
@@ -18,26 +19,15 @@ const ALLOWED_IMAGE_MIMES = new Set([
 ]);
 
 const CURRENT_YEAR = new Date().getUTCFullYear();
-const MIN_YEAR = 2000;
+const MIN_YEAR = 1990;
 const MAX_YEAR = CURRENT_YEAR + 1;
 
 type Range = { min: number; max: number };
-// Note: column names retain imperial suffixes (_mph, _miles, _lbs) but
-// stored values are now metric (km/h, km, kg). Renaming the columns is
-// a separate cleanup; the ranges below reflect the metric units.
 const RANGES: Record<string, Range> = {
-  motor_watts_nominal: { min: 50, max: 3000 },
-  motor_watts_peak: { min: 0, max: 5000 },
-  motor_torque_nm: { min: 0, max: 300 },
-  battery_wh: { min: 50, max: 5000 },
-  battery_voltage: { min: 0, max: 120 },
-  battery_amp_hours: { min: 0, max: 50 },
-  charge_time_hours: { min: 0, max: 24 },
-  top_speed_mph: { min: 0, max: 100 }, // km/h
-  range_miles_min: { min: 0, max: 600 }, // km
-  range_miles_max: { min: 0, max: 600 }, // km
-  mileage: { min: 0, max: 160000 }, // km
-  weight_lbs: { min: 0, max: 250 }, // kg
+  bust_inches: { min: 20, max: 70 },
+  waist_inches: { min: 18, max: 70 },
+  hips_inches: { min: 24, max: 80 },
+  original_retail_cents: { min: 0, max: 100_000_000 },
 };
 
 function parsePriceToCents(raw: string): number | null {
@@ -73,19 +63,6 @@ function getRequiredId(formData: FormData, key: string): string | null {
   return raw;
 }
 
-function getOptionalInt(
-  formData: FormData,
-  key: string,
-): number | null | "out-of-range" {
-  const raw = String(formData.get(key) ?? "").trim();
-  if (!raw) return null;
-  const n = Number.parseInt(raw, 10);
-  if (!Number.isFinite(n)) return "out-of-range";
-  const r = RANGES[key];
-  if (r && (n < r.min || n > r.max)) return "out-of-range";
-  return n;
-}
-
 function getOptionalNumber(
   formData: FormData,
   key: string,
@@ -107,44 +84,25 @@ function getCheckbox(formData: FormData, key: string): boolean {
 type ListingFields = {
   description: string | null;
   price_cents: number;
-  make_id: string;
+  designer_id: string;
   model: string;
-  year: number;
+  year: number | null;
   condition_id: string;
-  bike_class_id: string;
-  bike_category_id: string;
+  occasion_id: string;
   location_postal: string;
-  frame_size: string | null;
-  frame_style_id: string | null;
-  frame_material_id: string | null;
-  gender_fit_id: string | null;
-  wheel_size_id: string | null;
-  suspension_type_id: string | null;
-  brake_type_id: string | null;
-  motor_brand_id: string | null;
-  motor_type_id: string | null;
-  motor_watts_nominal: number | null;
-  motor_watts_peak: number | null;
-  motor_torque_nm: number | null;
-  battery_wh: number | null;
-  battery_voltage: number | null;
-  battery_amp_hours: number | null;
-  charge_time_hours: number | null;
-  top_speed_mph: number | null;
-  range_miles_min: number | null;
-  range_miles_max: number | null;
-  drive_mode_id: string | null;
-  mileage: number | null;
+  silhouette_id: string | null;
+  fabric_id: string | null;
+  size_id: string | null;
+  neckline_id: string | null;
+  sleeve_style_id: string | null;
+  length_id: string | null;
   color: string | null;
-  weight_lbs: number | null;
-  display_type: string | null;
-  drivetrain: string | null;
-  accessories: string | null;
-  modifications: string | null;
-  has_warranty: boolean;
-  warranty_text: string | null;
+  bust_inches: number | null;
+  waist_inches: number | null;
+  hips_inches: number | null;
+  original_retail_cents: number | null;
+  alterations_text: string | null;
   has_original_receipt: boolean;
-  body_position_id: string | null;
   offers_enabled: boolean;
 };
 
@@ -153,8 +111,7 @@ type ParseResult =
   | { ok: false; error: string };
 
 function parseListingFields(formData: FormData): ParseResult {
-  // Title is derived from year + make name + model in SQL — sellers don't
-  // supply it.
+  // Title is derived from designer + model in SQL — sellers don't supply it.
   const description = getString(formData, "description", DESCRIPTION_MAX);
   if (description.length > DESCRIPTION_MAX) {
     return { ok: false, error: "long-description" };
@@ -163,55 +120,50 @@ function parseListingFields(formData: FormData): ParseResult {
   const priceCents = parsePriceToCents(getString(formData, "price"));
   if (priceCents === null) return { ok: false, error: "invalid-price" };
 
-  const make_id = getRequiredId(formData, "make_id");
-  if (!make_id) return { ok: false, error: "invalid-make" };
+  const designer_id = getRequiredId(formData, "designer_id");
+  if (!designer_id) return { ok: false, error: "invalid-designer" };
 
   const model = getString(formData, "model", 100);
   if (!model) return { ok: false, error: "invalid-model" };
 
   const yearRaw = getString(formData, "year");
-  const year = Number.parseInt(yearRaw, 10);
-  if (!Number.isFinite(year) || year < MIN_YEAR || year > MAX_YEAR) {
-    return { ok: false, error: "invalid-year" };
+  let year: number | null = null;
+  if (yearRaw) {
+    const y = Number.parseInt(yearRaw, 10);
+    if (!Number.isFinite(y) || y < MIN_YEAR || y > MAX_YEAR) {
+      return { ok: false, error: "invalid-year" };
+    }
+    year = y;
   }
 
   const condition_id = getRequiredId(formData, "condition_id");
   if (!condition_id) return { ok: false, error: "invalid-condition" };
 
-  const bike_class_id = getRequiredId(formData, "bike_class_id");
-  if (!bike_class_id) return { ok: false, error: "invalid-class" };
-
-  const bike_category_id = getRequiredId(formData, "bike_category_id");
-  if (!bike_category_id) return { ok: false, error: "invalid-category" };
+  const occasion_id = getRequiredId(formData, "occasion_id");
+  if (!occasion_id) return { ok: false, error: "invalid-occasion" };
 
   const location_postal = getString(formData, "location_postal", 64);
   if (!location_postal) return { ok: false, error: "invalid-location" };
 
-  // Optional integers with range validation.
-  const intFields = [
-    "motor_watts_nominal",
-    "motor_watts_peak",
-    "motor_torque_nm",
-    "battery_wh",
-    "battery_voltage",
-    "top_speed_mph",
-    "range_miles_min",
-    "range_miles_max",
-    "mileage",
+  const measureFields = [
+    "bust_inches",
+    "waist_inches",
+    "hips_inches",
   ] as const;
-  const ints: Record<string, number | null> = {};
-  for (const f of intFields) {
-    const v = getOptionalInt(formData, f);
-    if (v === "out-of-range") return { ok: false, error: "out-of-range" };
-    ints[f] = v;
-  }
-
-  const numFields = ["battery_amp_hours", "charge_time_hours", "weight_lbs"] as const;
-  const nums: Record<string, number | null> = {};
-  for (const f of numFields) {
+  const measures: Record<string, number | null> = {};
+  for (const f of measureFields) {
     const v = getOptionalNumber(formData, f);
     if (v === "out-of-range") return { ok: false, error: "out-of-range" };
-    nums[f] = v;
+    measures[f] = v;
+  }
+
+  // Original retail is entered in dollars but stored in cents.
+  const retailRaw = getString(formData, "original_retail");
+  let original_retail_cents: number | null = null;
+  if (retailRaw) {
+    const cents = parsePriceToCents(retailRaw);
+    if (cents === null) return { ok: false, error: "out-of-range" };
+    original_retail_cents = cents;
   }
 
   return {
@@ -219,95 +171,58 @@ function parseListingFields(formData: FormData): ParseResult {
     fields: {
       description: nullableString(description),
       price_cents: priceCents,
-      make_id,
+      designer_id,
       model,
       year,
       condition_id,
-      bike_class_id,
-      bike_category_id,
+      occasion_id,
       location_postal,
-      frame_size: nullableString(getString(formData, "frame_size", 32)),
-      frame_style_id: getOptionalId(formData, "frame_style_id"),
-      frame_material_id: getOptionalId(formData, "frame_material_id"),
-      gender_fit_id: getOptionalId(formData, "gender_fit_id"),
-      wheel_size_id: getOptionalId(formData, "wheel_size_id"),
-      suspension_type_id: getOptionalId(formData, "suspension_type_id"),
-      brake_type_id: getOptionalId(formData, "brake_type_id"),
-      motor_brand_id: getOptionalId(formData, "motor_brand_id"),
-      motor_type_id: getOptionalId(formData, "motor_type_id"),
-      motor_watts_nominal: ints.motor_watts_nominal,
-      motor_watts_peak: ints.motor_watts_peak,
-      motor_torque_nm: ints.motor_torque_nm,
-      battery_wh: ints.battery_wh,
-      battery_voltage: ints.battery_voltage,
-      battery_amp_hours: nums.battery_amp_hours,
-      charge_time_hours: nums.charge_time_hours,
-      top_speed_mph: ints.top_speed_mph,
-      range_miles_min: ints.range_miles_min,
-      range_miles_max: ints.range_miles_max,
-      drive_mode_id: getOptionalId(formData, "drive_mode_id"),
-      mileage: ints.mileage,
+      silhouette_id: getOptionalId(formData, "silhouette_id"),
+      fabric_id: getOptionalId(formData, "fabric_id"),
+      size_id: getOptionalId(formData, "size_id"),
+      neckline_id: getOptionalId(formData, "neckline_id"),
+      sleeve_style_id: getOptionalId(formData, "sleeve_style_id"),
+      length_id: getOptionalId(formData, "length_id"),
       color: nullableString(getString(formData, "color", 32)),
-      weight_lbs: nums.weight_lbs,
-      display_type: nullableString(getString(formData, "display_type", 64)),
-      drivetrain: nullableString(getString(formData, "drivetrain", 120)),
-      accessories: nullableString(getString(formData, "accessories", 2000)),
-      modifications: nullableString(getString(formData, "modifications", 2000)),
-      has_warranty: getCheckbox(formData, "has_warranty"),
-      warranty_text: nullableString(getString(formData, "warranty_text", 500)),
+      bust_inches: measures.bust_inches,
+      waist_inches: measures.waist_inches,
+      hips_inches: measures.hips_inches,
+      original_retail_cents,
+      alterations_text: nullableString(
+        getString(formData, "alterations_text", ALTERATIONS_MAX),
+      ),
       has_original_receipt: getCheckbox(formData, "has_original_receipt"),
-      body_position_id: getOptionalId(formData, "body_position_id"),
       offers_enabled: getCheckbox(formData, "offers_enabled"),
     },
   };
 }
 
-// Title is auto-derived from year + make name + model in a follow-up
-// query so we don't have to share a parameter slot across multiple type
-// contexts inside this UPDATE.
+// Title is auto-derived from designer + model in a follow-up query so we
+// don't have to share a parameter slot across multiple type contexts.
 const UPDATE_SET = `
   description = $2,
   price_cents = $3,
-  make_id = $4::bigint,
+  designer_id = $4::bigint,
   model = $5,
   year = $6,
   condition_id = $7::bigint,
-  bike_class_id = $8::bigint,
-  bike_category_id = $9::bigint,
-  location_postal = $10,
-  frame_size = $11,
-  frame_style_id = NULLIF($12, '')::bigint,
-  frame_material_id = NULLIF($13, '')::bigint,
-  gender_fit_id = NULLIF($14, '')::bigint,
-  wheel_size_id = NULLIF($15, '')::bigint,
-  suspension_type_id = NULLIF($16, '')::bigint,
-  brake_type_id = NULLIF($17, '')::bigint,
-  motor_brand_id = NULLIF($18, '')::bigint,
-  motor_type_id = NULLIF($19, '')::bigint,
-  motor_watts_nominal = $20,
-  motor_watts_peak = $21,
-  motor_torque_nm = $22,
-  battery_wh = $23,
-  battery_voltage = $24,
-  battery_amp_hours = $25,
-  charge_time_hours = $26,
-  top_speed_mph = $27,
-  range_miles_min = $28,
-  range_miles_max = $29,
-  drive_mode_id = NULLIF($30, '')::bigint,
-  mileage = $31,
-  color = $32,
-  weight_lbs = $33,
-  display_type = $34,
-  drivetrain = $35,
-  accessories = $36,
-  modifications = $37,
-  has_warranty = $38,
-  warranty_text = $39,
-  has_original_receipt = $40,
-  body_position_id = NULLIF($41, '')::bigint,
-  offers_enabled = $42,
-  region_id = NULLIF($43, '')::bigint
+  occasion_id = $8::bigint,
+  location_postal = $9,
+  silhouette_id = NULLIF($10, '')::bigint,
+  fabric_id = NULLIF($11, '')::bigint,
+  size_id = NULLIF($12, '')::bigint,
+  neckline_id = NULLIF($13, '')::bigint,
+  sleeve_style_id = NULLIF($14, '')::bigint,
+  length_id = NULLIF($15, '')::bigint,
+  color = $16,
+  bust_inches = $17,
+  waist_inches = $18,
+  hips_inches = $19,
+  original_retail_cents = $20,
+  alterations_text = $21,
+  has_original_receipt = $22,
+  offers_enabled = $23,
+  region_id = NULLIF($24, '')::bigint
 `;
 
 function collectImageFiles(formData: FormData): File[] {
@@ -457,49 +372,30 @@ export async function updateListing(formData: FormData): Promise<void> {
   await query(
     `UPDATE listings SET ${UPDATE_SET}
       WHERE id = $1::bigint
-        AND (seller_id = $44::bigint OR $45::boolean)`,
+        AND (seller_id = $25::bigint OR $26::boolean)`,
     [
       listingId,
       f.description,
       f.price_cents,
-      f.make_id,
+      f.designer_id,
       f.model,
       f.year,
       f.condition_id,
-      f.bike_class_id,
-      f.bike_category_id,
+      f.occasion_id,
       f.location_postal,
-      f.frame_size,
-      f.frame_style_id ?? "",
-      f.frame_material_id ?? "",
-      f.gender_fit_id ?? "",
-      f.wheel_size_id ?? "",
-      f.suspension_type_id ?? "",
-      f.brake_type_id ?? "",
-      f.motor_brand_id ?? "",
-      f.motor_type_id ?? "",
-      f.motor_watts_nominal,
-      f.motor_watts_peak,
-      f.motor_torque_nm,
-      f.battery_wh,
-      f.battery_voltage,
-      f.battery_amp_hours,
-      f.charge_time_hours,
-      f.top_speed_mph,
-      f.range_miles_min,
-      f.range_miles_max,
-      f.drive_mode_id ?? "",
-      f.mileage,
+      f.silhouette_id ?? "",
+      f.fabric_id ?? "",
+      f.size_id ?? "",
+      f.neckline_id ?? "",
+      f.sleeve_style_id ?? "",
+      f.length_id ?? "",
       f.color,
-      f.weight_lbs,
-      f.display_type,
-      f.drivetrain,
-      f.accessories,
-      f.modifications,
-      f.has_warranty,
-      f.warranty_text,
+      f.bust_inches,
+      f.waist_inches,
+      f.hips_inches,
+      f.original_retail_cents,
+      f.alterations_text,
       f.has_original_receipt,
-      f.body_position_id ?? "",
       f.offers_enabled,
       regionId,
       user.id,
@@ -510,8 +406,7 @@ export async function updateListing(formData: FormData): Promise<void> {
   await query(
     `UPDATE listings
         SET title = TRIM(BOTH FROM CONCAT_WS(' ',
-              year::text,
-              (SELECT name FROM bike_makes WHERE id = listings.make_id),
+              (SELECT name FROM designers WHERE id = listings.designer_id),
               model
             ))
       WHERE id = $1::bigint`,

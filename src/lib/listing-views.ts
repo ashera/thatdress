@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { headers } from "next/headers";
 import { query } from "@/lib/db";
 
-const HASH_SALT = process.env.VIEW_IP_SALT ?? "ebikeflip-views";
+const HASH_SALT = process.env.VIEW_IP_SALT ?? "thatdress-views";
 
 async function clientIpHash(): Promise<string | null> {
   try {

@@ -32,7 +32,7 @@ const TABLE_DESCRIPTIONS: Record<string, TableMeta> = {
   // Marketplace
   listings: {
     group: "Marketplace",
-    desc: "eBike listings posted by sellers — spec, price, status, region.",
+    desc: "Dress listings posted by sellers — spec, price, status, region.",
   },
   listing_images: {
     group: "Marketplace",
@@ -68,61 +68,41 @@ const TABLE_DESCRIPTIONS: Record<string, TableMeta> = {
     group: "Reference data",
     desc: "Geographic regions the marketplace operates in.",
   },
-  bike_makes: {
+  designers: {
     group: "Reference data",
-    desc: "Bike manufacturers (Specialized, Trek, Giant, …).",
+    desc: "Dress designers / brands (Vera Wang, Marchesa, Carolina Herrera, …).",
   },
-  bike_categories: {
+  occasions: {
     group: "Reference data",
-    desc: "Use cases — commuter, mountain, cargo, folding, …",
+    desc: "Occasion types — wedding-guest, black-tie, cocktail, prom, …",
   },
-  bike_classes: {
+  silhouettes: {
     group: "Reference data",
-    desc: "Legal classes — Class 1/2/3 pedelec rules.",
+    desc: "A-line, ball gown, mermaid, sheath, empire, …",
   },
-  frame_styles: {
+  fabrics: {
     group: "Reference data",
-    desc: "Step-through, diamond, mid-step, etc.",
+    desc: "Silk, satin, chiffon, lace, tulle, velvet, …",
   },
-  frame_materials: {
+  dress_sizes: {
     group: "Reference data",
-    desc: "Aluminium, steel, carbon, titanium.",
+    desc: "Letter sizes (XS–XXL) and US numeric (0–22).",
   },
-  wheel_sizes: {
+  necklines: {
     group: "Reference data",
-    desc: 'Wheel sizes — 26", 27.5", 700c, 29".',
+    desc: "V-neck, sweetheart, halter, strapless, …",
   },
-  gender_fits: {
+  sleeve_styles: {
     group: "Reference data",
-    desc: "Men's, women's, unisex sizing.",
+    desc: "Sleeveless, cap, short, long, spaghetti strap, …",
   },
-  motor_brands: {
+  dress_lengths: {
     group: "Reference data",
-    desc: "Bosch, Shimano, Bafang, Yamaha, etc.",
-  },
-  motor_types: {
-    group: "Reference data",
-    desc: "Hub motor vs mid-drive.",
-  },
-  drive_modes: {
-    group: "Reference data",
-    desc: "Pedelec, throttle, hybrid drive options.",
-  },
-  brake_types: {
-    group: "Reference data",
-    desc: "Hydraulic disc, mechanical disc, rim brakes.",
-  },
-  suspension_types: {
-    group: "Reference data",
-    desc: "Hardtail, full suspension, rigid.",
+    desc: "Mini, knee-length, midi, tea, floor-length.",
   },
   condition_grades: {
     group: "Reference data",
-    desc: "Like-new, good, fair, well-used.",
-  },
-  body_positions: {
-    group: "Reference data",
-    desc: "Riding position — upright, sport, aggressive.",
+    desc: "New with tags, like-new, excellent, good, fair.",
   },
 
   // Support

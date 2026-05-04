@@ -1,10 +1,7 @@
 import { ButtonLink, Icon } from "./ui";
 import { toggleShortlist } from "@/lib/actions/shortlist";
 
-export type StatIcon = "range" | "battery" | "speed" | "weight";
-
 export type ListingCardStat = {
-  icon: StatIcon;
   value: string;
   label: string;
 };
@@ -32,115 +29,63 @@ export type ListingCardRow = {
   seller_email: string | null;
   seller_id?: string | null;
   primary_image_id?: string | null;
-  make_name: string | null;
+  designer_name: string | null;
   model: string | null;
   year: number | null;
   condition_label: string | null;
-  bike_class_label: string | null;
-  bike_category_label: string | null;
+  occasion_label: string | null;
+  silhouette_label: string | null;
+  fabric_label: string | null;
+  size_label: string | null;
+  neckline_label: string | null;
+  sleeve_style_label: string | null;
+  length_label: string | null;
   location_postal: string | null;
-  frame_size: string | null;
-  frame_style_label: string | null;
-  frame_material_label: string | null;
-  gender_fit_label: string | null;
-  wheel_size_label: string | null;
-  suspension_type_label: string | null;
-  brake_type_label: string | null;
-  motor_brand_name: string | null;
-  motor_type_label: string | null;
-  motor_watts_nominal: number | null;
-  battery_wh: number | null;
-  top_speed_mph: number | null;
-  range_miles_min: number | null;
-  range_miles_max: number | null;
-  drive_mode_label: string | null;
-  mileage: number | null;
   color: string | null;
-  weight_lbs: string | null;
-  has_warranty: boolean | null;
+  bust_inches: string | null;
+  waist_inches: string | null;
+  hips_inches: string | null;
+  original_retail_cents: number | null;
+  has_original_receipt: boolean | null;
   is_published?: boolean | null;
   sold_at?: string | null;
   conversation_count?: string | number | null;
 };
 
-function compactClass(label: string | null): string | null {
-  if (!label) return null;
-  const m = label.match(/^Class\s+(\d)/i);
-  return m ? `Class ${m[1]}` : label;
-}
-
-function fmtRange(min: number | null, max: number | null): string | null {
-  // Show only the max so the stat cell doesn't overflow on the grid card.
-  // Falls back to min if the seller only filled the lower bound.
-  const v = max ?? min;
-  return v == null ? null : `${v} km`;
-}
+const PLACEHOLDER = "-";
 
 function buildChips(row: ListingCardRow): [string, string, string] {
   return [
-    compactClass(row.bike_class_label) ?? PLACEHOLDER,
-    row.top_speed_mph != null ? `${row.top_speed_mph} mph` : PLACEHOLDER,
-    row.drive_mode_label ?? row.bike_category_label ?? PLACEHOLDER,
+    row.size_label ?? PLACEHOLDER,
+    row.silhouette_label ?? PLACEHOLDER,
+    row.occasion_label ?? PLACEHOLDER,
   ];
 }
 
-const PLACEHOLDER = "-";
-
 function buildStats(row: ListingCardRow): ListingCardStat[] {
-  const range = fmtRange(row.range_miles_min, row.range_miles_max);
-
-  let weightValue = PLACEHOLDER;
-  if (row.weight_lbs) {
-    const n = Number(row.weight_lbs);
-    if (Number.isFinite(n)) weightValue = `${n} kg`;
-  }
-
   return [
-    { icon: "range", value: range ?? PLACEHOLDER, label: "Range" },
-    {
-      icon: "battery",
-      value: row.battery_wh != null ? `${row.battery_wh} Wh` : PLACEHOLDER,
-      label: "Battery",
-    },
-    {
-      icon: "speed",
-      value:
-        row.top_speed_mph != null
-          ? `${row.top_speed_mph} km/h`
-          : PLACEHOLDER,
-      label: "Top speed",
-    },
-    { icon: "weight", value: weightValue, label: "Weight" },
+    { value: row.size_label ?? PLACEHOLDER, label: "Size" },
+    { value: row.length_label ?? PLACEHOLDER, label: "Length" },
+    { value: row.fabric_label ?? PLACEHOLDER, label: "Fabric" },
+    { value: row.condition_label ?? PLACEHOLDER, label: "Condition" },
   ];
 }
 
 function buildHighlights(row: ListingCardRow): [string | null, string | null, string | null] {
   const out: string[] = [];
 
-  if (row.brake_type_label) out.push(`${row.brake_type_label} brakes`);
-  if (row.has_warranty) out.push("Comprehensive warranty included");
-  if (
-    row.motor_brand_name &&
-    row.motor_type_label &&
-    !out.some((s) => s.includes("motor"))
-  ) {
-    out.push(`${row.motor_brand_name} ${row.motor_type_label} motor`);
-  }
-  if (
-    row.suspension_type_label &&
-    !/none|rigid/i.test(row.suspension_type_label) &&
-    out.length < 3
-  ) {
-    out.push(`${row.suspension_type_label} suspension`);
-  }
-  if (row.frame_material_label && out.length < 3) {
-    out.push(`${row.frame_material_label} frame`);
-  }
-  if (row.frame_style_label && out.length < 3) {
-    out.push(`${row.frame_style_label} frame design`);
-  }
-  if (row.wheel_size_label && out.length < 3) {
-    out.push(`${row.wheel_size_label} wheels`);
+  if (row.has_original_receipt) out.push("Original receipt included");
+  if (row.neckline_label) out.push(`${row.neckline_label} neckline`);
+  if (row.sleeve_style_label) out.push(`${row.sleeve_style_label}`);
+  if (row.color && out.length < 3) out.push(`${row.color}`);
+  if (row.fabric_label && out.length < 3) out.push(`${row.fabric_label} fabric`);
+  if (row.original_retail_cents && out.length < 3) {
+    const retail = new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 0,
+    }).format(row.original_retail_cents / 100);
+    out.push(`${retail} original retail`);
   }
 
   return [out[0] ?? null, out[1] ?? null, out[2] ?? null];
@@ -222,7 +167,7 @@ export function ListingRow({ data }: { data: ListingCardData }) {
           <img src={data.photo} alt={data.title} loading="lazy" />
         ) : (
           <span className="listing-row-photo-empty" aria-hidden>
-            ebike
+            dress
           </span>
         )}
         {data.isOwn && (
@@ -322,7 +267,7 @@ export function ListingCard({ data }: { data: ListingCardData }) {
         {data.photo ? (
           <img src={data.photo} alt={data.title} loading="lazy" />
         ) : (
-          <span className="listing-photo-empty">eBike photo</span>
+          <span className="listing-photo-empty">Dress photo</span>
         )}
         {data.isOwn && (
           <span className="listing-own-flag" title="Your listing">
@@ -343,13 +288,6 @@ export function ListingCard({ data }: { data: ListingCardData }) {
       <div className="listing-stats">
         {data.stats.map((s, i) => (
           <div key={`${s.label}-${i}`} className="listing-stat">
-            <img
-              src={`/images/${s.icon}.png`}
-              alt=""
-              className="listing-stat-icon"
-              width={28}
-              height={28}
-            />
             <span className={`v ${s.value === PLACEHOLDER ? "is-empty" : ""}`}>
               {s.value}
             </span>
@@ -390,7 +328,7 @@ export function ListingCard({ data }: { data: ListingCardData }) {
           iconRight="arrow"
           className="listing-cta"
         >
-          View Specs &amp; Photos
+          View Details &amp; Photos
         </ButtonLink>
       </div>
     </article>

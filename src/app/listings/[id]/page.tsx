@@ -34,44 +34,25 @@ type ListingRow = {
   region_id: string | null;
   conversation_count: string;
   // detail fields
-  make_name: string | null;
+  designer_name: string | null;
   model: string | null;
   year: number | null;
   condition_label: string | null;
-  bike_class_label: string | null;
-  bike_category_label: string | null;
+  occasion_label: string | null;
+  silhouette_label: string | null;
+  fabric_label: string | null;
+  size_label: string | null;
+  neckline_label: string | null;
+  sleeve_style_label: string | null;
+  length_label: string | null;
   location_postal: string | null;
-  frame_size: string | null;
-  frame_style_label: string | null;
-  frame_material_label: string | null;
-  gender_fit_label: string | null;
-  wheel_size_label: string | null;
-  suspension_type_label: string | null;
-  brake_type_label: string | null;
-  motor_brand_name: string | null;
-  motor_type_label: string | null;
-  motor_watts_nominal: number | null;
-  motor_watts_peak: number | null;
-  motor_torque_nm: number | null;
-  battery_wh: number | null;
-  battery_voltage: number | null;
-  battery_amp_hours: string | null;
-  charge_time_hours: string | null;
-  top_speed_mph: number | null;
-  range_miles_min: number | null;
-  range_miles_max: number | null;
-  drive_mode_label: string | null;
-  mileage: number | null;
   color: string | null;
-  weight_lbs: string | null;
-  display_type: string | null;
-  drivetrain: string | null;
-  accessories: string | null;
-  modifications: string | null;
-  has_warranty: boolean | null;
-  warranty_text: string | null;
+  bust_inches: string | null;
+  waist_inches: string | null;
+  hips_inches: string | null;
+  original_retail_cents: number | null;
+  alterations_text: string | null;
   has_original_receipt: boolean | null;
-  body_position_label: string | null;
 };
 
 type ImageRow = {
@@ -97,51 +78,38 @@ const LISTING_SELECT = `
       WHERE listing_id = l.id
   ) AS conversation_count,
   u.email AS seller_email,
-  mk.name AS make_name,
+  d.name AS designer_name,
   l.model,
   l.year,
   cg.label AS condition_label,
-  bcl.label AS bike_class_label,
-  bcat.label AS bike_category_label,
+  o.label AS occasion_label,
+  s.label AS silhouette_label,
+  f.label AS fabric_label,
+  ds.label AS size_label,
+  n.label AS neckline_label,
+  ss.label AS sleeve_style_label,
+  dl.label AS length_label,
   l.location_postal,
-  l.frame_size,
-  fs.label AS frame_style_label,
-  fm.label AS frame_material_label,
-  gf.label AS gender_fit_label,
-  ws.label AS wheel_size_label,
-  st.label AS suspension_type_label,
-  bt.label AS brake_type_label,
-  mb.name AS motor_brand_name,
-  mt.label AS motor_type_label,
-  l.motor_watts_nominal, l.motor_watts_peak, l.motor_torque_nm,
-  l.battery_wh, l.battery_voltage,
-  l.battery_amp_hours::text,
-  l.charge_time_hours::text,
-  l.top_speed_mph, l.range_miles_min, l.range_miles_max,
-  dm.label AS drive_mode_label,
-  l.mileage, l.color,
-  l.weight_lbs::text,
-  l.display_type, l.drivetrain, l.accessories, l.modifications,
-  l.has_warranty, l.warranty_text, l.has_original_receipt,
-  bp.label AS body_position_label
+  l.color,
+  l.bust_inches::text,
+  l.waist_inches::text,
+  l.hips_inches::text,
+  l.original_retail_cents,
+  l.alterations_text,
+  l.has_original_receipt
 `;
 
 const LISTING_JOINS = `
   LEFT JOIN users            u   ON u.id   = l.seller_id
-  LEFT JOIN bike_makes       mk  ON mk.id  = l.make_id
+  LEFT JOIN designers        d   ON d.id   = l.designer_id
   LEFT JOIN condition_grades cg  ON cg.id  = l.condition_id
-  LEFT JOIN bike_classes     bcl ON bcl.id = l.bike_class_id
-  LEFT JOIN bike_categories  bcat ON bcat.id = l.bike_category_id
-  LEFT JOIN frame_styles     fs  ON fs.id  = l.frame_style_id
-  LEFT JOIN frame_materials  fm  ON fm.id  = l.frame_material_id
-  LEFT JOIN gender_fits      gf  ON gf.id  = l.gender_fit_id
-  LEFT JOIN wheel_sizes      ws  ON ws.id  = l.wheel_size_id
-  LEFT JOIN suspension_types st  ON st.id  = l.suspension_type_id
-  LEFT JOIN brake_types      bt  ON bt.id  = l.brake_type_id
-  LEFT JOIN motor_brands     mb  ON mb.id  = l.motor_brand_id
-  LEFT JOIN motor_types      mt  ON mt.id  = l.motor_type_id
-  LEFT JOIN drive_modes      dm  ON dm.id  = l.drive_mode_id
-  LEFT JOIN body_positions   bp  ON bp.id  = l.body_position_id
+  LEFT JOIN occasions        o   ON o.id   = l.occasion_id
+  LEFT JOIN silhouettes      s   ON s.id   = l.silhouette_id
+  LEFT JOIN fabrics          f   ON f.id   = l.fabric_id
+  LEFT JOIN dress_sizes      ds  ON ds.id  = l.size_id
+  LEFT JOIN necklines        n   ON n.id   = l.neckline_id
+  LEFT JOIN sleeve_styles    ss  ON ss.id  = l.sleeve_style_id
+  LEFT JOIN dress_lengths    dl  ON dl.id  = l.length_id
 `;
 
 async function fetchListing(id: string): Promise<
@@ -202,96 +170,59 @@ function formatPostedDate(s: string): string {
   }
 }
 
-function fmtNum(n: number | string | null | undefined, suffix = ""): string | null {
-  if (n === null || n === undefined || n === "") return null;
-  const num = typeof n === "string" ? Number(n) : n;
-  if (!Number.isFinite(num)) return null;
-  return `${num}${suffix}`;
-}
-
-function rangeStr(
-  min: number | null,
-  max: number | null,
-  suffix: string,
-): string | null {
-  if (min == null && max == null) return null;
-  if (min != null && max != null) return `${min}–${max}${suffix}`;
-  return `${min ?? max}${suffix}`;
+function fmtMeasure(s: string | null): string | null {
+  if (!s) return null;
+  const n = Number(s);
+  if (!Number.isFinite(n)) return null;
+  return `${n}″`;
 }
 
 type Spec = { k: string; v: string };
 
 function buildSpecs(l: ListingRow): { group: string; items: Spec[] }[] {
   const overview: Spec[] = [];
-  if (l.make_name) overview.push({ k: "Make", v: l.make_name });
-  if (l.model) overview.push({ k: "Model", v: l.model });
+  if (l.designer_name) overview.push({ k: "Designer", v: l.designer_name });
+  if (l.model) overview.push({ k: "Style", v: l.model });
   if (l.year) overview.push({ k: "Year", v: String(l.year) });
   if (l.condition_label) overview.push({ k: "Condition", v: l.condition_label });
-  if (l.bike_class_label)
-    overview.push({ k: "Class", v: l.bike_class_label });
-  if (l.bike_category_label)
-    overview.push({ k: "Category", v: l.bike_category_label });
+  if (l.occasion_label) overview.push({ k: "Occasion", v: l.occasion_label });
   if (l.location_postal)
     overview.push({ k: "Location", v: l.location_postal });
 
-  const build: Spec[] = [];
-  if (l.frame_size) build.push({ k: "Frame size", v: l.frame_size });
-  if (l.frame_style_label)
-    build.push({ k: "Frame style", v: l.frame_style_label });
-  if (l.frame_material_label)
-    build.push({ k: "Material", v: l.frame_material_label });
-  if (l.gender_fit_label) build.push({ k: "Fit", v: l.gender_fit_label });
-  if (l.wheel_size_label) build.push({ k: "Wheels", v: l.wheel_size_label });
-  if (l.suspension_type_label)
-    build.push({ k: "Suspension", v: l.suspension_type_label });
-  if (l.brake_type_label) build.push({ k: "Brakes", v: l.brake_type_label });
-  if (l.color) build.push({ k: "Color", v: l.color });
+  const style: Spec[] = [];
+  if (l.silhouette_label) style.push({ k: "Silhouette", v: l.silhouette_label });
+  if (l.length_label) style.push({ k: "Length", v: l.length_label });
+  if (l.fabric_label) style.push({ k: "Fabric", v: l.fabric_label });
+  if (l.color) style.push({ k: "Color", v: l.color });
+  if (l.neckline_label) style.push({ k: "Neckline", v: l.neckline_label });
+  if (l.sleeve_style_label) style.push({ k: "Sleeve", v: l.sleeve_style_label });
 
-  const motor: Spec[] = [];
-  if (l.motor_brand_name)
-    motor.push({ k: "Motor brand", v: l.motor_brand_name });
-  if (l.motor_type_label)
-    motor.push({ k: "Motor type", v: l.motor_type_label });
-  const watts = fmtNum(l.motor_watts_nominal, " W");
-  if (watts) motor.push({ k: "Motor (nominal)", v: watts });
-  const peakW = fmtNum(l.motor_watts_peak, " W");
-  if (peakW) motor.push({ k: "Motor (peak)", v: peakW });
-  const torque = fmtNum(l.motor_torque_nm, " Nm");
-  if (torque) motor.push({ k: "Torque", v: torque });
-  const wh = fmtNum(l.battery_wh, " Wh");
-  if (wh) motor.push({ k: "Battery", v: wh });
-  const v = fmtNum(l.battery_voltage, " V");
-  if (v) motor.push({ k: "Battery voltage", v });
-  const ah = fmtNum(l.battery_amp_hours, " Ah");
-  if (ah) motor.push({ k: "Battery Ah", v: ah });
-  const charge = fmtNum(l.charge_time_hours, " hr");
-  if (charge) motor.push({ k: "Charge time", v: charge });
-  const top = fmtNum(l.top_speed_mph, " km/h");
-  if (top) motor.push({ k: "Top speed", v: top });
-  const range = rangeStr(l.range_miles_min, l.range_miles_max, " km");
-  if (range) motor.push({ k: "Range", v: range });
-  if (l.drive_mode_label)
-    motor.push({ k: "Drive mode", v: l.drive_mode_label });
-  if (l.display_type) motor.push({ k: "Display", v: l.display_type });
-  if (l.drivetrain) motor.push({ k: "Drivetrain", v: l.drivetrain });
+  const fit: Spec[] = [];
+  if (l.size_label) fit.push({ k: "Labelled size", v: l.size_label });
+  const bust = fmtMeasure(l.bust_inches);
+  if (bust) fit.push({ k: "Bust", v: bust });
+  const waist = fmtMeasure(l.waist_inches);
+  if (waist) fit.push({ k: "Waist", v: waist });
+  const hips = fmtMeasure(l.hips_inches);
+  if (hips) fit.push({ k: "Hips", v: hips });
 
-  const usage: Spec[] = [];
-  const mileage = fmtNum(l.mileage, " km");
-  if (mileage) usage.push({ k: "Mileage", v: mileage });
-  const weight = fmtNum(l.weight_lbs, " kg");
-  if (weight) usage.push({ k: "Weight", v: weight });
-  if (l.body_position_label)
-    usage.push({ k: "Body position", v: l.body_position_label });
-  if (l.has_warranty) usage.push({ k: "Warranty", v: "Yes" });
-  if (l.warranty_text) usage.push({ k: "Warranty notes", v: l.warranty_text });
+  const provenance: Spec[] = [];
+  if (l.original_retail_cents != null && l.original_retail_cents > 0) {
+    const retail = new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 0,
+    }).format(l.original_retail_cents / 100);
+    provenance.push({ k: "Original retail", v: retail });
+  }
   if (l.has_original_receipt)
-    usage.push({ k: "Original receipt", v: "Yes" });
+    provenance.push({ k: "Original receipt", v: "Yes" });
 
   const groups = [
     { group: "Overview", items: overview },
-    { group: "Build", items: build },
-    { group: "Motor & battery", items: motor },
-    { group: "Use & history", items: usage },
+    { group: "Style", items: style },
+    { group: "Size & fit", items: fit },
+    { group: "Provenance", items: provenance },
   ];
   return groups.filter((g) => g.items.length > 0);
 }
@@ -496,8 +427,8 @@ export default async function ListingDetailPage({
 
         <div className="detail-body">
           <p className="eyebrow">
-            {[l.year, l.bike_category_label].filter(Boolean).join(" · ") ||
-              "Used eBike"}
+            {[l.designer_name, l.occasion_label].filter(Boolean).join(" · ") ||
+              "Pre-loved dress"}
           </p>
           <h1 className="detail-title">{l.title}</h1>
           <div className="detail-price">{price}</div>
@@ -526,7 +457,7 @@ export default async function ListingDetailPage({
                     <Link href="/messages">Open inbox →</Link>
                   </>
                 ) : (
-                  <>{noun} asked the seller about this bike.</>
+                  <>{noun} asked the seller about this dress.</>
                 )}
               </p>
             );
@@ -603,7 +534,7 @@ export default async function ListingDetailPage({
               </form>
             )}
             <ButtonLink href="/listings" variant="ghost" size="lg">
-              See more bikes
+              See more dresses
             </ButtonLink>
             {(isOwner || isAdmin) && (
               <ButtonLink
@@ -620,7 +551,7 @@ export default async function ListingDetailPage({
 
       {specGroups.length > 0 && (
         <section className="detail-specs">
-          <h2 className="detail-specs-heading">Specs</h2>
+          <h2 className="detail-specs-heading">Details</h2>
           <div className="detail-specs-grid">
             {specGroups.map((g) => (
               <div key={g.group} className="detail-specs-group">
@@ -636,20 +567,12 @@ export default async function ListingDetailPage({
               </div>
             ))}
           </div>
-          {(l.accessories || l.modifications) && (
+          {l.alterations_text && (
             <div className="detail-notes">
-              {l.accessories && (
-                <div>
-                  <h4>Accessories</h4>
-                  <p>{l.accessories}</p>
-                </div>
-              )}
-              {l.modifications && (
-                <div>
-                  <h4>Modifications</h4>
-                  <p>{l.modifications}</p>
-                </div>
-              )}
+              <div>
+                <h4>Alterations &amp; tailoring</h4>
+                <p>{l.alterations_text}</p>
+              </div>
             </div>
           )}
         </section>

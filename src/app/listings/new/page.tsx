@@ -11,7 +11,7 @@ type DraftListItem = {
   id: string;
   title: string | null;
   has_basics: boolean;
-  has_class: boolean;
+  has_style: boolean;
   has_condition: boolean;
   updated_at: string;
 };
@@ -21,8 +21,8 @@ async function listDraftsForUser(userId: string): Promise<DraftListItem[]> {
     const r = await query<DraftListItem>(
       `SELECT id::text,
               title,
-              (title <> '' AND make_id IS NOT NULL AND model IS NOT NULL AND year IS NOT NULL) AS has_basics,
-              (bike_class_id IS NOT NULL AND bike_category_id IS NOT NULL) AS has_class,
+              (title <> '' AND designer_id IS NOT NULL AND model IS NOT NULL) AS has_basics,
+              (occasion_id IS NOT NULL) AS has_style,
               (condition_id IS NOT NULL) AS has_condition,
               created_at::text AS updated_at
          FROM listings
@@ -39,8 +39,8 @@ async function listDraftsForUser(userId: string): Promise<DraftListItem[]> {
 
 function nextStepFor(d: DraftListItem): string {
   if (!d.has_basics) return `/listings/new/${d.id}/photos`;
-  if (!d.has_class) return `/listings/new/${d.id}/frame`;
-  if (!d.has_condition) return `/listings/new/${d.id}/motor`;
+  if (!d.has_style) return `/listings/new/${d.id}/style`;
+  if (!d.has_condition) return `/listings/new/${d.id}/condition`;
   return `/listings/new/${d.id}/publish`;
 }
 
@@ -53,7 +53,7 @@ export default async function NewListingLandingPage() {
   return (
     <div className="page page--pad">
       <main style={{ maxWidth: 720, margin: "0 auto" }}>
-        <p className="eyebrow">Sell your eBike</p>
+        <p className="eyebrow">List your dress</p>
         <h1
           style={{
             fontFamily: "var(--font-display)",
@@ -67,8 +67,8 @@ export default async function NewListingLandingPage() {
           New listing
         </h1>
         <p style={{ color: "var(--ink-3)", margin: "0 0 var(--s-7)" }}>
-          We&rsquo;ll walk you through it in four short steps: photos &amp;
-          basics, the build, condition, and pricing.
+          We&rsquo;ll walk you through it in five short steps: photos &amp;
+          basics, style, size &amp; fit, condition, and pricing.
         </p>
 
         <form action={startDraftListing}>
@@ -115,10 +115,10 @@ export default async function NewListingLandingPage() {
                     <div style={{ fontSize: 13, color: "var(--ink-3)" }}>
                       {!d.has_basics
                         ? "Step 1 of 5 — photos & basics"
-                        : !d.has_class
-                        ? "Step 2 of 5 — frame"
+                        : !d.has_style
+                        ? "Step 2 of 5 — style"
                         : !d.has_condition
-                        ? "Step 3 of 5 — motor & battery"
+                        ? "Step 4 of 5 — condition"
                         : "Step 5 of 5 — publish"}
                     </div>
                   </div>

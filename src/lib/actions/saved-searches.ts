@@ -11,14 +11,13 @@ const NAME_MAX = 80;
 function sanitizeParams(input: Record<string, unknown>): Record<string, unknown> {
   const allowed = new Set([
     "q",
-    "make_id",
-    "bike_class_id",
-    "bike_category_id",
+    "designer_id",
+    "occasion_id",
+    "silhouette_id",
+    "size_id",
     "condition_id",
     "min_price",
     "max_price",
-    "min_year",
-    "max_year",
     "mode",
   ]);
   const out: Record<string, unknown> = {};

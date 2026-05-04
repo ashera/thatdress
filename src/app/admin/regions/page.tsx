@@ -64,7 +64,7 @@ export default async function AdminRegionsPage({
             <Field
               label="Short name"
               htmlFor="short_name"
-              help='Used in prose like "The {Austin Metro} eBike marketplace". Strips state/country.'
+              help='Used in prose like "The {Austin Metro} formal-dress marketplace". Strips state/country.'
             >
               <Input id="short_name" name="short_name" placeholder="Austin Metro" />
             </Field>

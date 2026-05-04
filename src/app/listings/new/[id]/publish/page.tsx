@@ -43,7 +43,7 @@ export default async function WizardPublishPage({
       <WizardHero
         icon="send"
         headline="Time to go live"
-        body="Set a price that reflects similar bikes you&rsquo;ve seen here, drop a few sentences in the description, and you&rsquo;re live to every buyer in the region."
+        body="Set a price that reflects similar dresses you&rsquo;ve seen here, drop a few sentences in the description, and you&rsquo;re live to every buyer in the region."
       />
 
       <form
@@ -114,7 +114,7 @@ export default async function WizardPublishPage({
           <p className="card-sub">Optional but recommended.</p>
           <WizardTip>
             Two short paragraphs is the sweet spot: why you&rsquo;re selling,
-            and how it rides. Skip the spec dump — you already filled that in.
+            and how it wears. Skip the spec dump — you already filled that in.
           </WizardTip>
 
           <Field label="Description" htmlFor="description">

@@ -21,14 +21,14 @@ type DraftItem = {
   id: string;
   title: string | null;
   has_basics: boolean;
-  has_class: boolean;
+  has_style: boolean;
   has_condition: boolean;
 };
 
 function nextStepFor(d: DraftItem): string {
   if (!d.has_basics) return `/listings/new/${d.id}/photos`;
-  if (!d.has_class) return `/listings/new/${d.id}/frame`;
-  if (!d.has_condition) return `/listings/new/${d.id}/motor`;
+  if (!d.has_style) return `/listings/new/${d.id}/style`;
+  if (!d.has_condition) return `/listings/new/${d.id}/condition`;
   return `/listings/new/${d.id}/publish`;
 }
 
@@ -37,8 +37,8 @@ async function fetchDrafts(userId: string): Promise<DraftItem[]> {
     const r = await query<DraftItem>(
       `SELECT id::text,
               title,
-              (title <> '' AND make_id IS NOT NULL AND model IS NOT NULL AND year IS NOT NULL) AS has_basics,
-              (bike_class_id IS NOT NULL AND bike_category_id IS NOT NULL) AS has_class,
+              (title <> '' AND designer_id IS NOT NULL AND model IS NOT NULL) AS has_basics,
+              (occasion_id IS NOT NULL) AS has_style,
               (condition_id IS NOT NULL) AS has_condition
          FROM listings
         WHERE seller_id = $1::bigint AND is_draft = TRUE
@@ -67,24 +67,24 @@ async function fetchOwnListings(
                   ORDER BY li.is_primary DESC, li.position, li.id
                   LIMIT 1
               ) AS primary_image_id,
-              mk.name AS make_name, l.model, l.year,
-              cg.label AS condition_label,
-              bcl.label AS bike_class_label,
-              bcat.label AS bike_category_label,
+              d.name    AS designer_name,
+              l.model,
+              l.year,
+              cg.label  AS condition_label,
+              o.label   AS occasion_label,
+              s.label   AS silhouette_label,
+              f.label   AS fabric_label,
+              ds.label  AS size_label,
+              n.label   AS neckline_label,
+              ss.label  AS sleeve_style_label,
+              dl.label  AS length_label,
               l.location_postal,
-              l.frame_size,
-              fs.label AS frame_style_label,
-              fm.label AS frame_material_label,
-              gf.label AS gender_fit_label,
-              ws.label AS wheel_size_label,
-              st.label AS suspension_type_label,
-              bt.label AS brake_type_label,
-              mb.name AS motor_brand_name,
-              mt.label AS motor_type_label,
-              l.motor_watts_nominal, l.battery_wh, l.top_speed_mph,
-              l.range_miles_min, l.range_miles_max,
-              dm.label AS drive_mode_label,
-              l.mileage, l.color, l.weight_lbs::text, l.has_warranty,
+              l.color,
+              l.bust_inches::text,
+              l.waist_inches::text,
+              l.hips_inches::text,
+              l.original_retail_cents,
+              l.has_original_receipt,
               l.sold_at::text,
               (
                 SELECT COUNT(DISTINCT buyer_id)::text FROM conversations
@@ -100,20 +100,16 @@ async function fetchOwnListings(
                     AND viewed_at > NOW() - INTERVAL '7 days'
               ) AS view_count_7d
          FROM listings l
-         LEFT JOIN users            u    ON u.id    = l.seller_id
-         LEFT JOIN bike_makes       mk   ON mk.id   = l.make_id
-         LEFT JOIN condition_grades cg   ON cg.id   = l.condition_id
-         LEFT JOIN bike_classes     bcl  ON bcl.id  = l.bike_class_id
-         LEFT JOIN bike_categories  bcat ON bcat.id = l.bike_category_id
-         LEFT JOIN frame_styles     fs   ON fs.id   = l.frame_style_id
-         LEFT JOIN frame_materials  fm   ON fm.id   = l.frame_material_id
-         LEFT JOIN gender_fits      gf   ON gf.id   = l.gender_fit_id
-         LEFT JOIN wheel_sizes      ws   ON ws.id   = l.wheel_size_id
-         LEFT JOIN suspension_types st   ON st.id   = l.suspension_type_id
-         LEFT JOIN brake_types      bt   ON bt.id   = l.brake_type_id
-         LEFT JOIN motor_brands     mb   ON mb.id   = l.motor_brand_id
-         LEFT JOIN motor_types      mt   ON mt.id   = l.motor_type_id
-         LEFT JOIN drive_modes      dm   ON dm.id   = l.drive_mode_id
+         LEFT JOIN users            u   ON u.id   = l.seller_id
+         LEFT JOIN designers        d   ON d.id   = l.designer_id
+         LEFT JOIN condition_grades cg  ON cg.id  = l.condition_id
+         LEFT JOIN occasions        o   ON o.id   = l.occasion_id
+         LEFT JOIN silhouettes      s   ON s.id   = l.silhouette_id
+         LEFT JOIN fabrics          f   ON f.id   = l.fabric_id
+         LEFT JOIN dress_sizes      ds  ON ds.id  = l.size_id
+         LEFT JOIN necklines        n   ON n.id   = l.neckline_id
+         LEFT JOIN sleeve_styles    ss  ON ss.id  = l.sleeve_style_id
+         LEFT JOIN dress_lengths    dl  ON dl.id  = l.length_id
         WHERE l.seller_id = $1::bigint
           AND l.is_draft = FALSE
         ORDER BY l.is_published DESC, l.created_at DESC
@@ -208,10 +204,10 @@ export default async function MyListingsPage() {
                   <div style={{ fontSize: 13, color: "var(--ink-3)" }}>
                     {!d.has_basics
                       ? "Step 1 of 5 — photos & basics"
-                      : !d.has_class
-                      ? "Step 2 of 5 — frame"
+                      : !d.has_style
+                      ? "Step 2 of 5 — style"
                       : !d.has_condition
-                      ? "Step 3 of 5 — motor & battery"
+                      ? "Step 4 of 5 — condition"
                       : "Step 5 of 5 — publish"}
                   </div>
                 </div>

@@ -1,6 +1,64 @@
--- Initial schema for ebikeflip.
+-- Initial schema for thatdress.
 -- Apply with: psql "$DATABASE_URL" -f db/schema.sql
 -- (or `npm run db:setup`, which also seeds.)
+
+-- =========================================================
+-- Pre-launch cleanup: drop legacy eBike tables/columns so a
+-- previously-deployed instance can be re-run cleanly. These
+-- DROPs are no-ops on a fresh database.
+-- =========================================================
+
+DROP TABLE IF EXISTS bike_makes        CASCADE;
+DROP TABLE IF EXISTS bike_categories   CASCADE;
+DROP TABLE IF EXISTS bike_classes      CASCADE;
+DROP TABLE IF EXISTS frame_styles      CASCADE;
+DROP TABLE IF EXISTS frame_materials   CASCADE;
+DROP TABLE IF EXISTS wheel_sizes       CASCADE;
+DROP TABLE IF EXISTS gender_fits       CASCADE;
+DROP TABLE IF EXISTS motor_brands      CASCADE;
+DROP TABLE IF EXISTS motor_types       CASCADE;
+DROP TABLE IF EXISTS drive_modes       CASCADE;
+DROP TABLE IF EXISTS brake_types       CASCADE;
+DROP TABLE IF EXISTS suspension_types  CASCADE;
+DROP TABLE IF EXISTS body_positions    CASCADE;
+
+ALTER TABLE IF EXISTS listings
+  DROP COLUMN IF EXISTS make_id,
+  DROP COLUMN IF EXISTS bike_category_id,
+  DROP COLUMN IF EXISTS bike_class_id,
+  DROP COLUMN IF EXISTS frame_size,
+  DROP COLUMN IF EXISTS frame_style_id,
+  DROP COLUMN IF EXISTS frame_material_id,
+  DROP COLUMN IF EXISTS wheel_size_id,
+  DROP COLUMN IF EXISTS gender_fit_id,
+  DROP COLUMN IF EXISTS suspension_type_id,
+  DROP COLUMN IF EXISTS brake_type_id,
+  DROP COLUMN IF EXISTS motor_brand_id,
+  DROP COLUMN IF EXISTS motor_type_id,
+  DROP COLUMN IF EXISTS motor_watts_nominal,
+  DROP COLUMN IF EXISTS motor_watts_peak,
+  DROP COLUMN IF EXISTS motor_torque_nm,
+  DROP COLUMN IF EXISTS battery_wh,
+  DROP COLUMN IF EXISTS battery_voltage,
+  DROP COLUMN IF EXISTS battery_amp_hours,
+  DROP COLUMN IF EXISTS charge_time_hours,
+  DROP COLUMN IF EXISTS top_speed_mph,
+  DROP COLUMN IF EXISTS range_miles_min,
+  DROP COLUMN IF EXISTS range_miles_max,
+  DROP COLUMN IF EXISTS drive_mode_id,
+  DROP COLUMN IF EXISTS mileage,
+  DROP COLUMN IF EXISTS weight_lbs,
+  DROP COLUMN IF EXISTS display_type,
+  DROP COLUMN IF EXISTS drivetrain,
+  DROP COLUMN IF EXISTS accessories,
+  DROP COLUMN IF EXISTS modifications,
+  DROP COLUMN IF EXISTS has_warranty,
+  DROP COLUMN IF EXISTS warranty_text,
+  DROP COLUMN IF EXISTS body_position_id;
+
+-- =========================================================
+-- Auth & users
+-- =========================================================
 
 CREATE TABLE IF NOT EXISTS users (
   id            BIGSERIAL    PRIMARY KEY,
@@ -29,6 +87,10 @@ CREATE TABLE IF NOT EXISTS sessions (
 
 CREATE INDEX IF NOT EXISTS sessions_user_id_idx ON sessions (user_id);
 CREATE INDEX IF NOT EXISTS sessions_expires_at_idx ON sessions (expires_at);
+
+-- =========================================================
+-- Listings (core)
+-- =========================================================
 
 CREATE TABLE IF NOT EXISTS listings (
   id          BIGSERIAL PRIMARY KEY,
@@ -71,17 +133,17 @@ CREATE UNIQUE INDEX IF NOT EXISTS listing_images_one_primary_idx
 -- =========================================================
 -- Reference data (admin-managed lookups)
 -- All tables share: id, sort_order, is_active. Slug+label
--- everywhere except bike_makes which uses `name` directly.
+-- everywhere except `designers` which uses `name` directly.
 -- =========================================================
 
-CREATE TABLE IF NOT EXISTS bike_makes (
+CREATE TABLE IF NOT EXISTS designers (
   id          BIGSERIAL    PRIMARY KEY,
   name        TEXT         UNIQUE NOT NULL,
   sort_order  INTEGER      NOT NULL DEFAULT 0,
   is_active   BOOLEAN      NOT NULL DEFAULT TRUE
 );
 
-CREATE TABLE IF NOT EXISTS bike_categories (
+CREATE TABLE IF NOT EXISTS occasions (
   id          BIGSERIAL    PRIMARY KEY,
   slug        TEXT         UNIQUE NOT NULL,
   label       TEXT         NOT NULL,
@@ -89,7 +151,7 @@ CREATE TABLE IF NOT EXISTS bike_categories (
   is_active   BOOLEAN      NOT NULL DEFAULT TRUE
 );
 
-CREATE TABLE IF NOT EXISTS bike_classes (
+CREATE TABLE IF NOT EXISTS silhouettes (
   id          BIGSERIAL    PRIMARY KEY,
   slug        TEXT         UNIQUE NOT NULL,
   label       TEXT         NOT NULL,
@@ -97,7 +159,7 @@ CREATE TABLE IF NOT EXISTS bike_classes (
   is_active   BOOLEAN      NOT NULL DEFAULT TRUE
 );
 
-CREATE TABLE IF NOT EXISTS frame_styles (
+CREATE TABLE IF NOT EXISTS fabrics (
   id          BIGSERIAL    PRIMARY KEY,
   slug        TEXT         UNIQUE NOT NULL,
   label       TEXT         NOT NULL,
@@ -105,7 +167,7 @@ CREATE TABLE IF NOT EXISTS frame_styles (
   is_active   BOOLEAN      NOT NULL DEFAULT TRUE
 );
 
-CREATE TABLE IF NOT EXISTS frame_materials (
+CREATE TABLE IF NOT EXISTS dress_sizes (
   id          BIGSERIAL    PRIMARY KEY,
   slug        TEXT         UNIQUE NOT NULL,
   label       TEXT         NOT NULL,
@@ -113,7 +175,7 @@ CREATE TABLE IF NOT EXISTS frame_materials (
   is_active   BOOLEAN      NOT NULL DEFAULT TRUE
 );
 
-CREATE TABLE IF NOT EXISTS wheel_sizes (
+CREATE TABLE IF NOT EXISTS necklines (
   id          BIGSERIAL    PRIMARY KEY,
   slug        TEXT         UNIQUE NOT NULL,
   label       TEXT         NOT NULL,
@@ -121,7 +183,7 @@ CREATE TABLE IF NOT EXISTS wheel_sizes (
   is_active   BOOLEAN      NOT NULL DEFAULT TRUE
 );
 
-CREATE TABLE IF NOT EXISTS gender_fits (
+CREATE TABLE IF NOT EXISTS sleeve_styles (
   id          BIGSERIAL    PRIMARY KEY,
   slug        TEXT         UNIQUE NOT NULL,
   label       TEXT         NOT NULL,
@@ -129,38 +191,7 @@ CREATE TABLE IF NOT EXISTS gender_fits (
   is_active   BOOLEAN      NOT NULL DEFAULT TRUE
 );
 
-CREATE TABLE IF NOT EXISTS motor_brands (
-  id          BIGSERIAL    PRIMARY KEY,
-  name        TEXT         UNIQUE NOT NULL,
-  sort_order  INTEGER      NOT NULL DEFAULT 0,
-  is_active   BOOLEAN      NOT NULL DEFAULT TRUE
-);
-
-CREATE TABLE IF NOT EXISTS motor_types (
-  id          BIGSERIAL    PRIMARY KEY,
-  slug        TEXT         UNIQUE NOT NULL,
-  label       TEXT         NOT NULL,
-  sort_order  INTEGER      NOT NULL DEFAULT 0,
-  is_active   BOOLEAN      NOT NULL DEFAULT TRUE
-);
-
-CREATE TABLE IF NOT EXISTS drive_modes (
-  id          BIGSERIAL    PRIMARY KEY,
-  slug        TEXT         UNIQUE NOT NULL,
-  label       TEXT         NOT NULL,
-  sort_order  INTEGER      NOT NULL DEFAULT 0,
-  is_active   BOOLEAN      NOT NULL DEFAULT TRUE
-);
-
-CREATE TABLE IF NOT EXISTS brake_types (
-  id          BIGSERIAL    PRIMARY KEY,
-  slug        TEXT         UNIQUE NOT NULL,
-  label       TEXT         NOT NULL,
-  sort_order  INTEGER      NOT NULL DEFAULT 0,
-  is_active   BOOLEAN      NOT NULL DEFAULT TRUE
-);
-
-CREATE TABLE IF NOT EXISTS suspension_types (
+CREATE TABLE IF NOT EXISTS dress_lengths (
   id          BIGSERIAL    PRIMARY KEY,
   slug        TEXT         UNIQUE NOT NULL,
   label       TEXT         NOT NULL,
@@ -176,153 +207,153 @@ CREATE TABLE IF NOT EXISTS condition_grades (
   is_active   BOOLEAN      NOT NULL DEFAULT TRUE
 );
 
-CREATE TABLE IF NOT EXISTS body_positions (
-  id          BIGSERIAL    PRIMARY KEY,
-  slug        TEXT         UNIQUE NOT NULL,
-  label       TEXT         NOT NULL,
-  sort_order  INTEGER      NOT NULL DEFAULT 0,
-  is_active   BOOLEAN      NOT NULL DEFAULT TRUE
-);
-
 -- =========================================================
 -- Listing detail columns (all nullable; legacy rows survive)
 -- =========================================================
 
 ALTER TABLE listings
-  ADD COLUMN IF NOT EXISTS make_id            BIGINT  REFERENCES bike_makes(id)         ON DELETE SET NULL,
-  ADD COLUMN IF NOT EXISTS model              TEXT,
-  ADD COLUMN IF NOT EXISTS year               INTEGER,
-  ADD COLUMN IF NOT EXISTS condition_id       BIGINT  REFERENCES condition_grades(id)   ON DELETE SET NULL,
-  ADD COLUMN IF NOT EXISTS bike_class_id      BIGINT  REFERENCES bike_classes(id)       ON DELETE SET NULL,
-  ADD COLUMN IF NOT EXISTS bike_category_id   BIGINT  REFERENCES bike_categories(id)    ON DELETE SET NULL,
-  ADD COLUMN IF NOT EXISTS location_postal    TEXT,
-  ADD COLUMN IF NOT EXISTS frame_size         TEXT,
-  ADD COLUMN IF NOT EXISTS frame_style_id     BIGINT  REFERENCES frame_styles(id)       ON DELETE SET NULL,
-  ADD COLUMN IF NOT EXISTS frame_material_id  BIGINT  REFERENCES frame_materials(id)    ON DELETE SET NULL,
-  ADD COLUMN IF NOT EXISTS gender_fit_id      BIGINT  REFERENCES gender_fits(id)        ON DELETE SET NULL,
-  ADD COLUMN IF NOT EXISTS wheel_size_id      BIGINT  REFERENCES wheel_sizes(id)        ON DELETE SET NULL,
-  ADD COLUMN IF NOT EXISTS suspension_type_id BIGINT  REFERENCES suspension_types(id)   ON DELETE SET NULL,
-  ADD COLUMN IF NOT EXISTS brake_type_id      BIGINT  REFERENCES brake_types(id)        ON DELETE SET NULL,
-  ADD COLUMN IF NOT EXISTS motor_brand_id     BIGINT  REFERENCES motor_brands(id)       ON DELETE SET NULL,
-  ADD COLUMN IF NOT EXISTS motor_type_id      BIGINT  REFERENCES motor_types(id)        ON DELETE SET NULL,
-  ADD COLUMN IF NOT EXISTS motor_watts_nominal INTEGER,
-  ADD COLUMN IF NOT EXISTS motor_watts_peak    INTEGER,
-  ADD COLUMN IF NOT EXISTS motor_torque_nm     INTEGER,
-  ADD COLUMN IF NOT EXISTS battery_wh          INTEGER,
-  ADD COLUMN IF NOT EXISTS battery_voltage     INTEGER,
-  ADD COLUMN IF NOT EXISTS battery_amp_hours   NUMERIC(5,1),
-  ADD COLUMN IF NOT EXISTS charge_time_hours   NUMERIC(4,1),
-  ADD COLUMN IF NOT EXISTS top_speed_mph       INTEGER,
-  ADD COLUMN IF NOT EXISTS range_miles_min     INTEGER,
-  ADD COLUMN IF NOT EXISTS range_miles_max     INTEGER,
-  ADD COLUMN IF NOT EXISTS drive_mode_id       BIGINT  REFERENCES drive_modes(id)        ON DELETE SET NULL,
-  ADD COLUMN IF NOT EXISTS mileage             INTEGER,
-  ADD COLUMN IF NOT EXISTS color               TEXT,
-  ADD COLUMN IF NOT EXISTS weight_lbs          NUMERIC(5,1),
-  ADD COLUMN IF NOT EXISTS display_type        TEXT,
-  ADD COLUMN IF NOT EXISTS drivetrain          TEXT,
-  ADD COLUMN IF NOT EXISTS accessories         TEXT,
-  ADD COLUMN IF NOT EXISTS modifications       TEXT,
-  ADD COLUMN IF NOT EXISTS has_warranty        BOOLEAN DEFAULT FALSE,
-  ADD COLUMN IF NOT EXISTS warranty_text       TEXT,
-  ADD COLUMN IF NOT EXISTS has_original_receipt BOOLEAN DEFAULT FALSE,
-  ADD COLUMN IF NOT EXISTS body_position_id    BIGINT  REFERENCES body_positions(id)     ON DELETE SET NULL;
+  ADD COLUMN IF NOT EXISTS designer_id          BIGINT  REFERENCES designers(id)        ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS model                TEXT,
+  ADD COLUMN IF NOT EXISTS year                 INTEGER,
+  ADD COLUMN IF NOT EXISTS condition_id         BIGINT  REFERENCES condition_grades(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS occasion_id          BIGINT  REFERENCES occasions(id)        ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS silhouette_id        BIGINT  REFERENCES silhouettes(id)      ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS fabric_id            BIGINT  REFERENCES fabrics(id)          ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS size_id              BIGINT  REFERENCES dress_sizes(id)      ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS neckline_id          BIGINT  REFERENCES necklines(id)        ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS sleeve_style_id      BIGINT  REFERENCES sleeve_styles(id)    ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS length_id            BIGINT  REFERENCES dress_lengths(id)    ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS color                TEXT,
+  ADD COLUMN IF NOT EXISTS bust_inches          NUMERIC(4,1),
+  ADD COLUMN IF NOT EXISTS waist_inches         NUMERIC(4,1),
+  ADD COLUMN IF NOT EXISTS hips_inches          NUMERIC(4,1),
+  ADD COLUMN IF NOT EXISTS original_retail_cents INTEGER,
+  ADD COLUMN IF NOT EXISTS alterations_text     TEXT,
+  ADD COLUMN IF NOT EXISTS location_postal      TEXT,
+  ADD COLUMN IF NOT EXISTS has_original_receipt BOOLEAN DEFAULT FALSE;
 
-CREATE INDEX IF NOT EXISTS listings_make_id_idx       ON listings (make_id);
-CREATE INDEX IF NOT EXISTS listings_category_id_idx   ON listings (bike_category_id);
-CREATE INDEX IF NOT EXISTS listings_class_id_idx      ON listings (bike_class_id);
+CREATE INDEX IF NOT EXISTS listings_designer_id_idx  ON listings (designer_id);
+CREATE INDEX IF NOT EXISTS listings_occasion_id_idx  ON listings (occasion_id);
+CREATE INDEX IF NOT EXISTS listings_size_id_idx      ON listings (size_id);
 
 -- =========================================================
 -- Reference data seed (idempotent)
 -- =========================================================
 
-INSERT INTO bike_makes (name, sort_order) VALUES
-  ('Trek', 10), ('Specialized', 20), ('Cannondale', 30), ('Giant', 40),
-  ('Aventon', 50), ('Rad Power', 60), ('Lectric', 70), ('Ride1Up', 80),
-  ('Velotric', 90), ('Heybike', 100), ('Juiced', 110), ('Pedego', 120),
-  ('Tern', 130), ('Riese & Müller', 140), ('Cube', 150), ('Orbea', 160),
-  ('Bulls', 170), ('Bianchi', 180), ('BMC', 190), ('Canyon', 200),
+INSERT INTO designers (name, sort_order) VALUES
+  ('Vera Wang', 10), ('Marchesa', 20), ('Carolina Herrera', 30),
+  ('Oscar de la Renta', 40), ('Reem Acra', 50), ('Monique Lhuillier', 60),
+  ('Zuhair Murad', 70), ('Elie Saab', 80), ('Galvan', 90),
+  ('Self-Portrait', 100), ('Reformation', 110), ('Rixo', 120),
+  ('Needle & Thread', 130), ('ML Monique Lhuillier', 140),
+  ('BHLDN', 150), ('Saloni', 160), ('Markarian', 170),
+  ('Cinq à Sept', 180), ('Alice + Olivia', 190), ('Alex Perry', 200),
   ('Other', 9999)
 ON CONFLICT (name) DO NOTHING;
 
-INSERT INTO bike_categories (slug, label, sort_order) VALUES
-  ('commuter', 'Commuter', 10), ('cargo', 'Cargo', 20), ('folding', 'Folding', 30),
-  ('cruiser', 'Cruiser', 40), ('mountain', 'Mountain', 50), ('road', 'Road', 60),
-  ('gravel', 'Gravel', 70), ('hybrid', 'Hybrid', 80), ('fat-tire', 'Fat-tire', 90),
-  ('step-through', 'Step-through', 100), ('trike', 'Trike', 110)
+INSERT INTO occasions (slug, label, sort_order) VALUES
+  ('wedding-guest',    'Wedding guest',       10),
+  ('black-tie',        'Black-tie / gala',    20),
+  ('cocktail',         'Cocktail',            30),
+  ('prom',             'Prom',                40),
+  ('bridesmaid',       'Bridesmaid',          50),
+  ('mother-of-bride',  'Mother of the bride', 60),
+  ('formal',           'Formal',              70),
+  ('semi-formal',      'Semi-formal',         80),
+  ('red-carpet',       'Red carpet / event',  90),
+  ('graduation',       'Graduation',         100)
 ON CONFLICT (slug) DO NOTHING;
 
-INSERT INTO bike_classes (slug, label, sort_order) VALUES
-  ('class-1', 'Class 1 (pedal-assist, 20 mph)', 10),
-  ('class-2', 'Class 2 (throttle + pedal, 20 mph)', 20),
-  ('class-3', 'Class 3 (pedal-assist, 28 mph)', 30),
-  ('out-of-class', 'Out-of-class / unrestricted', 40)
+INSERT INTO silhouettes (slug, label, sort_order) VALUES
+  ('a-line',         'A-line',          10),
+  ('ball-gown',      'Ball gown',       20),
+  ('mermaid',        'Mermaid / trumpet', 30),
+  ('sheath',         'Sheath / column', 40),
+  ('empire',         'Empire',          50),
+  ('fit-and-flare',  'Fit-and-flare',   60),
+  ('shift',          'Shift',           70),
+  ('wrap',           'Wrap',            80),
+  ('slip',           'Slip',            90),
+  ('two-piece',      'Two-piece',      100)
 ON CONFLICT (slug) DO NOTHING;
 
-INSERT INTO frame_styles (slug, label, sort_order) VALUES
-  ('step-over', 'Step-over', 10), ('step-through', 'Step-through', 20),
-  ('mid-step', 'Mid-step', 30), ('folding', 'Folding', 40),
-  ('recumbent', 'Recumbent', 50)
+INSERT INTO fabrics (slug, label, sort_order) VALUES
+  ('silk',     'Silk',     10),
+  ('satin',    'Satin',    20),
+  ('chiffon',  'Chiffon',  30),
+  ('lace',     'Lace',     40),
+  ('tulle',    'Tulle',    50),
+  ('velvet',   'Velvet',   60),
+  ('crepe',    'Crepe',    70),
+  ('organza',  'Organza',  80),
+  ('taffeta',  'Taffeta',  90),
+  ('sequined', 'Sequined', 100),
+  ('beaded',   'Beaded',   110),
+  ('jersey',   'Jersey',   120)
 ON CONFLICT (slug) DO NOTHING;
 
-INSERT INTO frame_materials (slug, label, sort_order) VALUES
-  ('aluminum', 'Aluminum', 10), ('carbon', 'Carbon fiber', 20),
-  ('steel', 'Steel', 30), ('chromoly', 'Chromoly steel', 40),
-  ('titanium', 'Titanium', 50)
+INSERT INTO dress_sizes (slug, label, sort_order) VALUES
+  ('xs',    'XS',    10),
+  ('s',     'S',     20),
+  ('m',     'M',     30),
+  ('l',     'L',     40),
+  ('xl',    'XL',    50),
+  ('xxl',   'XXL',   60),
+  ('us-0',  'US 0',  100),
+  ('us-2',  'US 2',  110),
+  ('us-4',  'US 4',  120),
+  ('us-6',  'US 6',  130),
+  ('us-8',  'US 8',  140),
+  ('us-10', 'US 10', 150),
+  ('us-12', 'US 12', 160),
+  ('us-14', 'US 14', 170),
+  ('us-16', 'US 16', 180),
+  ('us-18', 'US 18', 190),
+  ('us-20', 'US 20', 200),
+  ('us-22', 'US 22', 210)
 ON CONFLICT (slug) DO NOTHING;
 
-INSERT INTO wheel_sizes (slug, label, sort_order) VALUES
-  ('20', '20"', 10), ('24', '24"', 20), ('26', '26"', 30),
-  ('27-5', '27.5"', 40), ('29', '29"', 50), ('700c', '700c', 60)
+INSERT INTO necklines (slug, label, sort_order) VALUES
+  ('v-neck',       'V-neck',           10),
+  ('sweetheart',   'Sweetheart',       20),
+  ('halter',       'Halter',           30),
+  ('strapless',    'Strapless',        40),
+  ('off-shoulder', 'Off-the-shoulder', 50),
+  ('scoop',        'Scoop',            60),
+  ('square',       'Square',           70),
+  ('plunge',       'Plunge',           80),
+  ('high-neck',    'High neck',        90),
+  ('cowl',         'Cowl',            100),
+  ('illusion',     'Illusion',        110),
+  ('one-shoulder', 'One-shoulder',    120)
 ON CONFLICT (slug) DO NOTHING;
 
-INSERT INTO gender_fits (slug, label, sort_order) VALUES
-  ('mens', 'Men''s', 10), ('womens', 'Women''s', 20), ('unisex', 'Unisex', 30)
+INSERT INTO sleeve_styles (slug, label, sort_order) VALUES
+  ('sleeveless',     'Sleeveless',     10),
+  ('cap-sleeve',     'Cap sleeve',     20),
+  ('short-sleeve',   'Short sleeve',   30),
+  ('three-quarter',  '3/4 sleeve',     40),
+  ('long-sleeve',    'Long sleeve',    50),
+  ('spaghetti-strap','Spaghetti strap',60),
+  ('bishop',         'Bishop',         70),
+  ('puff',           'Puff',           80)
 ON CONFLICT (slug) DO NOTHING;
 
-INSERT INTO motor_brands (name, sort_order) VALUES
-  ('Bosch', 10), ('Shimano', 20), ('Yamaha', 30), ('Brose', 40),
-  ('Specialized', 50), ('Bafang', 60), ('MPF', 70),
-  ('Generic / unbranded', 9000), ('Other', 9999)
-ON CONFLICT (name) DO NOTHING;
-
-INSERT INTO motor_types (slug, label, sort_order) VALUES
-  ('mid-drive', 'Mid-drive', 10),
-  ('rear-hub', 'Rear hub', 20),
-  ('front-hub', 'Front hub', 30)
-ON CONFLICT (slug) DO NOTHING;
-
-INSERT INTO drive_modes (slug, label, sort_order) VALUES
-  ('pedal-assist', 'Pedal-assist only', 10),
-  ('throttle', 'Throttle only', 20),
-  ('both', 'Pedal-assist + throttle', 30)
-ON CONFLICT (slug) DO NOTHING;
-
-INSERT INTO brake_types (slug, label, sort_order) VALUES
-  ('hydraulic-disc', 'Hydraulic disc', 10),
-  ('mechanical-disc', 'Mechanical disc', 20),
-  ('rim', 'Rim', 30), ('drum', 'Drum', 40), ('coaster', 'Coaster', 50)
-ON CONFLICT (slug) DO NOTHING;
-
-INSERT INTO suspension_types (slug, label, sort_order) VALUES
-  ('rigid', 'None (rigid)', 10),
-  ('hardtail', 'Front (hardtail)', 20),
-  ('full', 'Full', 30),
-  ('rear-only', 'Rear only', 40)
+INSERT INTO dress_lengths (slug, label, sort_order) VALUES
+  ('mini',   'Mini',         10),
+  ('knee',   'Knee-length',  20),
+  ('midi',   'Midi',         30),
+  ('tea',    'Tea-length',   40),
+  ('floor',  'Floor-length', 50),
+  ('train',  'With train',   60)
 ON CONFLICT (slug) DO NOTHING;
 
 INSERT INTO condition_grades (slug, label, sort_order) VALUES
-  ('like-new', 'Like new', 10),
-  ('excellent', 'Excellent', 20),
-  ('good', 'Good', 30),
-  ('fair', 'Fair', 40),
-  ('for-parts', 'For parts', 50)
-ON CONFLICT (slug) DO NOTHING;
-
-INSERT INTO body_positions (slug, label, sort_order) VALUES
-  ('upright', 'Upright', 10),
-  ('forward', 'Forward', 20),
-  ('aggressive', 'Aggressive', 30)
+  ('new-with-tags', 'New with tags', 10),
+  ('like-new',      'Like new',      20),
+  ('excellent',     'Excellent',     30),
+  ('good',          'Good',          40),
+  ('fair',          'Fair',          50)
 ON CONFLICT (slug) DO NOTHING;
 
 -- =========================================================
@@ -661,30 +692,17 @@ CREATE TABLE IF NOT EXISTS blog_keyword_clusters (
 CREATE INDEX IF NOT EXISTS blog_keyword_clusters_kw_idx
   ON blog_keyword_clusters (keyword_id);
 
--- SERP analysis lives on the cluster (one cluster = one article).
--- Runs against the primary keyword's phrase and is overwritten on re-run.
 ALTER TABLE blog_clusters
   ADD COLUMN IF NOT EXISTS serp_analysis_json JSONB,
-  ADD COLUMN IF NOT EXISTS serp_analyzed_at   TIMESTAMPTZ;
-
--- Capture the last Generate Post call against this cluster so failures
--- (rate limits, unparseable JSON, etc.) can be inspected without digging
--- through server logs. Overwritten on each attempt.
-ALTER TABLE blog_clusters
+  ADD COLUMN IF NOT EXISTS serp_analyzed_at   TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS last_gen_response_text TEXT,
   ADD COLUMN IF NOT EXISTS last_gen_error         TEXT,
   ADD COLUMN IF NOT EXISTS last_gen_at            TIMESTAMPTZ;
 
--- Cutover from the earlier per-keyword variant. Pre-launch, so any
--- existing analyses can be re-run from the cluster page.
 ALTER TABLE blog_keywords
   DROP COLUMN IF EXISTS serp_analysis_json,
   DROP COLUMN IF EXISTS serp_analyzed_at;
 
--- Up to 5 Pexels hero candidates per cluster, slotted 0-4. Each slot
--- refreshes independently. include_in_post is the flag the post generator
--- reads to decide which images to embed. Images live on the cluster (one
--- cluster = one article) rather than on individual keywords.
 CREATE TABLE IF NOT EXISTS blog_cluster_images (
   id               BIGSERIAL    PRIMARY KEY,
   cluster_id       BIGINT       NOT NULL
@@ -706,31 +724,24 @@ CREATE TABLE IF NOT EXISTS blog_cluster_images (
 CREATE UNIQUE INDEX IF NOT EXISTS blog_cluster_images_slot_idx
   ON blog_cluster_images (cluster_id, slot);
 
--- Slots 0-4 are filled from the cluster's primary keyword (search_phrase
--- left NULL = "use the primary"). Slots 5+ are user-added custom-keyword
--- images and store the phrase that was used so refresh keeps that topic.
 ALTER TABLE blog_cluster_images
   ADD COLUMN IF NOT EXISTS search_phrase TEXT;
 
--- Cutover from the earlier per-keyword variant. Pre-launch, so the rows
--- aren't worth migrating; the cluster picker re-fills from Pexels.
 DROP TABLE IF EXISTS blog_keyword_images;
 
 -- Backfill existing accounts as verified — pre-rollout users shouldn't be
 -- nagged after the fact.
 UPDATE users SET email_verified_at = COALESCE(email_verified_at, created_at);
 
--- Switch existing listings to the auto-derived "Year Make Model" title
--- format. Skips rows where year/make/model aren't all present (drafts).
+-- Auto-derive listing title from "Designer Model" when both are present.
 UPDATE listings
    SET title = derived.t
   FROM (
     SELECT l.id,
-           TRIM(BOTH FROM CONCAT_WS(' ', l.year::text, mk.name, l.model)) AS t
+           TRIM(BOTH FROM CONCAT_WS(' ', d.name, l.model)) AS t
       FROM listings l
-      LEFT JOIN bike_makes mk ON mk.id = l.make_id
-     WHERE l.year IS NOT NULL
-       AND l.make_id IS NOT NULL
+      LEFT JOIN designers d ON d.id = l.designer_id
+     WHERE l.designer_id IS NOT NULL
        AND l.model IS NOT NULL
   ) derived
  WHERE listings.id = derived.id

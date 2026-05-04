@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* =========================================================
-   VOLTRA — eBike marketplace design tokens
+   THATDRESS — formal-dress marketplace design tokens
    Warm-neutral palette, signature orange accent
    ========================================================= */
 :root {
@@ -1334,9 +1334,7 @@ textarea.input {
   .hero-grid { gap: var(--s-7); }
 }
 
-/* Floating eBike toolbox card — sits over the bike image in the hero,
-   bottom-right corner. Hidden on narrow viewports where the bike image
-   collapses behind the text and there's no real estate for it. */
+/* Floating helper card slot — kept as legacy styling. */
 .hero-toolbox {
   position: absolute;
   bottom: var(--s-4);

@@ -1,6 +1,6 @@
-# ebikeflip
+# thatdress
 
-Next.js + Node + PostgreSQL starter.
+Peer-to-peer marketplace for pre-loved formal dresses. Next.js + Node + PostgreSQL.
 
 ## Stack
 

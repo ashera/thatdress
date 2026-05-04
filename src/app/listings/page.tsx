@@ -21,19 +21,15 @@ import { saveSearch } from "@/lib/actions/saved-searches";
 
 export const dynamic = "force-dynamic";
 
-const CURRENT_YEAR = new Date().getUTCFullYear();
-const MAX_YEAR = CURRENT_YEAR + 1;
-
 type RawSearchParams = {
   q?: string | string[];
-  make_id?: string | string[];
-  bike_class_id?: string | string[];
-  bike_category_id?: string | string[];
+  designer_id?: string | string[];
+  occasion_id?: string | string[];
+  silhouette_id?: string | string[];
+  size_id?: string | string[];
   condition_id?: string | string[];
   min_price?: string | string[];
   max_price?: string | string[];
-  min_year?: string | string[];
-  max_year?: string | string[];
   view?: string | string[];
   visibility?: string | string[];
   mode?: string | string[];
@@ -42,25 +38,23 @@ type RawSearchParams = {
 
 type BrowseMode = "for-sale" | "sold" | "shortlist";
 
-type SortOption = "newest" | "price-asc" | "price-desc" | "year-desc";
+type SortOption = "newest" | "price-asc" | "price-desc";
 
 const SORT_LABELS: Record<SortOption, string> = {
   newest: "Newest",
   "price-asc": "Price: low to high",
   "price-desc": "Price: high to low",
-  "year-desc": "Year: newest first",
 };
 
 const SORT_SQL: Record<SortOption, string> = {
   newest: "l.created_at DESC",
   "price-asc": "l.price_cents ASC, l.created_at DESC",
   "price-desc": "l.price_cents DESC, l.created_at DESC",
-  "year-desc": "l.year DESC NULLS LAST, l.created_at DESC",
 };
 
 function parseSort(raw: string | string[] | undefined): SortOption {
   const v = Array.isArray(raw) ? raw[0] : raw;
-  if (v === "price-asc" || v === "price-desc" || v === "year-desc") return v;
+  if (v === "price-asc" || v === "price-desc") return v;
   return "newest";
 }
 
@@ -153,7 +147,7 @@ function buildFilters(
   const params: unknown[] = [];
   const active: ActiveFilters = {};
 
-  // Mode: for-sale (default), sold, or shortlist (user's saved bikes).
+  // Mode: for-sale (default), sold, or shortlist (user's saved dresses).
   if (mode === "sold") {
     where.push("l.sold_at IS NOT NULL");
   } else if (mode === "shortlist") {
@@ -200,7 +194,7 @@ function buildFilters(
     params.push(`%${escapeLike(q)}%`);
     const n = params.length;
     where.push(
-      `(l.title ILIKE $${n} ESCAPE '\\' OR l.description ILIKE $${n} ESCAPE '\\' OR l.model ILIKE $${n} ESCAPE '\\' OR mk.name ILIKE $${n} ESCAPE '\\')`,
+      `(l.title ILIKE $${n} ESCAPE '\\' OR l.description ILIKE $${n} ESCAPE '\\' OR l.model ILIKE $${n} ESCAPE '\\' OR d.name ILIKE $${n} ESCAPE '\\')`,
     );
   }
 
@@ -209,9 +203,10 @@ function buildFilters(
     column: string,
     rawArr: string[],
     key:
-      | "make_id"
-      | "bike_class_id"
-      | "bike_category_id"
+      | "designer_id"
+      | "occasion_id"
+      | "silhouette_id"
+      | "size_id"
       | "condition_id",
   ) => {
     const ids = validIds(rawArr);
@@ -221,13 +216,10 @@ function buildFilters(
     where.push(`${column} = ANY($${params.length}::bigint[])`);
   };
 
-  addArrayFilter("l.make_id", asArray(raw.make_id), "make_id");
-  addArrayFilter("l.bike_class_id", asArray(raw.bike_class_id), "bike_class_id");
-  addArrayFilter(
-    "l.bike_category_id",
-    asArray(raw.bike_category_id),
-    "bike_category_id",
-  );
+  addArrayFilter("l.designer_id", asArray(raw.designer_id), "designer_id");
+  addArrayFilter("l.occasion_id", asArray(raw.occasion_id), "occasion_id");
+  addArrayFilter("l.silhouette_id", asArray(raw.silhouette_id), "silhouette_id");
+  addArrayFilter("l.size_id", asArray(raw.size_id), "size_id");
   addArrayFilter("l.condition_id", asArray(raw.condition_id), "condition_id");
 
   // Numeric ranges
@@ -240,16 +232,6 @@ function buildFilters(
   if (maxPrice !== undefined) {
     active.max_price = String(maxPrice);
     pushClause("l.price_cents <= $?", maxPrice * 100);
-  }
-  const minYear = validInt(asScalar(raw.min_year), 1990, MAX_YEAR);
-  if (minYear !== undefined) {
-    active.min_year = String(minYear);
-    pushClause("l.year >= $?", minYear);
-  }
-  const maxYear = validInt(asScalar(raw.max_year), 1990, MAX_YEAR);
-  if (maxYear !== undefined) {
-    active.max_year = String(maxYear);
-    pushClause("l.year <= $?", maxYear);
   }
 
   return { active, where, params };
@@ -276,32 +258,24 @@ async function fetchListings(
                   ORDER BY li.is_primary DESC, li.position, li.id
                   LIMIT 1
               ) AS primary_image_id,
-              mk.name   AS make_name,
+              d.name    AS designer_name,
               l.model,
               l.year,
               cg.label  AS condition_label,
-              bcl.label AS bike_class_label,
-              bcat.label AS bike_category_label,
+              o.label   AS occasion_label,
+              s.label   AS silhouette_label,
+              f.label   AS fabric_label,
+              ds.label  AS size_label,
+              n.label   AS neckline_label,
+              ss.label  AS sleeve_style_label,
+              dl.label  AS length_label,
               l.location_postal,
-              l.frame_size,
-              fs.label  AS frame_style_label,
-              fm.label  AS frame_material_label,
-              gf.label  AS gender_fit_label,
-              ws.label  AS wheel_size_label,
-              st.label  AS suspension_type_label,
-              bt.label  AS brake_type_label,
-              mb.name   AS motor_brand_name,
-              mt.label  AS motor_type_label,
-              l.motor_watts_nominal,
-              l.battery_wh,
-              l.top_speed_mph,
-              l.range_miles_min,
-              l.range_miles_max,
-              dm.label  AS drive_mode_label,
-              l.mileage,
               l.color,
-              l.weight_lbs::text,
-              l.has_warranty,
+              l.bust_inches::text,
+              l.waist_inches::text,
+              l.hips_inches::text,
+              l.original_retail_cents,
+              l.has_original_receipt,
               l.is_published,
               l.sold_at::text,
               (
@@ -309,20 +283,16 @@ async function fetchListings(
                   WHERE listing_id = l.id
               ) AS conversation_count
          FROM listings l
-         LEFT JOIN users            u    ON u.id    = l.seller_id
-         LEFT JOIN bike_makes       mk   ON mk.id   = l.make_id
-         LEFT JOIN condition_grades cg   ON cg.id   = l.condition_id
-         LEFT JOIN bike_classes     bcl  ON bcl.id  = l.bike_class_id
-         LEFT JOIN bike_categories  bcat ON bcat.id = l.bike_category_id
-         LEFT JOIN frame_styles     fs   ON fs.id   = l.frame_style_id
-         LEFT JOIN frame_materials  fm   ON fm.id   = l.frame_material_id
-         LEFT JOIN gender_fits      gf   ON gf.id   = l.gender_fit_id
-         LEFT JOIN wheel_sizes      ws   ON ws.id   = l.wheel_size_id
-         LEFT JOIN suspension_types st   ON st.id   = l.suspension_type_id
-         LEFT JOIN brake_types      bt   ON bt.id   = l.brake_type_id
-         LEFT JOIN motor_brands     mb   ON mb.id   = l.motor_brand_id
-         LEFT JOIN motor_types      mt   ON mt.id   = l.motor_type_id
-         LEFT JOIN drive_modes      dm   ON dm.id   = l.drive_mode_id
+         LEFT JOIN users            u   ON u.id   = l.seller_id
+         LEFT JOIN designers        d   ON d.id   = l.designer_id
+         LEFT JOIN condition_grades cg  ON cg.id  = l.condition_id
+         LEFT JOIN occasions        o   ON o.id   = l.occasion_id
+         LEFT JOIN silhouettes      s   ON s.id   = l.silhouette_id
+         LEFT JOIN fabrics          f   ON f.id   = l.fabric_id
+         LEFT JOIN dress_sizes      ds  ON ds.id  = l.size_id
+         LEFT JOIN necklines        n   ON n.id   = l.neckline_id
+         LEFT JOIN sleeve_styles    ss  ON ss.id  = l.sleeve_style_id
+         LEFT JOIN dress_lengths    dl  ON dl.id  = l.length_id
          ${whereSql}
          ORDER BY ${orderBy}
          LIMIT 50`,
@@ -343,13 +313,15 @@ async function loadFilterOptions() {
     if (!t) return [];
     return listActiveRefOptions(t);
   };
-  const [makes, classes, categories, conditions] = await Promise.all([
-    get("bike-makes"),
-    get("bike-classes"),
-    get("bike-categories"),
-    get("condition-grades"),
-  ]);
-  return { makes, classes, categories, conditions };
+  const [designers, occasions, silhouettes, sizes, conditions] =
+    await Promise.all([
+      get("designers"),
+      get("occasions"),
+      get("silhouettes"),
+      get("dress-sizes"),
+      get("condition-grades"),
+    ]);
+  return { designers, occasions, silhouettes, sizes, conditions };
 }
 
 export default async function ListingsPage({
@@ -447,7 +419,7 @@ export default async function ListingsPage({
               ? "Recently sold"
               : mode === "shortlist"
                 ? "Your shortlist"
-                : "Browse eBikes"}
+                : "Browse dresses"}
           </h3>
           {result.ok && (
             <span className="count">
@@ -510,7 +482,7 @@ export default async function ListingsPage({
             type="text"
             name="name"
             maxLength={80}
-            placeholder="e.g. Trek under £3000"
+            placeholder="e.g. Vera Wang under $500"
             required
           />
           <Button type="submit" variant="primary" size="sm" iconRight="check">

@@ -35,52 +35,40 @@ async function fetchShortlistedListings(userId: string) {
                   ORDER BY li.is_primary DESC, li.position, li.id
                   LIMIT 1
               ) AS primary_image_id,
-              mk.name   AS make_name,
+              d.name    AS designer_name,
               l.model,
               l.year,
               cg.label  AS condition_label,
-              bcl.label AS bike_class_label,
-              bcat.label AS bike_category_label,
+              o.label   AS occasion_label,
+              sl.label  AS silhouette_label,
+              f.label   AS fabric_label,
+              ds.label  AS size_label,
+              n.label   AS neckline_label,
+              ss.label  AS sleeve_style_label,
+              dl.label  AS length_label,
               l.location_postal,
-              l.frame_size,
-              fs.label  AS frame_style_label,
-              fm.label  AS frame_material_label,
-              gf.label  AS gender_fit_label,
-              ws.label  AS wheel_size_label,
-              st.label  AS suspension_type_label,
-              bt.label  AS brake_type_label,
-              mb.name   AS motor_brand_name,
-              mt.label  AS motor_type_label,
-              l.motor_watts_nominal,
-              l.battery_wh,
-              l.top_speed_mph,
-              l.range_miles_min,
-              l.range_miles_max,
-              dm.label  AS drive_mode_label,
-              l.mileage,
               l.color,
-              l.weight_lbs::text,
-              l.has_warranty,
+              l.bust_inches::text,
+              l.waist_inches::text,
+              l.hips_inches::text,
+              l.original_retail_cents,
+              l.has_original_receipt,
               l.is_published,
               l.sold_at::text,
               s.created_at::text AS shortlisted_at,
               s.ignored_at::text AS ignored_at
          FROM shortlists s
          JOIN listings l ON l.id = s.listing_id
-         LEFT JOIN users            u    ON u.id    = l.seller_id
-         LEFT JOIN bike_makes       mk   ON mk.id   = l.make_id
-         LEFT JOIN condition_grades cg   ON cg.id   = l.condition_id
-         LEFT JOIN bike_classes     bcl  ON bcl.id  = l.bike_class_id
-         LEFT JOIN bike_categories  bcat ON bcat.id = l.bike_category_id
-         LEFT JOIN frame_styles     fs   ON fs.id   = l.frame_style_id
-         LEFT JOIN frame_materials  fm   ON fm.id   = l.frame_material_id
-         LEFT JOIN gender_fits      gf   ON gf.id   = l.gender_fit_id
-         LEFT JOIN wheel_sizes      ws   ON ws.id   = l.wheel_size_id
-         LEFT JOIN suspension_types st   ON st.id   = l.suspension_type_id
-         LEFT JOIN brake_types      bt   ON bt.id   = l.brake_type_id
-         LEFT JOIN motor_brands     mb   ON mb.id   = l.motor_brand_id
-         LEFT JOIN motor_types      mt   ON mt.id   = l.motor_type_id
-         LEFT JOIN drive_modes      dm   ON dm.id   = l.drive_mode_id
+         LEFT JOIN users            u   ON u.id   = l.seller_id
+         LEFT JOIN designers        d   ON d.id   = l.designer_id
+         LEFT JOIN condition_grades cg  ON cg.id  = l.condition_id
+         LEFT JOIN occasions        o   ON o.id   = l.occasion_id
+         LEFT JOIN silhouettes      sl  ON sl.id  = l.silhouette_id
+         LEFT JOIN fabrics          f   ON f.id   = l.fabric_id
+         LEFT JOIN dress_sizes      ds  ON ds.id  = l.size_id
+         LEFT JOIN necklines        n   ON n.id   = l.neckline_id
+         LEFT JOIN sleeve_styles    ss  ON ss.id  = l.sleeve_style_id
+         LEFT JOIN dress_lengths    dl  ON dl.id  = l.length_id
         WHERE s.user_id = $1::bigint
         ORDER BY (s.ignored_at IS NOT NULL), s.created_at DESC`,
       [userId],
