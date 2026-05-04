@@ -9,10 +9,10 @@ const repoRoot = join(__dirname, "..");
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
-  console.warn(
-    "[db:setup] DATABASE_URL is not set — skipping. Set it and redeploy.",
+  console.error(
+    "[db:setup] DATABASE_URL is not set — aborting. Set it and redeploy.",
   );
-  process.exit(0);
+  process.exit(1);
 }
 
 const client = new pg.Client({
@@ -34,10 +34,10 @@ try {
     process.stdout.write("ok\n");
   }
 } catch (err) {
-  console.warn(
-    `[db:setup] failed: ${err instanceof Error ? err.message : err}. Continuing without seeding.`,
+  console.error(
+    `[db:setup] failed: ${err instanceof Error ? err.message : err}`,
   );
-  process.exit(0);
+  process.exit(1);
 } finally {
   await client.end().catch(() => {});
 }
