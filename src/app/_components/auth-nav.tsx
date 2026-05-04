@@ -81,8 +81,8 @@ export async function AuthNav() {
           <Image
             src="/get-frockd-logo-tr-back.png"
             alt="GET FROCKD"
-            width={2768}
-            height={1536}
+            width={1839}
+            height={468}
             priority
             className="brand-logo"
           />
