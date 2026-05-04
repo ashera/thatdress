@@ -12,6 +12,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${baseUrl}/`, lastModified: now, changeFrequency: "daily", priority: 1 },
     { url: `${baseUrl}/listings`, lastModified: now, changeFrequency: "hourly", priority: 0.9 },
     { url: `${baseUrl}/blog`, lastModified: now, changeFrequency: "weekly", priority: 0.8 },
+    { url: `${baseUrl}/tools`, lastModified: now, changeFrequency: "monthly", priority: 0.6 },
+    { url: `${baseUrl}/tools/value-estimator`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
   ];
 
   let posts: { slug: string; published_at: string; updated_at: string }[] = [];

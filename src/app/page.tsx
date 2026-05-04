@@ -214,6 +214,26 @@ export default async function Home({
             sizes="(max-width: 900px) 100vw, 50vw"
           />
         </div>
+        <aside className="hero-toolbox" aria-label="frockd tools">
+          <p className="hero-toolbox-title">frockd toolbox</p>
+          <ul className="hero-toolbox-list">
+            {[
+              {
+                href: "/tools/value-estimator",
+                label: "Estimate dress value",
+              },
+            ].map((t) => (
+              <li key={t.href}>
+                <Link href={t.href} className="hero-toolbox-link">
+                  {t.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <Link href="/tools" className="hero-toolbox-all">
+            All tools →
+          </Link>
+        </aside>
         <div className="hero-grid">
           <div>
             <p className="eyebrow">Peer-to-peer formal-dress marketplace</p>

@@ -143,6 +143,19 @@ CREATE TABLE IF NOT EXISTS designers (
   is_active   BOOLEAN      NOT NULL DEFAULT TRUE
 );
 
+-- Resale-market tier drives the value-estimator depreciation range:
+--   premium       => 35–55% of RRP at like-new + recent
+--   mid (default) => 40–60% (contemporary brands; the bulk of the market)
+--   fast-fashion  => 15–30% (H&M / Zara / generic)
+ALTER TABLE designers
+  ADD COLUMN IF NOT EXISTS tier TEXT NOT NULL DEFAULT 'mid';
+
+ALTER TABLE designers
+  DROP CONSTRAINT IF EXISTS designers_tier_check;
+ALTER TABLE designers
+  ADD CONSTRAINT designers_tier_check
+    CHECK (tier IN ('premium', 'mid', 'fast-fashion'));
+
 CREATE TABLE IF NOT EXISTS occasions (
   id          BIGSERIAL    PRIMARY KEY,
   slug        TEXT         UNIQUE NOT NULL,
@@ -240,16 +253,36 @@ CREATE INDEX IF NOT EXISTS listings_size_id_idx      ON listings (size_id);
 -- Reference data seed (idempotent)
 -- =========================================================
 
-INSERT INTO designers (name, sort_order) VALUES
-  ('Vera Wang', 10), ('Marchesa', 20), ('Carolina Herrera', 30),
-  ('Oscar de la Renta', 40), ('Reem Acra', 50), ('Monique Lhuillier', 60),
-  ('Zuhair Murad', 70), ('Elie Saab', 80), ('Galvan', 90),
-  ('Self-Portrait', 100), ('Reformation', 110), ('Rixo', 120),
-  ('Needle & Thread', 130), ('ML Monique Lhuillier', 140),
-  ('BHLDN', 150), ('Saloni', 160), ('Markarian', 170),
-  ('Cinq à Sept', 180), ('Alice + Olivia', 190), ('Alex Perry', 200),
-  ('Other', 9999)
+INSERT INTO designers (name, sort_order, tier) VALUES
+  ('Vera Wang', 10, 'premium'),
+  ('Marchesa', 20, 'premium'),
+  ('Carolina Herrera', 30, 'premium'),
+  ('Oscar de la Renta', 40, 'premium'),
+  ('Reem Acra', 50, 'premium'),
+  ('Monique Lhuillier', 60, 'premium'),
+  ('Zuhair Murad', 70, 'premium'),
+  ('Elie Saab', 80, 'premium'),
+  ('Galvan', 90, 'premium'),
+  ('Alex Perry', 200, 'premium'),
+  ('Self-Portrait', 100, 'mid'),
+  ('Reformation', 110, 'mid'),
+  ('Rixo', 120, 'mid'),
+  ('Needle & Thread', 130, 'mid'),
+  ('ML Monique Lhuillier', 140, 'mid'),
+  ('BHLDN', 150, 'mid'),
+  ('Saloni', 160, 'mid'),
+  ('Markarian', 170, 'mid'),
+  ('Cinq à Sept', 180, 'mid'),
+  ('Alice + Olivia', 190, 'mid'),
+  ('Other', 9999, 'mid')
 ON CONFLICT (name) DO NOTHING;
+
+-- Backfill tier for designer rows that pre-date this column.
+UPDATE designers SET tier = 'premium' WHERE name IN (
+  'Vera Wang', 'Marchesa', 'Carolina Herrera', 'Oscar de la Renta',
+  'Reem Acra', 'Monique Lhuillier', 'Zuhair Murad', 'Elie Saab',
+  'Galvan', 'Alex Perry'
+) AND tier = 'mid';
 
 INSERT INTO occasions (slug, label, sort_order) VALUES
   ('wedding-guest',    'Wedding guest',       10),

@@ -12,6 +12,7 @@ const BYPASS_PREFIXES = [
   "/",
   "/listings",
   "/blog",
+  "/tools",
   "/regions",
   "/admin",
   "/login",
