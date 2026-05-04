@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { logout } from "@/lib/actions/auth";
 import { getCurrentUser } from "@/lib/auth";
@@ -77,7 +78,14 @@ export async function AuthNav() {
     <header className="topbar">
       <div className="brand-row">
         <Link href="/" className="brand">
-          <span className="brand-mark">td</span>
+          <span className="brand-mark" aria-hidden>
+            <Image
+              src="/dress-sketch-tr-back.png"
+              alt=""
+              width={28}
+              height={28}
+            />
+          </span>
           thatdress
         </Link>
         {(() => {
