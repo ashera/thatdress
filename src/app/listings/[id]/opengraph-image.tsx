@@ -53,8 +53,9 @@ async function resolveOrigin(): Promise<string> {
 export default async function OgImage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
   let row: Row | null = null;
   try {
     const r = await query<Row>(
@@ -83,7 +84,7 @@ export default async function OgImage({
          LEFT JOIN condition_grades cg ON cg.id = l.condition_id
         WHERE l.id = $1::bigint
         LIMIT 1`,
-      [params.id],
+      [id],
     );
     row = r.rows[0] ?? null;
   } catch {
@@ -93,7 +94,7 @@ export default async function OgImage({
   const origin = await resolveOrigin();
   const photoUrl =
     row?.primary_image_id
-      ? `${origin}/api/listings/${params.id}/images/${row.primary_image_id}`
+      ? `${origin}/api/listings/${id}/images/${row.primary_image_id}`
       : null;
 
   const title = row?.title ?? "frockd listing";

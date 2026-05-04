@@ -39,8 +39,9 @@ function formatDate(s: string | null): string {
 export default async function OgImage({
   params,
 }: {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }) {
+  const { slug } = await params;
   let row: Row | null = null;
   try {
     const r = await query<Row>(
@@ -52,7 +53,7 @@ export default async function OgImage({
          LEFT JOIN users u ON u.id = p.author_id
         WHERE p.slug = $1
         LIMIT 1`,
-      [params.slug],
+      [slug],
     );
     row = r.rows[0] ?? null;
   } catch {
