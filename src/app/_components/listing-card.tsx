@@ -80,9 +80,9 @@ function buildHighlights(row: ListingCardRow): [string | null, string | null, st
   if (row.color && out.length < 3) out.push(`${row.color}`);
   if (row.fabric_label && out.length < 3) out.push(`${row.fabric_label} fabric`);
   if (row.original_retail_cents && out.length < 3) {
-    const retail = new Intl.NumberFormat("en-US", {
+    const retail = new Intl.NumberFormat("en-AU", {
       style: "currency",
-      currency: "USD",
+      currency: "AUD",
       maximumFractionDigits: 0,
     }).format(row.original_retail_cents / 100);
     out.push(`${retail} original retail`);
@@ -104,9 +104,9 @@ export function listingFromRow(
     shortlistedIds != null && shortlistedIds.has(row.id);
   // Only show the toggle when logged in and not the owner.
   const showShortlist = currentUserId != null && !isOwn;
-  const priceFmt = new Intl.NumberFormat("en-US", {
+  const priceFmt = new Intl.NumberFormat("en-AU", {
     style: "currency",
-    currency: "USD",
+    currency: "AUD",
     maximumFractionDigits: 0,
   });
   return {

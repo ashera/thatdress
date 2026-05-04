@@ -46,9 +46,9 @@ export default async function MakeOfferPage({
   if (!listing.offers_enabled) redirect(`/listings/${id}`);
   if (listing.seller_id === user.id) redirect(`/listings/${id}`);
 
-  const askingPrice = new Intl.NumberFormat("en-US", {
+  const askingPrice = new Intl.NumberFormat("en-AU", {
     style: "currency",
-    currency: "USD",
+    currency: "AUD",
     maximumFractionDigits: 0,
   }).format(listing.price_cents / 100);
 
@@ -95,7 +95,7 @@ export default async function MakeOfferPage({
             <input type="hidden" name="listingId" value={id} />
 
             <Field
-              label="Your offer (USD)"
+              label="Your offer (AUD)"
               htmlFor="amount"
               help="The seller can accept, decline, or counter."
             >

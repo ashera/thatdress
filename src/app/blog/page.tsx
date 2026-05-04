@@ -3,7 +3,11 @@ import type { Metadata } from "next";
 import { query } from "@/lib/db";
 import { getBaseUrl } from "@/lib/email";
 
-export const dynamic = "force-dynamic";
+// Static-rendered with revalidation. Blog admin actions call
+// revalidatePath('/blog') on every publish/update/delete/tag change,
+// so changes appear within a few seconds for admins. The hour-long
+// fallback covers any actions we forget to wire revalidations into.
+export const revalidate = 3600;
 
 const PAGE_SIZE = 10;
 

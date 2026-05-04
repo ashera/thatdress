@@ -61,7 +61,7 @@ export default async function WizardPublishPage({
           <p className="card-sub">All required.</p>
 
           <div className="grid-2">
-            <Field label="Price (USD)" htmlFor="price">
+            <Field label="Price (AUD)" htmlFor="price">
               <Input
                 id="price"
                 type="text"

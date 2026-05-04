@@ -162,7 +162,7 @@ export default async function WizardMeasurementsPage({
             they value the discount.
           </p>
 
-          <Field label="Original retail price (USD)" htmlFor="original_retail">
+          <Field label="Original retail price (AUD)" htmlFor="original_retail">
             <Input
               id="original_retail"
               type="text"

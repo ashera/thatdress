@@ -20,9 +20,9 @@ function parseAmountToCents(raw: string): number | null {
 }
 
 function formatPrice(cents: number): string {
-  return new Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat("en-AU", {
     style: "currency",
-    currency: "USD",
+    currency: "AUD",
     maximumFractionDigits: 0,
   }).format(cents / 100);
 }

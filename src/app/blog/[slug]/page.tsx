@@ -7,7 +7,11 @@ import { getBaseUrl } from "@/lib/email";
 import { renderMarkdown, stripMarkdown } from "@/lib/blog";
 import { ViewLogger } from "@/app/_components/view-logger";
 
-export const dynamic = "force-dynamic";
+// Static-rendered with revalidation. The blog admin actions call
+// revalidatePath('/blog/{slug}') on update/publish so the post is
+// fresh within seconds of an edit; the hour fallback handles any
+// untracked changes (e.g. direct DB edits).
+export const revalidate = 3600;
 
 type PostRow = {
   id: string;

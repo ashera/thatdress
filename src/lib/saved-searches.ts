@@ -139,9 +139,9 @@ export async function emailSavedSearchDigest(opts: {
   const { to, searchName, searchId, matches, baseUrl } = opts;
   if (matches.length === 0) return;
 
-  const priceFmt = new Intl.NumberFormat("en-US", {
+  const priceFmt = new Intl.NumberFormat("en-AU", {
     style: "currency",
-    currency: "USD",
+    currency: "AUD",
     maximumFractionDigits: 0,
   });
   const subject = `${matches.length} new match${matches.length === 1 ? "" : "es"} for "${searchName}"`;

@@ -148,9 +148,9 @@ export default async function ConversationPage({
 
   const price =
     head.listing_price_cents != null
-      ? new Intl.NumberFormat("en-US", {
+      ? new Intl.NumberFormat("en-AU", {
           style: "currency",
-          currency: "USD",
+          currency: "AUD",
           maximumFractionDigits: 0,
         }).format(head.listing_price_cents / 100)
       : null;

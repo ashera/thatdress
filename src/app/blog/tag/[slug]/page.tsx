@@ -4,7 +4,9 @@ import type { Metadata } from "next";
 import { query } from "@/lib/db";
 import { getBaseUrl } from "@/lib/email";
 
-export const dynamic = "force-dynamic";
+// Static-rendered with revalidation. Tag pages drift slowly (only
+// affected by tag-edit + post-publish events). Hour fallback is fine.
+export const revalidate = 3600;
 
 const PAGE_SIZE = 10;
 

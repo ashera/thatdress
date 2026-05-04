@@ -159,9 +159,9 @@ const fetchListing = cache(async (
 });
 
 function priceFormat(cents: number): string {
-  return new Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat("en-AU", {
     style: "currency",
-    currency: "USD",
+    currency: "AUD",
     maximumFractionDigits: 0,
   }).format(cents / 100);
 }
@@ -305,9 +305,9 @@ function buildSpecs(l: ListingRow): { group: string; items: Spec[] }[] {
 
   const provenance: Spec[] = [];
   if (l.original_retail_cents != null && l.original_retail_cents > 0) {
-    const retail = new Intl.NumberFormat("en-US", {
+    const retail = new Intl.NumberFormat("en-AU", {
       style: "currency",
-      currency: "USD",
+      currency: "AUD",
       maximumFractionDigits: 0,
     }).format(l.original_retail_cents / 100);
     provenance.push({ k: "Original retail", v: retail });
@@ -449,9 +449,9 @@ export default async function ListingDetailPage({
   ) {
     notFound();
   }
-  const price = new Intl.NumberFormat("en-US", {
+  const price = new Intl.NumberFormat("en-AU", {
     style: "currency",
-    currency: "USD",
+    currency: "AUD",
     maximumFractionDigits: 0,
   }).format(l.price_cents / 100);
   const sellerName = l.seller_email
@@ -503,7 +503,7 @@ export default async function ListingDetailPage({
         offers: {
           "@type": "Offer",
           url: productUrl,
-          priceCurrency: "USD",
+          priceCurrency: "AUD",
           price: (l.price_cents / 100).toFixed(2),
           availability: l.sold_at
             ? "https://schema.org/SoldOut"
@@ -759,9 +759,9 @@ export default async function ListingDetailPage({
           ) : (
             <ul className="admin-conv-list">
               {offers.map((o) => {
-                const amount = new Intl.NumberFormat("en-US", {
+                const amount = new Intl.NumberFormat("en-AU", {
                   style: "currency",
-                  currency: "USD",
+                  currency: "AUD",
                   maximumFractionDigits: 0,
                 }).format(o.amount_cents / 100);
                 const when = new Date(o.created_at).toLocaleDateString(

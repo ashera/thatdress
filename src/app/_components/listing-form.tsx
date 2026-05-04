@@ -178,7 +178,7 @@ export function ListingForm({
         </p>
 
         <div className="grid-2">
-          <Field label="Price (USD)" htmlFor="price">
+          <Field label="Price (AUD)" htmlFor="price">
             <Input
               id="price"
               type="text"
@@ -336,7 +336,7 @@ export function ListingForm({
         <p className="card-sub">Provenance and tailoring notes for serious buyers.</p>
 
         <Field
-          label="Original retail price (USD)"
+          label="Original retail price (AUD)"
           htmlFor="original_retail"
           help="Helps buyers value the discount."
         >
