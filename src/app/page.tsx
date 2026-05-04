@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { query } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
@@ -172,6 +173,15 @@ export default async function Home({
         </div>
       )}
       <section className="hero">
+        <div className="hero-sketch" aria-hidden>
+          <Image
+            src="/dress-sketch.png"
+            alt=""
+            fill
+            priority
+            sizes="(max-width: 900px) 100vw, 50vw"
+          />
+        </div>
         <div className="hero-grid">
           <div>
             <p className="eyebrow">Peer-to-peer formal-dress marketplace</p>

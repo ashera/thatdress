@@ -1271,40 +1271,40 @@ textarea.input {
   isolation: isolate;
   overflow: hidden;
 }
-.hero-bike {
+.hero-sketch {
   position: absolute;
   top: 50%;
-  right: -8%;
+  right: 2%;
   transform: translateY(-50%);
-  width: 62%;
-  max-width: 820px;
-  aspect-ratio: 1140 / 920;
+  width: 44%;
+  max-width: 560px;
+  aspect-ratio: 3 / 4;
   z-index: -1;
   pointer-events: none;
   opacity: 0.95;
-  filter: drop-shadow(0 30px 40px oklch(20% 0.02 60 / 0.08));
+  filter: drop-shadow(0 16px 28px oklch(20% 0.02 350 / 0.08));
   mask-image: linear-gradient(
     to right,
     transparent 0%,
-    black 22%,
+    black 18%,
     black 100%
   );
   -webkit-mask-image: linear-gradient(
     to right,
     transparent 0%,
-    black 22%,
+    black 18%,
     black 100%
   );
 }
-.hero-bike img {
+.hero-sketch img {
   object-fit: contain;
   object-position: center right;
 }
 @media (max-width: 900px) {
-  .hero-bike {
-    width: 100%;
-    right: -20%;
-    opacity: 0.18;
+  .hero-sketch {
+    width: 90%;
+    right: -10%;
+    opacity: 0.14;
   }
 }
 .hero-grid {
@@ -1312,6 +1312,10 @@ textarea.input {
   grid-template-columns: minmax(0, 1.2fr);
   gap: var(--s-9);
   align-items: end;
+  max-width: 56%;
+}
+@media (max-width: 900px) {
+  .hero-grid { max-width: 100%; }
 }
 .hero h1 {
   font-family: var(--font-display);
