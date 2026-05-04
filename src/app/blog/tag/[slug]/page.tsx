@@ -140,7 +140,7 @@ export default async function BlogTagPage({
 
   return (
     <div className="page page--pad">
-      <main style={{ maxWidth: 880, margin: "0 auto" }}>
+      <main style={{ maxWidth: 1024, margin: "0 auto" }}>
         <Link
           href="/blog"
           style={{

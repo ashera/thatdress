@@ -169,7 +169,7 @@ export default async function BlogPostPage({
 
   return (
     <div className="page page--pad">
-      <article style={{ maxWidth: 720, margin: "0 auto" }}>
+      <article style={{ maxWidth: 1024, margin: "0 auto" }}>
         <Link
           href="/blog"
           style={{
