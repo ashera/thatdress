@@ -14,6 +14,11 @@ const TOOLS: Array<{
     title: "Value estimator",
     desc: "Find out what your designer dress is worth on the Australian resale market.",
   },
+  {
+    href: "/tools/alterations-cost",
+    title: "Alterations cost",
+    desc: "What to budget at the tailor — hem, bust, straps, beading, zippers.",
+  },
 ];
 
 export async function generateMetadata(): Promise<Metadata> {

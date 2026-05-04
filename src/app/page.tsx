@@ -222,6 +222,10 @@ export default async function Home({
                 href: "/tools/value-estimator",
                 label: "Estimate dress value",
               },
+              {
+                href: "/tools/alterations-cost",
+                label: "Alterations cost",
+              },
             ].map((t) => (
               <li key={t.href}>
                 <Link href={t.href} className="hero-toolbox-link">
