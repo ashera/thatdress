@@ -53,22 +53,30 @@ export async function sendEmail(opts: {
   }
 }
 
-/** Resolve the public base URL for building absolute links inside emails.
- *  Normalises bare-hostname env values (e.g. Railway's
- *  "frockd-production.up.railway.app") into a full URL with protocol. */
+/** Resolve the public base URL for canonical/OG/email links.
+ *
+ *  Prefers the request's own host (so a page fetched at
+ *  www.frockd.com.au declares its canonical on www.frockd.com.au, not
+ *  whatever internal hostname APP_URL is set to). Falls back to
+ *  APP_URL for request-less contexts (e.g. cron jobs sending the
+ *  saved-search digest). Hardcoded final fallback prevents broken
+ *  URLs in tests / build-time edge cases.
+ *
+ *  Bare-hostname env values (e.g. Railway's
+ *  "frockd-production.up.railway.app") are normalised to https://. */
 export async function getBaseUrl(): Promise<string> {
-  const raw = process.env.APP_URL?.trim().replace(/\/+$/, "");
-  if (raw) {
-    if (/^https?:\/\//i.test(raw)) return raw;
-    return `https://${raw}`;
-  }
   try {
     const h = await headers();
     const proto = h.get("x-forwarded-proto") ?? "https";
     const host = h.get("host");
     if (host) return `${proto}://${host}`;
   } catch {
-    // Fall through.
+    // No request context — fall through to APP_URL.
+  }
+  const raw = process.env.APP_URL?.trim().replace(/\/+$/, "");
+  if (raw) {
+    if (/^https?:\/\//i.test(raw)) return raw;
+    return `https://${raw}`;
   }
   return "https://www.frockd.com.au";
 }

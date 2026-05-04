@@ -3,7 +3,31 @@ import { getCurrentUser } from "@/lib/auth";
 import { resolveCurrentRegion } from "@/lib/regions";
 import { RegionPicker } from "./region-picker";
 
-const BYPASS_PREFIXES = ["/admin", "/login", "/register", "/api"];
+// Region gate only intercepts pages where region context is essential
+// for the experience. Everything else passes through so deep links and
+// crawlers see the real content without hitting the picker. Listings,
+// blog posts, and the home page handle "no region selected" state on
+// their own (default copy / unfiltered listings).
+const BYPASS_PREFIXES = [
+  "/",
+  "/listings",
+  "/blog",
+  "/regions",
+  "/admin",
+  "/login",
+  "/register",
+  "/forgot",
+  "/reset",
+  "/verify",
+  "/email-change",
+  "/profile",
+  "/messages",
+  "/shortlist",
+  "/alerts",
+  "/support",
+  "/status",
+  "/api",
+];
 
 function shouldBypass(path: string): boolean {
   return BYPASS_PREFIXES.some(
