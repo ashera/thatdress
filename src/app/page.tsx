@@ -1,7 +1,9 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { query } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { getBaseUrl } from "@/lib/email";
 import { getShortlistIds } from "@/lib/shortlist";
 import { regionShortName, resolveCurrentRegion } from "@/lib/regions";
 import { ButtonLink, Spec } from "./_components/ui";
@@ -12,6 +14,31 @@ import {
 } from "./_components/listing-card";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const baseUrl = await getBaseUrl();
+  const title =
+    "frockd — buy & sell pre-loved formal dresses in Australia";
+  const description =
+    "Australia's peer-to-peer marketplace for pre-loved formal dresses and gowns. Wedding-guest, black-tie, prom, bridesmaid — verified designers, honest condition, no listing fees.";
+  return {
+    title,
+    description,
+    alternates: { canonical: `${baseUrl}/` },
+    openGraph: {
+      type: "website",
+      url: `${baseUrl}/`,
+      title,
+      description,
+      siteName: "frockd",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+    },
+  };
+}
 
 type MarketplaceStats = {
   designer_count: number;

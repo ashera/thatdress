@@ -1,8 +1,11 @@
+import { cache } from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { query } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { getCurrentRegionId } from "@/lib/regions";
+import { getBaseUrl } from "@/lib/email";
 import { startConversation } from "@/lib/actions/messages";
 import { toggleListingSold } from "@/lib/actions/listings";
 import { toggleShortlist } from "@/lib/actions/shortlist";
@@ -112,10 +115,15 @@ const LISTING_JOINS = `
   LEFT JOIN dress_lengths    dl  ON dl.id  = l.length_id
 `;
 
-async function fetchListing(id: string): Promise<
+// React.cache dedupes the DB hit between generateMetadata and the
+// default export within a single request — both call this with the
+// same id, so the second call returns the cached promise.
+const fetchListing = cache(async (
+  id: string,
+): Promise<
   | { ok: true; listing: ListingRow | null; images: GalleryImage[] }
   | { ok: false; error: string }
-> {
+> => {
   if (!/^\d+$/.test(id)) return { ok: true, listing: null, images: [] };
   try {
     const result = await query<ListingRow>(
@@ -148,6 +156,95 @@ async function fetchListing(id: string): Promise<
       error: error instanceof Error ? error.message : "unknown error",
     };
   }
+});
+
+function priceFormat(cents: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(cents / 100);
+}
+
+/**
+ * Map our condition slugs to schema.org's enum. We only use
+ * NewCondition for tagged-as-new; everything else is UsedCondition
+ * since the marketplace is pre-loved.
+ */
+function schemaCondition(condition_label: string | null): string {
+  if (!condition_label) return "https://schema.org/UsedCondition";
+  const lc = condition_label.toLowerCase();
+  if (lc.includes("new with tags")) return "https://schema.org/NewCondition";
+  return "https://schema.org/UsedCondition";
+}
+
+function buildListingDescription(l: ListingRow): string {
+  if (l.description) {
+    const trimmed = l.description.replace(/\s+/g, " ").trim();
+    return trimmed.length <= 160 ? trimmed : `${trimmed.slice(0, 157)}…`;
+  }
+  // Fall back to a spec line built from the structured fields.
+  const parts: string[] = [];
+  if (l.condition_label) parts.push(l.condition_label.toLowerCase());
+  if (l.silhouette_label) parts.push(l.silhouette_label.toLowerCase());
+  if (l.color) parts.push(l.color.toLowerCase());
+  if (l.designer_name) parts.push(`by ${l.designer_name}`);
+  if (l.size_label) parts.push(`size ${l.size_label}`);
+  const opening = parts.length ? `Pre-loved ${parts.join(" ")}` : "Pre-loved formal dress";
+  return `${opening}. Available on frockd, the peer-to-peer formal-dress marketplace.`;
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const result = await fetchListing(id);
+  if (!result.ok || !result.listing) {
+    return { title: "Listing not found" };
+  }
+  const l = result.listing;
+  // Hide unpublished/draft listings from search engines too.
+  if (l.is_draft || !l.is_published) {
+    return {
+      title: l.title,
+      robots: { index: false, follow: false },
+    };
+  }
+
+  const description = buildListingDescription(l);
+  const titleSegments = [l.title];
+  if (l.size_label) titleSegments.push(`size ${l.size_label}`);
+  titleSegments.push(priceFormat(l.price_cents));
+  const title = titleSegments.join(" · ");
+
+  const baseUrl = await getBaseUrl();
+  const url = `${baseUrl}/listings/${l.id}`;
+  const primaryImageId = result.images[0]?.id ?? null;
+  const imageUrl = primaryImageId
+    ? `${baseUrl}/api/listings/${l.id}/images/${primaryImageId}`
+    : undefined;
+
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      type: "website",
+      url,
+      title,
+      description,
+      siteName: "frockd",
+      images: imageUrl ? [imageUrl] : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: imageUrl ? [imageUrl] : undefined,
+    },
+  };
 }
 
 function initials(email?: string | null): string {
@@ -381,8 +478,50 @@ export default async function ListingDetailPage({
     ? await getListingStats(l.id)
     : null;
 
+  // Product structured data — only emit for live, available listings so
+  // we don't tell Google a sold/draft listing is in stock.
+  const baseUrl = await getBaseUrl();
+  const productUrl = `${baseUrl}/listings/${l.id}`;
+  const primaryImageId = result.images[0]?.id ?? null;
+  const productImageUrl = primaryImageId
+    ? `${baseUrl}/api/listings/${l.id}/images/${primaryImageId}`
+    : undefined;
+  const showProductSchema = l.is_published && !l.is_draft;
+  const productSchema = showProductSchema
+    ? {
+        "@context": "https://schema.org",
+        "@type": "Product",
+        name: l.title,
+        description: buildListingDescription(l),
+        ...(productImageUrl ? { image: productImageUrl } : {}),
+        ...(l.designer_name
+          ? { brand: { "@type": "Brand", name: l.designer_name } }
+          : {}),
+        ...(l.color ? { color: l.color } : {}),
+        ...(l.size_label ? { size: l.size_label } : {}),
+        ...(l.occasion_label ? { category: l.occasion_label } : {}),
+        offers: {
+          "@type": "Offer",
+          url: productUrl,
+          priceCurrency: "USD",
+          price: (l.price_cents / 100).toFixed(2),
+          availability: l.sold_at
+            ? "https://schema.org/SoldOut"
+            : "https://schema.org/InStock",
+          itemCondition: schemaCondition(l.condition_label),
+        },
+      }
+    : null;
+
   return (
     <div className="page detail-page">
+      {productSchema && (
+        <script
+          type="application/ld+json"
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }}
+        />
+      )}
       <Link href="/listings" className="back-link">
         ← Back to browse
       </Link>

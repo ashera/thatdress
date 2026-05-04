@@ -34,6 +34,32 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }));
 
+  // Live listings — published, non-draft, not sold. Sold listings are
+  // valuable for "what did this dress sell for" queries but typically
+  // shouldn't be canonical search-result targets, so skip them here.
+  let listings: { id: string; created_at: string }[] = [];
+  try {
+    const r = await query<{ id: string; created_at: string }>(
+      `SELECT id::text, created_at::text
+         FROM listings
+        WHERE is_published = TRUE
+          AND is_draft = FALSE
+          AND sold_at IS NULL
+        ORDER BY created_at DESC
+        LIMIT 5000`,
+    );
+    listings = r.rows;
+  } catch {
+    // sitemap should still serve even if DB hiccups
+  }
+
+  const listingEntries: MetadataRoute.Sitemap = listings.map((l) => ({
+    url: `${baseUrl}/listings/${l.id}`,
+    lastModified: new Date(l.created_at),
+    changeFrequency: "weekly",
+    priority: 0.8,
+  }));
+
   let tagSlugs: { slug: string }[] = [];
   try {
     const r = await query<{ slug: string }>(
@@ -55,5 +81,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.5,
   }));
 
-  return [...staticEntries, ...postEntries, ...tagEntries];
+  return [
+    ...staticEntries,
+    ...listingEntries,
+    ...postEntries,
+    ...tagEntries,
+  ];
 }

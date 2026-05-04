@@ -25,9 +25,33 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
+// metadataBase resolves all relative OG / Twitter image URLs in pages
+// that don't override it. APP_URL is set on the deployed services;
+// the fallback is the production domain so dev/preview also work.
+const SITE_URL = process.env.APP_URL ?? "https://www.frockd.com.au";
+
 export const metadata: Metadata = {
-  title: "frockd — buy & sell formal dresses",
-  description: "A peer-to-peer marketplace for pre-loved formal dresses and gowns.",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "frockd — buy & sell pre-loved formal dresses",
+    template: "%s · frockd",
+  },
+  description:
+    "Australia's peer-to-peer marketplace for pre-loved formal dresses and gowns — wedding-guest, black-tie, prom, bridesmaid.",
+  applicationName: "frockd",
+  twitter: {
+    card: "summary_large_image",
+    title: "frockd — buy & sell pre-loved formal dresses",
+    description:
+      "Peer-to-peer marketplace for pre-loved formal dresses and gowns.",
+  },
+  openGraph: {
+    type: "website",
+    siteName: "frockd",
+    title: "frockd — buy & sell pre-loved formal dresses",
+    description:
+      "Peer-to-peer marketplace for pre-loved formal dresses and gowns.",
+  },
 };
 
 export const viewport: Viewport = {
