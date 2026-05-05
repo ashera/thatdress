@@ -970,15 +970,30 @@ textarea.input {
   border-radius: var(--r-3);
   aspect-ratio: 4 / 3;
   overflow: hidden;
-  display: grid;
-  place-items: center;
 }
+/* Absolute-position the image so iOS Safari honours height correctly —
+   a known layout quirk with grid + aspect-ratio + height:100% on img. */
 .listing-photo img {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
+  object-position: center;
   display: block;
   transition: transform var(--dur-slow) var(--ease-out);
+}
+.listing-photo > .listing-photo-empty,
+.listing-photo > .listing-own-flag,
+.listing-photo > .listing-hidden-flag,
+.listing-photo > .listing-sold-overlay,
+.listing-photo > .shortlist-form {
+  position: absolute;
+}
+.listing-photo > .listing-photo-empty {
+  inset: 0;
+  display: grid;
+  place-items: center;
 }
 .listing:hover .listing-photo img { transform: scale(1.03); }
 .listing-photo-empty {
@@ -2863,19 +2878,27 @@ textarea.input {
   box-shadow: var(--e-2);
 }
 .listing-row-photo {
+  position: relative;
   width: 100px;
   aspect-ratio: 4 / 3;
   background: var(--surface-sunken);
   border-radius: var(--r-2);
   overflow: hidden;
-  display: grid;
-  place-items: center;
   flex-shrink: 0;
 }
 .listing-row-photo img {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
+  object-position: center;
+}
+.listing-row-photo > .listing-row-photo-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
 }
 .listing-row-photo-empty {
   font-family: var(--font-mono);
