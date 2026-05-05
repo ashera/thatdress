@@ -16,6 +16,7 @@ import {
 } from "@/lib/listing-views";
 import { isTrustStatus } from "@/lib/listing-trust";
 import { setListingTrustStatus } from "@/lib/actions/listing-trust";
+import { TrustBadge } from "../../_components/trust-badge";
 import { Button, ButtonLink, Icon } from "../../_components/ui";
 import {
   ListingGallery,
@@ -606,39 +607,11 @@ export default async function ListingDetailPage({
             const ts =
               l.trust_status && isTrustStatus(l.trust_status)
                 ? l.trust_status
-                : null;
-            if (!ts || ts === "self-declared" || ts === "flagged") return null;
-            const isAuth = ts === "authenticated";
+                : undefined;
+            if (!ts) return null;
             return (
-              <div
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "6px 14px",
-                  borderRadius: 999,
-                  background: isAuth ? "#1c1816" : "var(--volt-100)",
-                  color: isAuth ? "#fff" : "var(--volt-700)",
-                  border: isAuth
-                    ? "1px solid #1c1816"
-                    : "1px solid var(--volt-200)",
-                  fontFamily: "var(--font-mono)",
-                  fontSize: 12,
-                  fontWeight: 700,
-                  letterSpacing: "0.12em",
-                  textTransform: "uppercase",
-                  margin: "var(--s-3) 0",
-                }}
-                title={
-                  isAuth
-                    ? "Authenticated by frockd — verified by our authentication partner."
-                    : "Verified — this listing meets frockd's photo, condition, and authenticity criteria."
-                }
-              >
-                <span aria-hidden style={{ fontSize: 14, lineHeight: 1 }}>
-                  ✓
-                </span>
-                {isAuth ? "Authenticated" : "Verified by frockd"}
+              <div style={{ margin: "var(--s-3) 0" }}>
+                <TrustBadge status={ts} size="large" />
               </div>
             );
           })()}

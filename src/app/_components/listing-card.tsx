@@ -1,11 +1,8 @@
 import Link from "next/link";
 import { ButtonLink, Icon } from "./ui";
 import { toggleShortlist } from "@/lib/actions/shortlist";
-import {
-  TRUST_BADGE_LABELS,
-  isTrustStatus,
-  type TrustStatus,
-} from "@/lib/listing-trust";
+import { isTrustStatus, type TrustStatus } from "@/lib/listing-trust";
+import { TrustBadge } from "./trust-badge";
 
 export type ListingCardStat = {
   value: string;
@@ -160,47 +157,6 @@ export function listingFromRow(
   };
 }
 
-/** Small inline trust pill for listing cards. Only renders for the
- *  verified / authenticated tiers; the default 'self-declared' is the
- *  baseline so we don't add visual noise to every card. */
-function TrustBadge({ status }: { status: TrustStatus | undefined }) {
-  if (!status || status === "self-declared" || status === "flagged") {
-    return null;
-  }
-  const isAuthenticated = status === "authenticated";
-  return (
-    <span
-      title={
-        isAuthenticated
-          ? "Authenticated by frockd"
-          : "Verified — meets frockd's listing-quality and authenticity criteria"
-      }
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 4,
-        padding: "3px 8px",
-        borderRadius: 999,
-        background: isAuthenticated ? "#1c1816" : "var(--volt-100)",
-        color: isAuthenticated ? "#fff" : "var(--volt-700)",
-        border: isAuthenticated
-          ? "1px solid #1c1816"
-          : "1px solid var(--volt-200)",
-        fontFamily: "var(--font-mono)",
-        fontSize: 10,
-        fontWeight: 700,
-        letterSpacing: "0.1em",
-        textTransform: "uppercase",
-        whiteSpace: "nowrap",
-      }}
-    >
-      <span aria-hidden style={{ fontSize: 11, lineHeight: 1 }}>
-        ✓
-      </span>
-      {TRUST_BADGE_LABELS[status]}
-    </span>
-  );
-}
 
 function ShortlistButton({
   listingId,
