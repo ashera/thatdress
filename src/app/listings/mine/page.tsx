@@ -2,7 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { query } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { ButtonLink } from "../../_components/ui";
+import { startDraftListing } from "@/lib/actions/listing-wizard";
+import { Button } from "../../_components/ui";
 import {
   ListingRow,
   listingFromRow,
@@ -141,20 +142,38 @@ export default async function MyListingsPage() {
   return (
     <div className="page page--pad">
       <header className="my-listings-header">
-        <p className="eyebrow">Your listings</p>
-        <h1>My listings</h1>
+        <p className="eyebrow">Your wardrobe</p>
+        <h1>Sell a dress</h1>
         <p className="sub">
-          {total === 0
-            ? "You haven't posted any listings yet."
-            : `${total} total · ${hidden} hidden from public browse.`}
+          We&rsquo;ll walk you through it in five short steps: photos &amp;
+          basics, style, size &amp; fit, condition, and pricing.
         </p>
       </header>
 
-      <div style={{ marginBottom: "var(--s-5)" }}>
-        <ButtonLink href="/listings/new" variant="primary" icon="plus">
-          New listing
-        </ButtonLink>
-      </div>
+      <section
+        className="form-card"
+        style={{
+          marginBottom: "var(--s-7)",
+          padding: "var(--s-5) var(--s-6)",
+          background: "var(--volt-50)",
+          border: "1px solid var(--volt-100)",
+        }}
+      >
+        <h2 className="card-heading" style={{ margin: 0 }}>
+          Start a new listing
+        </h2>
+        <p
+          className="card-sub"
+          style={{ marginTop: 4, marginBottom: "var(--s-4)" }}
+        >
+          Listings are free to post. We never take a commission.
+        </p>
+        <form action={startDraftListing}>
+          <Button type="submit" variant="primary" iconRight="arrow">
+            Start a new listing
+          </Button>
+        </form>
+      </section>
 
       {drafts.length > 0 && (
         <section
@@ -228,6 +247,20 @@ export default async function MyListingsPage() {
         </section>
       )}
 
+      <header style={{ marginBottom: "var(--s-5)" }}>
+        <h2
+          className="card-heading"
+          style={{ margin: 0, fontSize: 22 }}
+        >
+          Your published listings
+        </h2>
+        <p className="card-sub" style={{ marginTop: 4 }}>
+          {total === 0
+            ? "You haven't posted any listings yet."
+            : `${total} total · ${hidden} hidden from public browse.`}
+        </p>
+      </header>
+
       {!result.ok ? (
         <div className="form-error">
           <strong>Could not load your listings.</strong>
@@ -239,8 +272,7 @@ export default async function MyListingsPage() {
         <div className="empty-state">
           <h3>No listings yet</h3>
           <p style={{ margin: 0 }}>
-            <Link href="/listings/new">Create your first listing</Link> when
-            you&rsquo;re ready.
+            Start your first one with the button above.
           </p>
         </div>
       ) : (

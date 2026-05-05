@@ -291,7 +291,7 @@ function ResultCard({
             flexWrap: "wrap",
           }}
         >
-          <ButtonLink href="/listings/new" variant="primary" iconRight="arrow">
+          <ButtonLink href="/listings/mine" variant="primary" iconRight="arrow">
             List your dress on frockd
           </ButtonLink>
           <ButtonLink

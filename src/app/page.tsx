@@ -281,7 +281,7 @@ export default async function Home({
               <ButtonLink href="/listings" variant="primary" size="lg" iconRight="arrow">
                 Browse listings
               </ButtonLink>
-              <ButtonLink href="/listings/new" variant="ghost" size="lg" icon="plus">
+              <ButtonLink href="/listings/mine" variant="ghost" size="lg" icon="plus">
                 List your dress
               </ButtonLink>
             </div>

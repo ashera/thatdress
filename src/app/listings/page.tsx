@@ -491,7 +491,7 @@ export default async function ListingsPage({
           <ViewToggle current={view} hrefFor={(v) => buildViewHref(v, sp)} />
           {user ? (
             <ButtonLink
-              href="/listings/new"
+              href="/listings/mine"
               variant="primary"
               size="sm"
               icon="plus"
@@ -590,7 +590,7 @@ export default async function ListingsPage({
             </ButtonLink>
           ) : (
             <ButtonLink
-              href={user ? "/listings/new" : "/register"}
+              href={user ? "/listings/mine" : "/register"}
               variant="primary"
               iconRight="arrow"
             >
