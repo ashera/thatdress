@@ -1343,6 +1343,12 @@ textarea.input {
   .hero-grid { gap: var(--s-7); }
 }
 
+/* Hide the dress-sketch decoration on the start-listing card on
+   narrow viewports — the card otherwise pinches the text column. */
+@media (max-width: 540px) {
+  .start-listing-art { display: none !important; }
+}
+
 /* Floating helper card slot — kept as legacy styling. */
 .hero-toolbox {
   position: absolute;

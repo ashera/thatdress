@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { query } from "@/lib/db";
@@ -157,22 +158,45 @@ export default async function MyListingsPage() {
           padding: "var(--s-5) var(--s-6)",
           background: "var(--volt-50)",
           border: "1px solid var(--volt-100)",
+          display: "flex",
+          alignItems: "center",
+          gap: "var(--s-5)",
         }}
       >
-        <h2 className="card-heading" style={{ margin: 0 }}>
-          Start a new listing
-        </h2>
-        <p
-          className="card-sub"
-          style={{ marginTop: 4, marginBottom: "var(--s-4)" }}
-        >
-          Listings are free to post. We never take a commission.
-        </p>
-        <form action={startDraftListing}>
-          <Button type="submit" variant="primary" iconRight="arrow">
+        <div style={{ flex: "1 1 auto", minWidth: 0 }}>
+          <h2 className="card-heading" style={{ margin: 0 }}>
             Start a new listing
-          </Button>
-        </form>
+          </h2>
+          <p
+            className="card-sub"
+            style={{ marginTop: 4, marginBottom: "var(--s-4)" }}
+          >
+            Listings are free to post. We never take a commission.
+          </p>
+          <form action={startDraftListing}>
+            <Button type="submit" variant="primary" iconRight="arrow">
+              Start a new listing
+            </Button>
+          </form>
+        </div>
+        <div
+          aria-hidden
+          className="start-listing-art"
+          style={{
+            position: "relative",
+            flex: "0 0 auto",
+            width: 120,
+            height: 160,
+          }}
+        >
+          <Image
+            src="/dress-sketch-tr-back.png"
+            alt=""
+            fill
+            sizes="120px"
+            style={{ objectFit: "contain", opacity: 0.85 }}
+          />
+        </div>
       </section>
 
       {drafts.length > 0 && (
