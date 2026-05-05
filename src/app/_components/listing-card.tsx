@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ButtonLink, Icon } from "./ui";
 import { toggleShortlist } from "@/lib/actions/shortlist";
 
@@ -283,11 +284,17 @@ export function ListingCard({ data }: { data: ListingCardData }) {
       </div>
 
       <div className="listing-photo">
-        {data.photo ? (
-          <img src={data.photo} alt={data.title} loading="lazy" />
-        ) : (
-          <span className="listing-photo-empty">Dress photo</span>
-        )}
+        <Link
+          href={detailHref}
+          className="listing-photo-link"
+          aria-label={`View ${data.title}`}
+        >
+          {data.photo ? (
+            <img src={data.photo} alt={data.title} loading="lazy" />
+          ) : (
+            <span className="listing-photo-empty">Dress photo</span>
+          )}
+        </Link>
         {data.isOwn && (
           <span className="listing-own-flag" title="Your listing">
             Yours

@@ -985,17 +985,22 @@ textarea.input {
   display: block;
   transition: transform var(--dur-slow) var(--ease-out);
 }
-.listing-photo > .listing-photo-empty,
 .listing-photo > .listing-own-flag,
 .listing-photo > .listing-hidden-flag,
 .listing-photo > .listing-sold-overlay,
 .listing-photo > .shortlist-form {
   position: absolute;
 }
-.listing-photo > .listing-photo-empty {
+/* Photo is wrapped in a Link so the user can click through to the
+   listing detail page. Link fills the container and provides the
+   positioning context for the absolute img inside it. */
+.listing-photo-link {
+  position: absolute;
   inset: 0;
   display: grid;
   place-items: center;
+  text-decoration: none;
+  color: inherit;
 }
 .listing:hover .listing-photo img { transform: scale(1.03); }
 .listing-photo-empty {
