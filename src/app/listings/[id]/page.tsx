@@ -16,6 +16,8 @@ import {
 } from "@/lib/listing-views";
 import { isTrustStatus } from "@/lib/listing-trust";
 import { setListingTrustStatus } from "@/lib/actions/listing-trust";
+import { computeHealth, type HealthInput } from "@/lib/listing-health";
+import { loadSiteSettings } from "@/lib/site-settings";
 import { TrustBadge } from "../../_components/trust-badge";
 import { Button, ButtonLink, Icon } from "../../_components/ui";
 import {
@@ -59,6 +61,8 @@ type ListingRow = {
   original_retail_cents: number | null;
   alterations_text: string | null;
   has_original_receipt: boolean | null;
+  is_authentic_declared: boolean | null;
+  includes_label_lining_photos: boolean | null;
   trust_status: string | null;
 };
 
@@ -104,6 +108,8 @@ const LISTING_SELECT = `
   l.original_retail_cents,
   l.alterations_text,
   l.has_original_receipt,
+  l.is_authentic_declared,
+  l.includes_label_lining_photos,
   l.trust_status
 `;
 
@@ -323,6 +329,219 @@ function buildSpecs(l: ListingRow): { group: string; items: Spec[] }[] {
     { group: "Provenance", items: provenance },
   ];
   return groups.filter((g) => g.items.length > 0);
+}
+
+/** Coerce a ListingRow into the HealthInput shape. We only have the
+ *  joined *_label fields on the detail page (not the raw *_id columns),
+ *  but presence-of-label is a reliable proxy for presence-of-id, which
+ *  is all the health calc needs. */
+function rowToHealthInput(l: ListingRow, imageCount: number): HealthInput {
+  function num(s: string | null | undefined): number | null {
+    if (s == null || s === "") return null;
+    const n = Number(s);
+    return Number.isFinite(n) ? n : null;
+  }
+  const present = (s: string | null | undefined) => (s ? "x" : null);
+  return {
+    designerId: present(l.designer_name),
+    model: l.model,
+    year: l.year,
+    occasionId: present(l.occasion_label),
+    conditionId: present(l.condition_label),
+    sizeId: present(l.size_label),
+    silhouetteId: present(l.silhouette_label),
+    fabricId: present(l.fabric_label),
+    necklineId: present(l.neckline_label),
+    sleeveStyleId: present(l.sleeve_style_label),
+    lengthId: present(l.length_label),
+    color: l.color,
+    bustInches: num(l.bust_inches),
+    waistInches: num(l.waist_inches),
+    hipsInches: num(l.hips_inches),
+    originalRetailCents: l.original_retail_cents,
+    hasOriginalReceipt: !!l.has_original_receipt,
+    isAuthenticDeclared: !!l.is_authentic_declared,
+    includesLabelLiningPhotos: !!l.includes_label_lining_photos,
+    description: l.description,
+    imageCount,
+  };
+}
+
+/** Compressed listing-health card shown on the detail page when the
+ *  viewer owns the listing (or is an admin). Mirrors the wizard's
+ *  HealthBar but with smaller numerals and only the top suggestion,
+ *  so it acts as a quick "here's what's still keeping you off the
+ *  Verified badge" hint without the full breakdown. Each suggestion
+ *  link jumps to the relevant wizard step. */
+async function OwnerHealthCard({
+  listing,
+  imageCount,
+}: {
+  listing: ListingRow;
+  imageCount: number;
+}) {
+  const settings = await loadSiteSettings();
+  const verifiedThreshold = settings.healthThresholdVerified;
+  const { score, suggestions } = computeHealth(
+    rowToHealthInput(listing, imageCount),
+  );
+  const meetsVerified = score >= verifiedThreshold;
+  const top = suggestions.slice(0, 1);
+  return (
+    <div
+      style={{
+        margin: "var(--s-3) 0",
+        padding: "10px 14px",
+        background: meetsVerified
+          ? "var(--volt-50)"
+          : "var(--surface-sunken)",
+        border: `1px solid ${
+          meetsVerified ? "var(--volt-200)" : "var(--hairline)"
+        }`,
+        borderRadius: 10,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          flexWrap: "wrap",
+        }}
+      >
+        <div
+          style={{
+            fontFamily: "var(--font-mono)",
+            fontSize: 10,
+            letterSpacing: "0.16em",
+            textTransform: "uppercase",
+            color: "var(--ink-3)",
+          }}
+        >
+          Listing health
+        </div>
+        <div
+          style={{
+            fontFamily: "var(--font-display)",
+            fontSize: 16,
+            color: "var(--ink-1)",
+            letterSpacing: "-0.01em",
+            lineHeight: 1,
+          }}
+        >
+          {score}
+          <span
+            style={{
+              color: "var(--ink-4)",
+              fontSize: 12,
+              fontWeight: 400,
+            }}
+          >
+            {" / 100"}
+          </span>
+        </div>
+        {meetsVerified ? (
+          <span
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: 10,
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+              color: "#92400e",
+              fontWeight: 700,
+              background: "#fef3c7",
+              border: "1px solid #fcd34d",
+              padding: "2px 8px",
+              borderRadius: 999,
+            }}
+          >
+            ✓ Verified-eligible
+          </span>
+        ) : (
+          <span
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: 10,
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+              color: "var(--ink-3)",
+            }}
+          >
+            {verifiedThreshold - score} pts to Verified
+          </span>
+        )}
+        <Link
+          href={`/listings/${listing.id}/edit`}
+          style={{
+            marginLeft: "auto",
+            fontFamily: "var(--font-mono)",
+            fontSize: 11,
+            color: "var(--ink-2)",
+            textDecoration: "underline",
+            textDecorationColor: "var(--hairline-strong)",
+            textUnderlineOffset: 3,
+          }}
+        >
+          Edit →
+        </Link>
+      </div>
+
+      <div
+        style={{
+          height: 4,
+          background: "var(--hairline)",
+          borderRadius: 999,
+          marginTop: 8,
+          overflow: "hidden",
+        }}
+        aria-hidden
+      >
+        <div
+          style={{
+            width: `${score}%`,
+            height: "100%",
+            background: meetsVerified ? "#fcd34d" : "var(--ink-2)",
+            transition: "width 200ms",
+          }}
+        />
+      </div>
+
+      {top.length > 0 && (
+        <div
+          style={{
+            marginTop: 8,
+            fontSize: 12,
+            color: "var(--ink-2)",
+            display: "flex",
+            gap: 6,
+            alignItems: "baseline",
+          }}
+        >
+          <span
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: 10,
+              color: "#92400e",
+              fontWeight: 700,
+            }}
+          >
+            +{top[0]!.points}
+          </span>
+          <Link
+            href={`/listings/new/${listing.id}/${top[0]!.step}`}
+            style={{
+              color: "var(--ink-1)",
+              textDecoration: "underline",
+              textDecorationColor: "var(--hairline-strong)",
+              textUnderlineOffset: 3,
+            }}
+          >
+            {top[0]!.text}
+          </Link>
+        </div>
+      )}
+    </div>
+  );
 }
 
 type ConversationSummary = {
@@ -615,6 +834,12 @@ export default async function ListingDetailPage({
               </div>
             );
           })()}
+          {(isOwner || isAdmin) && (
+            <OwnerHealthCard
+              listing={l}
+              imageCount={result.images.length}
+            />
+          )}
           <div className="detail-price">{price}</div>
 
           <div className="detail-seller">
