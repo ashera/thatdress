@@ -17,6 +17,10 @@ type FlaggedRow = {
   created_at: string;
   designer_name: string | null;
   primary_image_id: string | null;
+  flag_reason: string | null;
+  flag_created_at: string | null;
+  flag_by_email: string | null;
+  flag_count: string | null;
 };
 
 async function fetchFlagged(): Promise<FlaggedRow[]> {
@@ -36,18 +40,48 @@ async function fetchFlagged(): Promise<FlaggedRow[]> {
                   WHERE li.listing_id = l.id
                   ORDER BY li.is_primary DESC, li.position, li.id
                   LIMIT 1
-              ) AS primary_image_id
+              ) AS primary_image_id,
+              fl.reason         AS flag_reason,
+              fl.created_at::text AS flag_created_at,
+              fbu.email         AS flag_by_email,
+              (
+                SELECT COUNT(*)::text FROM listing_flags
+                  WHERE listing_id = l.id
+              )                 AS flag_count
          FROM listings l
          LEFT JOIN users     u ON u.id = l.seller_id
          LEFT JOIN designers d ON d.id = l.designer_id
+         LEFT JOIN LATERAL (
+           SELECT lf.reason, lf.created_at, lf.flagged_by_user_id
+             FROM listing_flags lf
+            WHERE lf.listing_id = l.id
+              AND lf.resolved_at IS NULL
+            ORDER BY lf.created_at DESC
+            LIMIT 1
+         ) fl ON TRUE
+         LEFT JOIN users     fbu ON fbu.id = fl.flagged_by_user_id
         WHERE l.trust_status = 'flagged'
           AND l.is_draft = FALSE
-        ORDER BY l.created_at DESC
+        ORDER BY COALESCE(fl.created_at, l.created_at) DESC
         LIMIT 200`,
     );
     return r.rows;
   } catch {
     return [];
+  }
+}
+
+function formatFlagDateTime(s: string): string {
+  try {
+    return new Date(s).toLocaleString("en-AU", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  } catch {
+    return s;
   }
 }
 
@@ -196,6 +230,46 @@ export default async function FlaggedListingsPage({
                   {row.is_published ? "" : " · Hidden"}
                   {row.sold_at ? " · Sold" : ""}
                 </div>
+                {row.flag_reason && (
+                  <div
+                    style={{
+                      marginTop: 8,
+                      padding: "8px 10px",
+                      borderRadius: 8,
+                      background: "var(--surface-sunken)",
+                      borderLeft: "3px solid var(--ink-2)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontFamily: "var(--font-mono)",
+                        fontSize: 10,
+                        letterSpacing: "0.12em",
+                        textTransform: "uppercase",
+                        color: "var(--ink-3)",
+                        marginBottom: 4,
+                      }}
+                    >
+                      Flagged by {row.flag_by_email ?? "(unknown)"}{" "}
+                      {row.flag_created_at
+                        ? `· ${formatFlagDateTime(row.flag_created_at)}`
+                        : ""}
+                      {row.flag_count && Number(row.flag_count) > 1
+                        ? ` · ${row.flag_count} total flags`
+                        : ""}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 13,
+                        color: "var(--ink-1)",
+                        lineHeight: 1.45,
+                        whiteSpace: "pre-wrap",
+                      }}
+                    >
+                      {row.flag_reason}
+                    </div>
+                  </div>
+                )}
               </div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 <form action={setListingTrustStatus}>

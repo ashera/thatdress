@@ -428,6 +428,24 @@ ALTER TABLE listings
   ADD CONSTRAINT listings_trust_status_check
     CHECK (trust_status IN ('self-declared', 'verified', 'authenticated', 'flagged'));
 
+-- Audit trail for trust_status='flagged' transitions. Each row captures
+-- *who* flagged a listing, *when*, and *why*. Marked resolved when an
+-- admin restores the listing to 'self-declared' or accepts the flag.
+CREATE TABLE IF NOT EXISTS listing_flags (
+  id                   BIGSERIAL    PRIMARY KEY,
+  listing_id           BIGINT       NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
+  flagged_by_user_id   BIGINT       REFERENCES users(id) ON DELETE SET NULL,
+  reason               TEXT         NOT NULL,
+  created_at           TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  resolved_at          TIMESTAMPTZ,
+  resolved_by_user_id  BIGINT       REFERENCES users(id) ON DELETE SET NULL,
+  resolution_note      TEXT
+);
+
+CREATE INDEX IF NOT EXISTS listing_flags_listing_idx ON listing_flags (listing_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS listing_flags_open_idx
+  ON listing_flags (listing_id) WHERE resolved_at IS NULL;
+
 CREATE INDEX IF NOT EXISTS listings_region_idx ON listings (region_id);
 
 INSERT INTO regions (slug, label, short_name, match_pattern, sort_order) VALUES

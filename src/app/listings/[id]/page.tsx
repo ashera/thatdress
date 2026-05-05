@@ -14,11 +14,12 @@ import {
   getListingStats,
   trackListingView,
 } from "@/lib/listing-views";
-import { isTrustStatus } from "@/lib/listing-trust";
+import { deriveTrustStatus, isTrustStatus } from "@/lib/listing-trust";
 import { setListingTrustStatus } from "@/lib/actions/listing-trust";
 import { computeHealth, type HealthInput } from "@/lib/listing-health";
 import { loadSiteSettings } from "@/lib/site-settings";
 import { TrustBadge } from "../../_components/trust-badge";
+import { FlagListingDialog } from "../../_components/flag-listing-dialog";
 import { Button, ButtonLink, Icon } from "../../_components/ui";
 import {
   ListingGallery,
@@ -604,6 +605,32 @@ export default async function ListingDetailPage({
   ) {
     notFound();
   }
+
+  // Self-heal trust_status: re-derive from the live row data and write
+  // back if it doesn't match the stored value. Catches listings that
+  // existed before recompute was wired into the wizard, or any future
+  // path that mutates a relevant field without recomputing. Cost is
+  // one UPDATE *only when something actually drifted* — the read is
+  // free, we already have everything from fetchListing.
+  {
+    const settingsForTrust = await loadSiteSettings();
+    const currentTrust =
+      l.trust_status && isTrustStatus(l.trust_status)
+        ? l.trust_status
+        : "self-declared";
+    const derivedTrust = deriveTrustStatus({
+      current: currentTrust,
+      health: rowToHealthInput(l, result.images.length),
+      threshold: settingsForTrust.healthThresholdVerified,
+    });
+    if (derivedTrust !== currentTrust) {
+      await query(
+        `UPDATE listings SET trust_status = $1 WHERE id = $2::bigint`,
+        [derivedTrust, l.id],
+      );
+      l.trust_status = derivedTrust;
+    }
+  }
   const price = new Intl.NumberFormat("en-AU", {
     style: "currency",
     currency: "AUD",
@@ -905,29 +932,17 @@ export default async function ListingDetailPage({
                 </Button>
               </form>
             )}
-            {isAdmin && (
+            {isAdmin && l.trust_status === "flagged" && (
               <form action={setListingTrustStatus}>
                 <input type="hidden" name="listingId" value={l.id} />
-                {l.trust_status === "flagged" ? (
-                  <>
-                    <input
-                      type="hidden"
-                      name="status"
-                      value="self-declared"
-                    />
-                    <Button type="submit" variant="quiet" size="sm">
-                      Restore (un-flag)
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <input type="hidden" name="status" value="flagged" />
-                    <Button type="submit" variant="quiet" size="sm">
-                      Flag for review
-                    </Button>
-                  </>
-                )}
+                <input type="hidden" name="status" value="self-declared" />
+                <Button type="submit" variant="quiet" size="sm">
+                  Restore (un-flag)
+                </Button>
               </form>
+            )}
+            {isAdmin && l.trust_status !== "flagged" && (
+              <FlagListingDialog listingId={l.id} next="detail" />
             )}
           </div>
 
