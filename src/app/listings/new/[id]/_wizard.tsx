@@ -119,12 +119,13 @@ function SeamstressMascot({ step }: { step: WizardStep }) {
         width: 96,
         height: 131,
         borderRadius: 14,
-        background: "var(--surface-sunken)",
-        backgroundImage: "url(/frockd-seamstress.png)",
+        backgroundColor: "var(--surface-sunken)",
+        backgroundImage: "url('/frockd-seamstress.png')",
         backgroundSize: "500% 200%",
         backgroundPosition: `${pose.x} ${pose.y}`,
         backgroundRepeat: "no-repeat",
         border: "1px solid var(--hairline)",
+        overflow: "hidden",
       }}
     />
   );
