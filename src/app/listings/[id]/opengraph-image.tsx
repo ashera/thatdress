@@ -34,7 +34,7 @@ let cachedLogoDataUrl: string | null | undefined;
 async function getLogoDataUrl(): Promise<string | null> {
   if (cachedLogoDataUrl !== undefined) return cachedLogoDataUrl;
   try {
-    const path = join(process.cwd(), "public", "get-frockd-logo-tr-back.png");
+    const path = join(process.cwd(), "public", "frockd-logo-new.png");
     const bytes = await readFile(path);
     cachedLogoDataUrl = `data:image/png;base64,${bytes.toString("base64")}`;
   } catch {
@@ -228,11 +228,11 @@ export default async function OgImage({
           }}
         >
           {/* Brand mark — frockd lockup PNG embedded as data URL.
-              Source is 1839x468; rendered at 220x56 to keep aspect. */}
+              Source is 1411x512; rendered at 200x73 to keep aspect. */}
           <div style={{ display: "flex", alignItems: "center" }}>
             {logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text
-              <img src={logoUrl} width={220} height={56} />
+              <img src={logoUrl} width={200} height={73} />
             ) : (
               <div
                 style={{

@@ -79,10 +79,10 @@ export async function AuthNav() {
       <div className="brand-row">
         <Link href="/" className="brand" aria-label="frockd home">
           <Image
-            src="/get-frockd-logo-tr-back.png"
-            alt="GET FROCKD"
-            width={1839}
-            height={468}
+            src="/frockd-logo-new.png"
+            alt="frockd"
+            width={1411}
+            height={512}
             priority
             className="brand-logo"
           />
