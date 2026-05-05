@@ -67,6 +67,69 @@ const STEPS: { key: WizardStep; label: string; n: number }[] = [
   { key: "publish", label: "Publish", n: 5 },
 ];
 
+/** Per-step pose for our seamstress mascot. The PNG sheet at
+ *  /public/frockd-seamstress.png is a 5-column × 2-row grid (1408×768),
+ *  so we drive a single image as a CSS sprite with percentage
+ *  background-position. Each line is the seamstress's voice for the
+ *  step — short, warm, in-character. */
+const SEAMSTRESS_POSE: Record<
+  WizardStep,
+  { x: string; y: string; line: string }
+> = {
+  // (0,1) — holding the dress up overhead, "let's see her"
+  photos: {
+    x: "0%",
+    y: "100%",
+    line: "First — let's get her under the lights.",
+  },
+  // (2,0) — holding fabric, considering the cloth
+  style: {
+    x: "50%",
+    y: "0%",
+    line: "Now, what kind of dress are we working with?",
+  },
+  // (0,0) — tape measure at the mannequin
+  measurements: {
+    x: "0%",
+    y: "0%",
+    line: "Measure twice, list once.",
+  },
+  // (3,1) — sitting, hand-sewing — careful inspection
+  condition: {
+    x: "75%",
+    y: "100%",
+    line: "Let's give her a careful once-over.",
+  },
+  // (2,1) — finished gown on the dressform — ready to go
+  publish: {
+    x: "50%",
+    y: "100%",
+    line: "She's almost ready to find her next wearer.",
+  },
+};
+
+function SeamstressMascot({ step }: { step: WizardStep }) {
+  const pose = SEAMSTRESS_POSE[step];
+  return (
+    <div
+      role="img"
+      aria-label="Frockd seamstress mascot"
+      style={{
+        flex: "0 0 auto",
+        width: 96,
+        height: 131,
+        borderRadius: 14,
+        background: "var(--surface-sunken)",
+        backgroundImage: "url(/frockd-seamstress.png)",
+        backgroundSize: "500% 200%",
+        backgroundPosition: `${pose.x} ${pose.y}`,
+        backgroundRepeat: "no-repeat",
+        border: "1px solid var(--hairline)",
+      }}
+    />
+  );
+}
+
 export async function loadDraft(
   listingId: string,
   step: WizardStep,
@@ -362,23 +425,47 @@ export function WizardShell({
   return (
     <div className="page page--pad">
       <main style={{ maxWidth: 1152, margin: "0 auto" }}>
-        <p className="eyebrow">
-          {editMode
-            ? `Edit listing — step ${currentIdx + 1} of ${STEPS.length}`
-            : `List your dress — step ${currentIdx + 1} of ${STEPS.length}`}
-        </p>
-        <h1
+        <div
           style={{
-            fontFamily: "var(--font-display)",
-            fontSize: "var(--t-h1)",
-            color: "var(--ink-1)",
-            margin: "0 0 var(--s-3)",
-            letterSpacing: "-0.02em",
-            lineHeight: 1.05,
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 18,
+            margin: "0 0 var(--s-5)",
           }}
         >
-          {STEPS[currentIdx]?.label ?? "New listing"}
-        </h1>
+          <SeamstressMascot step={step} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p className="eyebrow" style={{ margin: 0 }}>
+              {editMode
+                ? `Edit listing — step ${currentIdx + 1} of ${STEPS.length}`
+                : `List your dress — step ${currentIdx + 1} of ${STEPS.length}`}
+            </p>
+            <h1
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: "var(--t-h1)",
+                color: "var(--ink-1)",
+                margin: "var(--s-1) 0 var(--s-2)",
+                letterSpacing: "-0.02em",
+                lineHeight: 1.05,
+              }}
+            >
+              {STEPS[currentIdx]?.label ?? "New listing"}
+            </h1>
+            <p
+              style={{
+                fontFamily: "var(--font-display)",
+                fontStyle: "italic",
+                color: "var(--ink-2)",
+                margin: 0,
+                fontSize: 16,
+                lineHeight: 1.4,
+              }}
+            >
+              {SEAMSTRESS_POSE[step].line}
+            </p>
+          </div>
+        </div>
 
         <ol
           style={{
