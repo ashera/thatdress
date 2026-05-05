@@ -333,6 +333,42 @@ export async function setListingVisibility(formData: FormData): Promise<void> {
   redirect(`/listings/${listingId}/edit?vis=1`);
 }
 
+/**
+ * One-click visibility toggle for the listing detail page. Flips
+ * is_published in-SQL so the button works the same way for the seller
+ * and admins. When `next` is supplied in the form, redirect there;
+ * otherwise return to the detail page so the seller sees the
+ * hidden-banner update.
+ */
+export async function toggleListingVisibility(
+  formData: FormData,
+): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const listingId = String(formData.get("listingId") ?? "");
+  if (!(await canEditListing(listingId, user))) {
+    redirect("/listings");
+  }
+
+  await query(
+    `UPDATE listings
+        SET is_published = NOT is_published
+      WHERE id = $1::bigint
+        AND (seller_id = $2::bigint OR $3::boolean)`,
+    [listingId, user.id, user.isAdmin],
+  );
+
+  revalidatePath(`/listings/${listingId}`);
+  revalidatePath(`/listings/${listingId}/edit`);
+  revalidatePath(`/listings`);
+  revalidatePath(`/`);
+  revalidatePath(`/listings/mine`);
+
+  const next = String(formData.get("next") ?? `/listings/${listingId}`);
+  redirect(next);
+}
+
 async function ensureListingOwner(
   listingId: string,
   userId: string,

@@ -7,7 +7,10 @@ import { getCurrentUser } from "@/lib/auth";
 import { getCurrentRegionId } from "@/lib/regions";
 import { getBaseUrl } from "@/lib/email";
 import { startConversation } from "@/lib/actions/messages";
-import { toggleListingSold } from "@/lib/actions/listings";
+import {
+  toggleListingSold,
+  toggleListingVisibility,
+} from "@/lib/actions/listings";
 import { toggleShortlist } from "@/lib/actions/shortlist";
 import { getShortlistIds } from "@/lib/shortlist";
 import {
@@ -929,6 +932,14 @@ export default async function ListingDetailPage({
                 <input type="hidden" name="listingId" value={l.id} />
                 <Button type="submit" variant="ghost" size="sm">
                   Mark as sold
+                </Button>
+              </form>
+            )}
+            {(isOwner || isAdmin) && (
+              <form action={toggleListingVisibility}>
+                <input type="hidden" name="listingId" value={l.id} />
+                <Button type="submit" variant="ghost" size="sm">
+                  {l.is_published ? "Hide from buyers" : "Show to buyers"}
                 </Button>
               </form>
             )}
