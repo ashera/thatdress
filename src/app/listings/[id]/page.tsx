@@ -834,6 +834,16 @@ export default async function ListingDetailPage({
           )}
 
           <div className="detail-actions">
+            {(isOwner || isAdmin) && !l.sold_at && (
+              <ButtonLink
+                href={`/listings/${l.id}/edit`}
+                variant="primary"
+                size="lg"
+                iconRight="arrow"
+              >
+                {isOwner ? "Edit listing" : "Edit (admin)"}
+              </ButtonLink>
+            )}
             {!l.sold_at && !isOwner && l.seller_id && currentUser ? (
               <form action={startConversation}>
                 <input type="hidden" name="listingId" value={l.id} />
@@ -864,18 +874,10 @@ export default async function ListingDetailPage({
                     : `/login?next=${encodeURIComponent(`/listings/${l.id}/offer`)}`
                 }
                 variant="dark"
-                size="lg"
+                size="sm"
               >
                 Make an offer
               </ButtonLink>
-            )}
-            {!l.sold_at && (isOwner || isAdmin) && (
-              <form action={toggleListingSold}>
-                <input type="hidden" name="listingId" value={l.id} />
-                <Button type="submit" variant="dark" size="lg">
-                  Mark as sold
-                </Button>
-              </form>
             )}
             {!l.sold_at && !isOwner && currentUser && (
               <form action={toggleShortlist}>
@@ -888,24 +890,20 @@ export default async function ListingDetailPage({
                 <Button
                   type="submit"
                   variant={shortlistedIds.has(l.id) ? "primary" : "ghost"}
-                  size="lg"
+                  size="sm"
                 >
                   <Icon name="heart" size="sm" />
                   {shortlistedIds.has(l.id) ? "Saved" : "Save"}
                 </Button>
               </form>
             )}
-            <ButtonLink href="/listings" variant="ghost" size="lg">
-              See more dresses
-            </ButtonLink>
-            {(isOwner || isAdmin) && (
-              <ButtonLink
-                href={`/listings/${l.id}/edit`}
-                variant="quiet"
-                size="lg"
-              >
-                {isOwner ? "Edit listing" : "Edit (admin)"}
-              </ButtonLink>
+            {!l.sold_at && (isOwner || isAdmin) && (
+              <form action={toggleListingSold}>
+                <input type="hidden" name="listingId" value={l.id} />
+                <Button type="submit" variant="ghost" size="sm">
+                  Mark as sold
+                </Button>
+              </form>
             )}
             {isAdmin && (
               <form action={setListingTrustStatus}>
@@ -917,14 +915,14 @@ export default async function ListingDetailPage({
                       name="status"
                       value="self-declared"
                     />
-                    <Button type="submit" variant="quiet" size="lg">
+                    <Button type="submit" variant="quiet" size="sm">
                       Restore (un-flag)
                     </Button>
                   </>
                 ) : (
                   <>
                     <input type="hidden" name="status" value="flagged" />
-                    <Button type="submit" variant="quiet" size="lg">
+                    <Button type="submit" variant="quiet" size="sm">
                       Flag for review
                     </Button>
                   </>
@@ -932,6 +930,26 @@ export default async function ListingDetailPage({
               </form>
             )}
           </div>
+
+          <p
+            style={{
+              margin: "var(--s-3) 0 0",
+              fontSize: 13,
+              color: "var(--ink-3)",
+            }}
+          >
+            <Link
+              href="/listings"
+              style={{
+                color: "var(--ink-2)",
+                textDecoration: "underline",
+                textDecorationColor: "var(--hairline-strong)",
+                textUnderlineOffset: 3,
+              }}
+            >
+              See more dresses →
+            </Link>
+          </p>
         </div>
       </article>
 
