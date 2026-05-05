@@ -118,15 +118,18 @@ export async function loadDraft(
   );
   const draft = r.rows[0];
   if (!draft) notFound();
-  if (!draft.is_draft) {
-    // Already published — bounce to the listing.
-    redirect(`/listings/${draft.id}`);
-  }
   if (!user.isAdmin && draft.seller_id !== user.id) {
     redirect("/listings/mine");
   }
   void step;
   return { user, draft };
+}
+
+/** True when the wizard is editing an already-published listing (or
+ *  any non-draft state, e.g. sold). Drives copy, button text, and
+ *  whether the publish step toggles is_draft on save. */
+export function isEditMode(draft: DraftRow): boolean {
+  return !draft.is_draft;
 }
 
 /** Coerce a DraftRow into the shape computeHealth expects. The DB
@@ -355,10 +358,15 @@ export function WizardShell({
 }) {
   const currentIdx = STEPS.findIndex((s) => s.key === step);
   const draftId = draft.id;
+  const editMode = isEditMode(draft);
   return (
     <div className="page page--pad">
       <main style={{ maxWidth: 720, margin: "0 auto" }}>
-        <p className="eyebrow">List your dress — step {currentIdx + 1} of {STEPS.length}</p>
+        <p className="eyebrow">
+          {editMode
+            ? `Edit listing — step ${currentIdx + 1} of ${STEPS.length}`
+            : `List your dress — step ${currentIdx + 1} of ${STEPS.length}`}
+        </p>
         <h1
           style={{
             fontFamily: "var(--font-display)",
@@ -386,30 +394,32 @@ export function WizardShell({
             const active = i === currentIdx;
             const done = i < currentIdx;
             return (
-              <li
-                key={s.key}
-                style={{
-                  flex: "1 1 120px",
-                  minWidth: 120,
-                  borderRadius: 999,
-                  padding: "8px 14px",
-                  background: active
-                    ? "var(--ink-1)"
-                    : done
-                    ? "var(--volt-100, #f4f1ea)"
-                    : "var(--surface-2, #f7f6f3)",
-                  color: active
-                    ? "#fff"
-                    : done
-                    ? "var(--ink-1)"
-                    : "var(--ink-3)",
-                  border: "1px solid var(--line, #e9e5df)",
-                  fontSize: "var(--t-body-s)",
-                  fontWeight: 600,
-                  textAlign: "center",
-                }}
-              >
-                {s.n}. {s.label}
+              <li key={s.key} style={{ flex: "1 1 120px", minWidth: 120 }}>
+                <Link
+                  href={`/listings/new/${draftId}/${s.key}`}
+                  style={{
+                    display: "block",
+                    borderRadius: 999,
+                    padding: "8px 14px",
+                    background: active
+                      ? "var(--ink-1)"
+                      : done
+                      ? "var(--volt-100, #f4f1ea)"
+                      : "var(--surface-2, #f7f6f3)",
+                    color: active
+                      ? "#fff"
+                      : done
+                      ? "var(--ink-1)"
+                      : "var(--ink-3)",
+                    border: "1px solid var(--line, #e9e5df)",
+                    fontSize: "var(--t-body-s)",
+                    fontWeight: 600,
+                    textAlign: "center",
+                    textDecoration: "none",
+                  }}
+                >
+                  {s.n}. {s.label}
+                </Link>
               </li>
             );
           })}
@@ -425,30 +435,52 @@ export function WizardShell({
 
         {children}
 
-        <form
-          action={abandonDraftListing}
-          style={{
-            marginTop: "var(--s-7)",
-            paddingTop: "var(--s-5)",
-            borderTop: "1px solid var(--line, #e9e5df)",
-            textAlign: "center",
-          }}
-        >
-          <input type="hidden" name="listingId" value={draftId} />
-          <button
-            type="submit"
+        {editMode ? (
+          <div
             style={{
-              background: "transparent",
-              border: 0,
-              color: "var(--ink-3)",
-              fontSize: "var(--t-body-s)",
-              cursor: "pointer",
-              textDecoration: "underline",
+              marginTop: "var(--s-7)",
+              paddingTop: "var(--s-5)",
+              borderTop: "1px solid var(--line, #e9e5df)",
+              textAlign: "center",
             }}
           >
-            Discard this draft
-          </button>
-        </form>
+            <Link
+              href={`/listings/${draftId}`}
+              style={{
+                color: "var(--ink-3)",
+                fontSize: "var(--t-body-s)",
+                textDecoration: "underline",
+              }}
+            >
+              ← Done — back to listing
+            </Link>
+          </div>
+        ) : (
+          <form
+            action={abandonDraftListing}
+            style={{
+              marginTop: "var(--s-7)",
+              paddingTop: "var(--s-5)",
+              borderTop: "1px solid var(--line, #e9e5df)",
+              textAlign: "center",
+            }}
+          >
+            <input type="hidden" name="listingId" value={draftId} />
+            <button
+              type="submit"
+              style={{
+                background: "transparent",
+                border: 0,
+                color: "var(--ink-3)",
+                fontSize: "var(--t-body-s)",
+                cursor: "pointer",
+                textDecoration: "underline",
+              }}
+            >
+              Discard this draft
+            </button>
+          </form>
+        )}
       </main>
     </div>
   );

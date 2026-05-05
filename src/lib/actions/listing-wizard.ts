@@ -74,20 +74,30 @@ function parsePriceToCents(raw: string): number | null {
   return Math.round(dollars * 100);
 }
 
-async function ensureDraftOwnership(
+async function ensureWizardOwnership(
   listingId: string,
   user: { id: string; isAdmin: boolean },
 ): Promise<boolean> {
   if (!/^\d+$/.test(listingId)) return false;
-  const r = await query<{ seller_id: string | null; is_draft: boolean }>(
-    `SELECT seller_id::text, is_draft FROM listings
+  const r = await query<{ seller_id: string | null }>(
+    `SELECT seller_id::text FROM listings
       WHERE id = $1::bigint LIMIT 1`,
     [listingId],
   );
   const row = r.rows[0];
   if (!row) return false;
-  if (!row.is_draft) return false;
+  // The wizard now serves both new (is_draft=TRUE) and edit (is_draft=FALSE)
+  // flows; ownership is the only gate.
   return user.isAdmin || row.seller_id === user.id;
+}
+
+/** Whether a listing is in the draft pre-publish state. */
+async function isListingDraft(listingId: string): Promise<boolean> {
+  const r = await query<{ is_draft: boolean }>(
+    `SELECT is_draft FROM listings WHERE id = $1::bigint LIMIT 1`,
+    [listingId],
+  );
+  return r.rows[0]?.is_draft === true;
 }
 
 export async function startDraftListing(): Promise<void> {
@@ -114,7 +124,7 @@ export async function deleteDraftImage(formData: FormData): Promise<void> {
   const listingId = String(formData.get("listingId") ?? "");
   const imageId = String(formData.get("imageId") ?? "");
   if (!/^\d+$/.test(imageId)) redirect("/listings/mine");
-  if (!(await ensureDraftOwnership(listingId, user))) {
+  if (!(await ensureWizardOwnership(listingId, user))) {
     redirect("/listings/mine");
   }
 
@@ -148,7 +158,7 @@ export async function abandonDraftListing(formData: FormData): Promise<void> {
   if (!user) redirect("/login");
 
   const listingId = String(formData.get("listingId") ?? "");
-  if (!(await ensureDraftOwnership(listingId, user))) {
+  if (!(await ensureWizardOwnership(listingId, user))) {
     redirect("/listings/mine");
   }
 
@@ -216,7 +226,7 @@ export async function saveDraftPhotos(formData: FormData): Promise<void> {
   if (!user) redirect("/login");
 
   const listingId = String(formData.get("listingId") ?? "");
-  if (!(await ensureDraftOwnership(listingId, user))) {
+  if (!(await ensureWizardOwnership(listingId, user))) {
     redirect("/listings/mine");
   }
 
@@ -280,7 +290,7 @@ export async function saveDraftStyle(formData: FormData): Promise<void> {
   if (!user) redirect("/login");
 
   const listingId = String(formData.get("listingId") ?? "");
-  if (!(await ensureDraftOwnership(listingId, user))) {
+  if (!(await ensureWizardOwnership(listingId, user))) {
     redirect("/listings/mine");
   }
 
@@ -322,7 +332,7 @@ export async function saveDraftMeasurements(
   if (!user) redirect("/login");
 
   const listingId = String(formData.get("listingId") ?? "");
-  if (!(await ensureDraftOwnership(listingId, user))) {
+  if (!(await ensureWizardOwnership(listingId, user))) {
     redirect("/listings/mine");
   }
 
@@ -375,7 +385,7 @@ export async function saveDraftCondition(formData: FormData): Promise<void> {
   if (!user) redirect("/login");
 
   const listingId = String(formData.get("listingId") ?? "");
-  if (!(await ensureDraftOwnership(listingId, user))) {
+  if (!(await ensureWizardOwnership(listingId, user))) {
     redirect("/listings/mine");
   }
 
@@ -407,7 +417,7 @@ export async function publishDraftListing(formData: FormData): Promise<void> {
   if (!user) redirect("/login");
 
   const listingId = String(formData.get("listingId") ?? "");
-  if (!(await ensureDraftOwnership(listingId, user))) {
+  if (!(await ensureWizardOwnership(listingId, user))) {
     redirect("/listings/mine");
   }
 
@@ -456,6 +466,8 @@ export async function publishDraftListing(formData: FormData): Promise<void> {
     original_retail_cents: number | null;
     has_original_receipt: boolean | null;
     trust_status: string | null;
+    is_draft: boolean;
+    is_published: boolean;
     image_count: string;
   }>(
     `SELECT title,
@@ -477,6 +489,8 @@ export async function publishDraftListing(formData: FormData): Promise<void> {
             original_retail_cents,
             has_original_receipt,
             trust_status,
+            is_draft,
+            is_published,
             (SELECT COUNT(*)::text FROM listing_images WHERE listing_id = listings.id) AS image_count
        FROM listings WHERE id = $1::bigint LIMIT 1`,
     [listingId],
@@ -533,6 +547,14 @@ export async function publishDraftListing(formData: FormData): Promise<void> {
     },
   });
 
+  // Two modes:
+  //  - draft → publish: toggle is_draft FALSE + is_published TRUE
+  //  - already-published edit: leave is_draft / is_published alone so
+  //    a previously hidden listing stays hidden after a save.
+  const isPublishingDraft = row.is_draft;
+  const draftToggleSql = isPublishingDraft
+    ? ", is_draft = FALSE, is_published = TRUE"
+    : "";
   await query(
     `UPDATE listings
         SET description = $2,
@@ -542,9 +564,7 @@ export async function publishDraftListing(formData: FormData): Promise<void> {
             offers_enabled = $6,
             is_authentic_declared = $7,
             includes_label_lining_photos = $8,
-            trust_status = $9,
-            is_draft = FALSE,
-            is_published = TRUE
+            trust_status = $9${draftToggleSql}
       WHERE id = $1::bigint`,
     [
       listingId,

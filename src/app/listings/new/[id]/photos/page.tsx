@@ -3,8 +3,12 @@ import {
   deleteDraftImage,
   saveDraftPhotos,
 } from "@/lib/actions/listing-wizard";
+import {
+  moveListingImage,
+  setPrimaryImage,
+} from "@/lib/actions/listings";
 import { query } from "@/lib/db";
-import { Field, Input } from "../../../../_components/ui";
+import { Button, Field, Input } from "../../../../_components/ui";
 import {
   loadDraft,
   StepNav,
@@ -81,79 +85,144 @@ export default async function WizardPhotosPage({
               marginTop: "var(--s-3)",
             }}
           >
-            {images.map((img) => (
-              <div
-                key={img.id}
-                style={{
-                  position: "relative",
-                  borderRadius: 10,
-                  overflow: "hidden",
-                  border: "1px solid var(--line, #e9e5df)",
-                  background: "var(--surface-2, #f7f6f3)",
-                  aspectRatio: "1 / 1",
-                  display: "flex",
-                  flexDirection: "column",
-                }}
-              >
-                <img
-                  src={`/api/listings/${draft.id}/images/${img.id}`}
-                  alt=""
+            {images.map((img, idx) => {
+              // First image (highest is_primary, then position) is the
+              // default. Reorder buttons only apply to non-primary images
+              // so the default is always the first thumb.
+              const canMoveUp = !img.is_primary && idx > 1;
+              const canMoveDown = !img.is_primary && idx < images.length - 1;
+              return (
+                <div
+                  key={img.id}
                   style={{
-                    width: "100%",
-                    flex: "1 1 auto",
-                    objectFit: "cover",
-                    minHeight: 0,
-                  }}
-                />
-                {img.is_primary && (
-                  <span
-                    style={{
-                      position: "absolute",
-                      top: 6,
-                      left: 6,
-                      background: "var(--ink-1)",
-                      color: "#fff",
-                      fontSize: 10,
-                      fontWeight: 600,
-                      letterSpacing: "0.04em",
-                      padding: "3px 7px",
-                      borderRadius: 999,
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    Default
-                  </span>
-                )}
-                <form
-                  action={deleteDraftImage}
-                  style={{
-                    position: "absolute",
-                    top: 6,
-                    right: 6,
+                    position: "relative",
+                    borderRadius: 10,
+                    overflow: "hidden",
+                    border: "1px solid var(--line, #e9e5df)",
+                    background: "var(--surface-2, #f7f6f3)",
+                    display: "flex",
+                    flexDirection: "column",
                   }}
                 >
-                  <input type="hidden" name="listingId" value={draft.id} />
-                  <input type="hidden" name="imageId" value={img.id} />
-                  <button
-                    type="submit"
-                    title="Remove this photo"
+                  <div
                     style={{
-                      width: 26,
-                      height: 26,
-                      border: 0,
-                      borderRadius: "50%",
-                      background: "rgba(28, 24, 22, 0.7)",
-                      color: "#fff",
-                      cursor: "pointer",
-                      fontSize: 14,
-                      lineHeight: 1,
+                      position: "relative",
+                      aspectRatio: "1 / 1",
+                      width: "100%",
                     }}
                   >
-                    ✕
-                  </button>
-                </form>
-              </div>
-            ))}
+                    <img
+                      src={`/api/listings/${draft.id}/images/${img.id}`}
+                      alt=""
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                      }}
+                    />
+                    {img.is_primary && (
+                      <span
+                        style={{
+                          position: "absolute",
+                          top: 6,
+                          left: 6,
+                          background: "var(--ink-1)",
+                          color: "#fff",
+                          fontSize: 10,
+                          fontWeight: 600,
+                          letterSpacing: "0.04em",
+                          padding: "3px 7px",
+                          borderRadius: 999,
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        Default
+                      </span>
+                    )}
+                    <form
+                      action={deleteDraftImage}
+                      style={{ position: "absolute", top: 6, right: 6 }}
+                    >
+                      <input type="hidden" name="listingId" value={draft.id} />
+                      <input type="hidden" name="imageId" value={img.id} />
+                      <button
+                        type="submit"
+                        title="Remove this photo"
+                        style={{
+                          width: 26,
+                          height: 26,
+                          border: 0,
+                          borderRadius: "50%",
+                          background: "rgba(28, 24, 22, 0.7)",
+                          color: "#fff",
+                          cursor: "pointer",
+                          fontSize: 14,
+                          lineHeight: 1,
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </form>
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: 4,
+                      padding: 6,
+                      borderTop: "1px solid var(--hairline)",
+                    }}
+                  >
+                    {!img.is_primary && (
+                      <form action={setPrimaryImage}>
+                        <input type="hidden" name="listingId" value={draft.id} />
+                        <input type="hidden" name="imageId" value={img.id} />
+                        <Button
+                          type="submit"
+                          variant="ghost"
+                          size="sm"
+                          title="Use as default photo"
+                        >
+                          ★ Default
+                        </Button>
+                      </form>
+                    )}
+                    {canMoveUp && (
+                      <form action={moveListingImage}>
+                        <input type="hidden" name="listingId" value={draft.id} />
+                        <input type="hidden" name="imageId" value={img.id} />
+                        <input type="hidden" name="direction" value="up" />
+                        <Button
+                          type="submit"
+                          variant="ghost"
+                          size="sm"
+                          title="Move up"
+                        >
+                          ↑
+                        </Button>
+                      </form>
+                    )}
+                    {canMoveDown && (
+                      <form action={moveListingImage}>
+                        <input type="hidden" name="listingId" value={draft.id} />
+                        <input type="hidden" name="imageId" value={img.id} />
+                        <input type="hidden" name="direction" value="down" />
+                        <Button
+                          type="submit"
+                          variant="ghost"
+                          size="sm"
+                          title="Move down"
+                        >
+                          ↓
+                        </Button>
+                      </form>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </section>
       )}

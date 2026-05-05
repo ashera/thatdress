@@ -1,5 +1,6 @@
 import { loadListingRefOptions } from "@/lib/ref-data";
 import { publishDraftListing } from "@/lib/actions/listing-wizard";
+import { setListingVisibility } from "@/lib/actions/listings";
 import { query } from "@/lib/db";
 import {
   estimateValue,
@@ -8,8 +9,9 @@ import {
   type ConditionSlug,
   type DesignerTier,
 } from "@/lib/value-estimator";
-import { Field, Input, Textarea } from "../../../../_components/ui";
+import { Button, Field, Input, Textarea } from "../../../../_components/ui";
 import {
+  isEditMode,
   loadDraft,
   StepNav,
   STEP_ERRORS,
@@ -155,6 +157,8 @@ export default async function WizardPublishPage({
   const priceInputDefault = priceFromUrl ?? priceDefault(draft.price_cents);
   const priceCameFromEstimator = priceFromUrl !== null;
 
+  const editMode = isEditMode(draft);
+
   return (
     <WizardShell
       step="publish"
@@ -163,8 +167,12 @@ export default async function WizardPublishPage({
     >
       <WizardHero
         icon="send"
-        headline="Time to go live"
-        body="Set a price that reflects similar dresses you&rsquo;ve seen here, drop a few sentences in the description, and you&rsquo;re live to every buyer in the region."
+        headline={editMode ? "Save your changes" : "Time to go live"}
+        body={
+          editMode
+            ? "Update the price, description, or trust confirmations. Tick both boxes below to keep (or earn) the public Verified badge."
+            : "Set a price that reflects similar dresses you've seen here, drop a few sentences in the description, and you're live to every buyer in the region."
+        }
       />
 
       <form
@@ -385,9 +393,48 @@ export default async function WizardPublishPage({
 
         <StepNav
           prevHref={`/listings/new/${draft.id}/condition`}
-          submitLabel="Publish listing"
+          submitLabel={editMode ? "Save changes" : "Publish listing"}
         />
       </form>
+
+      {editMode && (
+        <section
+          className="form-card"
+          style={{ marginTop: "var(--s-7)" }}
+        >
+          <h2 className="card-heading">Visibility</h2>
+          <p className="card-sub">
+            {draft.is_published
+              ? "Visible in browse and discoverable by other users."
+              : "Hidden from browse — only you (and admins) can see this listing."}
+          </p>
+          <form action={setListingVisibility}>
+            <input type="hidden" name="listingId" value={draft.id} />
+            <label className="visibility-toggle">
+              <input
+                type="checkbox"
+                name="is_published"
+                defaultChecked={!!draft.is_published}
+              />
+              <span className="visibility-track" aria-hidden />
+              <span className="visibility-label">
+                Show in public browse results
+              </span>
+            </label>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                marginTop: "var(--s-3)",
+              }}
+            >
+              <Button type="submit" variant="primary" size="sm">
+                Update visibility
+              </Button>
+            </div>
+          </form>
+        </section>
+      )}
     </WizardShell>
   );
 }
