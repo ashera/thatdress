@@ -390,7 +390,7 @@ async function OwnerHealthCard({
   return (
     <div
       style={{
-        margin: "var(--s-3) 0",
+        margin: "var(--s-2) 0 var(--s-3)",
         padding: "10px 14px",
         background: meetsVerified
           ? "var(--volt-50)"
@@ -817,20 +817,38 @@ export default async function ListingDetailPage({
         <ListingGallery images={result.images} title={l.title} />
 
         <div className="detail-body">
-          <p className="eyebrow">
-            {[l.designer_name, l.occasion_label].filter(Boolean).join(" · ") ||
-              "Pre-loved dress"}
-          </p>
-          <h1 className="detail-title">{l.title}</h1>
           {(() => {
             const ts =
               l.trust_status && isTrustStatus(l.trust_status)
                 ? l.trust_status
                 : undefined;
-            if (!ts) return null;
             return (
-              <div style={{ margin: "var(--s-3) 0" }}>
-                <TrustBadge status={ts} size="large" />
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  justifyContent: "space-between",
+                  gap: 12,
+                }}
+              >
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p className="eyebrow">
+                    {[l.designer_name, l.occasion_label]
+                      .filter(Boolean)
+                      .join(" · ") || "Pre-loved dress"}
+                  </p>
+                  <h1
+                    className="detail-title"
+                    style={{ marginBottom: 0 }}
+                  >
+                    {l.title}
+                  </h1>
+                </div>
+                {ts && (
+                  <div style={{ flex: "0 0 auto", marginTop: 4 }}>
+                    <TrustBadge status={ts} size="large" />
+                  </div>
+                )}
               </div>
             );
           })()}
