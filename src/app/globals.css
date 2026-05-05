@@ -968,7 +968,9 @@ textarea.input {
   position: relative;
   background: var(--surface-sunken);
   border-radius: var(--r-3);
-  aspect-ratio: 4 / 3;
+  /* Portrait — matches typical phone-camera vertical aspect (3:4) so
+     seller photos fit with minimal crop under object-fit: cover. */
+  aspect-ratio: 3 / 4;
   overflow: hidden;
 }
 /* Absolute-position the image so iOS Safari honours height correctly —
