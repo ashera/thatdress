@@ -361,7 +361,7 @@ export function WizardShell({
   const editMode = isEditMode(draft);
   return (
     <div className="page page--pad">
-      <main style={{ maxWidth: 720, margin: "0 auto" }}>
+      <main style={{ maxWidth: 1152, margin: "0 auto" }}>
         <p className="eyebrow">
           {editMode
             ? `Edit listing — step ${currentIdx + 1} of ${STEPS.length}`
