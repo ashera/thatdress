@@ -44,6 +44,11 @@ const ADMIN_LINKS: Array<{ href: string; title: string; desc: string }> = [
     title: "Database Structure",
     desc: "Tables, descriptions, and current row counts.",
   },
+  {
+    href: "/admin/docs",
+    title: "Project Documentation",
+    desc: "Rendered view of README.md — stack, architecture, feature systems, deploy notes.",
+  },
 ];
 
 export default async function AdminHomePage() {
