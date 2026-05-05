@@ -4,6 +4,9 @@ import { toggleShortlist } from "@/lib/actions/shortlist";
 export type ListingCardStat = {
   value: string;
   label: string;
+  /** Public-path icon shown next to the value on the card view. Optional
+   *  so the row layout (which doesn't render icons) doesn't have to set it. */
+  iconSrc?: string;
 };
 
 export type ListingCardData = {
@@ -64,10 +67,26 @@ function buildChips(row: ListingCardRow): [string, string, string] {
 
 function buildStats(row: ListingCardRow): ListingCardStat[] {
   return [
-    { value: row.size_label ?? PLACEHOLDER, label: "Size" },
-    { value: row.length_label ?? PLACEHOLDER, label: "Length" },
-    { value: row.fabric_label ?? PLACEHOLDER, label: "Fabric" },
-    { value: row.condition_label ?? PLACEHOLDER, label: "Condition" },
+    {
+      value: row.size_label ?? PLACEHOLDER,
+      label: "Size",
+      iconSrc: "/size.png",
+    },
+    {
+      value: row.length_label ?? PLACEHOLDER,
+      label: "Length",
+      iconSrc: "/length.png",
+    },
+    {
+      value: row.fabric_label ?? PLACEHOLDER,
+      label: "Fabric",
+      iconSrc: "/fabric.png",
+    },
+    {
+      value: row.condition_label ?? PLACEHOLDER,
+      label: "Condition",
+      iconSrc: "/condition.png",
+    },
   ];
 }
 
@@ -288,6 +307,16 @@ export function ListingCard({ data }: { data: ListingCardData }) {
       <div className="listing-stats">
         {data.stats.map((s, i) => (
           <div key={`${s.label}-${i}`} className="listing-stat">
+            {s.iconSrc && (
+              <img
+                src={s.iconSrc}
+                alt=""
+                aria-hidden
+                className="listing-stat-icon"
+                width={28}
+                height={28}
+              />
+            )}
             <span className={`v ${s.value === PLACEHOLDER ? "is-empty" : ""}`}>
               {s.value}
             </span>
