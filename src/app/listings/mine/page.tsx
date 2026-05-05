@@ -158,7 +158,11 @@ export default async function MyListingsPage() {
           padding: "var(--s-5) var(--s-6)",
           background: "var(--volt-50)",
           border: "1px solid var(--volt-100)",
+          // .form-card defaults to flex-direction: column — override
+          // here so the dress-sketch art sits to the right of the
+          // text content rather than below it.
           display: "flex",
+          flexDirection: "row",
           alignItems: "center",
           gap: "var(--s-5)",
         }}
