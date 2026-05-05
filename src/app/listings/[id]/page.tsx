@@ -838,7 +838,7 @@ export default async function ListingDetailPage({
               <ButtonLink
                 href={`/listings/${l.id}/edit`}
                 variant="primary"
-                size="lg"
+                size="sm"
                 iconRight="arrow"
               >
                 {isOwner ? "Edit listing" : "Edit (admin)"}
@@ -850,7 +850,7 @@ export default async function ListingDetailPage({
                 <Button
                   type="submit"
                   variant="primary"
-                  size="lg"
+                  size="sm"
                   iconRight="msg"
                 >
                   Contact seller
@@ -860,7 +860,7 @@ export default async function ListingDetailPage({
               <ButtonLink
                 href={`/login?next=${encodeURIComponent(`/listings/${l.id}`)}`}
                 variant="primary"
-                size="lg"
+                size="sm"
                 iconRight="arrow"
               >
                 Log in to contact seller
