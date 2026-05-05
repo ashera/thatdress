@@ -762,6 +762,18 @@ ALTER TABLE blog_cluster_images
 
 DROP TABLE IF EXISTS blog_keyword_images;
 
+-- Site-wide settings managed from /admin/site-settings. Single row
+-- keyed at id=1. Default allow_indexing=FALSE so a fresh deploy is
+-- blocked from search engines until an admin flips it on.
+CREATE TABLE IF NOT EXISTS site_settings (
+  id              INTEGER     PRIMARY KEY CHECK (id = 1),
+  allow_indexing  BOOLEAN     NOT NULL DEFAULT FALSE,
+  updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+INSERT INTO site_settings (id) VALUES (1)
+ON CONFLICT (id) DO NOTHING;
+
 -- Blog Builder: tunable prompt budgets so admins can dial the per-call
 -- token usage from the UI to stay under their Anthropic ITPM cap. Single
 -- row keyed at id=1; values are characters for the markdown reference

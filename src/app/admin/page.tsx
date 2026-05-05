@@ -30,6 +30,11 @@ const ADMIN_LINKS: Array<{ href: string; title: string; desc: string }> = [
     desc: "Write articles to attract visitors and support SEO.",
   },
   {
+    href: "/admin/site-settings",
+    title: "Site Settings",
+    desc: "Block crawlers pre-launch and other site-wide switches.",
+  },
+  {
     href: "/admin/database",
     title: "Database Structure",
     desc: "Tables, descriptions, and current row counts.",

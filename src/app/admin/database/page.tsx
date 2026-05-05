@@ -158,6 +158,12 @@ const TABLE_DESCRIPTIONS: Record<string, TableMeta> = {
     group: "Blog Builder",
     desc: "Tunable prompt budgets and max_tokens caps used during blog generation. Single-row table managed at /admin/blog/builder/budgets.",
   },
+
+  // Site-wide settings
+  site_settings: {
+    group: "Auth & users",
+    desc: "Site-wide switches (e.g. allow_indexing). Single-row table managed at /admin/site-settings.",
+  },
 };
 
 const GROUP_ORDER = [

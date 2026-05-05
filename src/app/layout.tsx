@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Archivo_Black, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { loadSiteSettings } from "@/lib/site-settings";
 import { AuthNav } from "./_components/auth-nav";
 import { Footer } from "./_components/footer";
 import { RegionGate } from "./_components/region-gate";
@@ -43,29 +44,39 @@ function resolveCanonicalUrl(): string {
 }
 const SITE_URL = resolveCanonicalUrl();
 
-export const metadata: Metadata = {
-  metadataBase: new URL(SITE_URL),
-  title: {
-    default: "frockd — buy & sell pre-loved formal dresses",
-    template: "%s · frockd",
-  },
-  description:
-    "Australia's peer-to-peer marketplace for pre-loved formal dresses and gowns — wedding-guest, black-tie, prom, bridesmaid.",
-  applicationName: "frockd",
-  twitter: {
-    card: "summary_large_image",
-    title: "frockd — buy & sell pre-loved formal dresses",
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await loadSiteSettings();
+  return {
+    metadataBase: new URL(SITE_URL),
+    title: {
+      default: "frockd — buy & sell pre-loved formal dresses",
+      template: "%s · frockd",
+    },
     description:
-      "Peer-to-peer marketplace for pre-loved formal dresses and gowns.",
-  },
-  openGraph: {
-    type: "website",
-    siteName: "frockd",
-    title: "frockd — buy & sell pre-loved formal dresses",
-    description:
-      "Peer-to-peer marketplace for pre-loved formal dresses and gowns.",
-  },
-};
+      "Australia's peer-to-peer marketplace for pre-loved formal dresses and gowns — wedding-guest, black-tie, prom, bridesmaid.",
+    applicationName: "frockd",
+    // Pre-launch / staging blocks indexing on every page. /robots.txt
+    // also disallows everything when this flag is off, but the meta tag
+    // is the belt to robots.txt's braces — search engines that have
+    // already cached robots.txt will still honour the page-level tag.
+    robots: settings.allowIndexing
+      ? undefined
+      : { index: false, follow: false },
+    twitter: {
+      card: "summary_large_image",
+      title: "frockd — buy & sell pre-loved formal dresses",
+      description:
+        "Peer-to-peer marketplace for pre-loved formal dresses and gowns.",
+    },
+    openGraph: {
+      type: "website",
+      siteName: "frockd",
+      title: "frockd — buy & sell pre-loved formal dresses",
+      description:
+        "Peer-to-peer marketplace for pre-loved formal dresses and gowns.",
+    },
+  };
+}
 
 export const viewport: Viewport = {
   width: "device-width",
