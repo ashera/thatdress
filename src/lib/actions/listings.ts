@@ -6,6 +6,7 @@ import { query, withTransaction } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { getCurrentRegionId } from "@/lib/regions";
 import { deriveTrustStatus, isTrustStatus } from "@/lib/listing-trust";
+import { recomputeListingTrustStatus } from "@/lib/listing-trust-server";
 import { loadSiteSettings } from "@/lib/site-settings";
 
 const DESCRIPTION_MAX = 5000;
@@ -519,6 +520,9 @@ export async function addListingImages(formData: FormData): Promise<void> {
   if (imageErr) redirect(`/listings/${listingId}/edit?error=${imageErr}`);
 
   await insertImages(listingId, files, existing, hasPrimary);
+  // Adding photos can push imageCount over 3, which is one of the
+  // verified-badge criteria; re-derive so the badge appears immediately.
+  await recomputeListingTrustStatus(listingId);
 
   revalidatePath(`/listings/${listingId}`);
   revalidatePath(`/listings/${listingId}/edit`);
@@ -635,6 +639,9 @@ export async function deleteListingImage(formData: FormData): Promise<void> {
       [listingId],
     );
   }
+
+  // Removing a photo can drop imageCount below 3, demoting trust.
+  await recomputeListingTrustStatus(listingId);
 
   revalidatePath(`/listings/${listingId}`);
   revalidatePath(`/listings/${listingId}/edit`);

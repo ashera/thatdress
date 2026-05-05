@@ -6,6 +6,7 @@ import { query } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { getCurrentRegionId } from "@/lib/regions";
 import { deriveTrustStatus, isTrustStatus } from "@/lib/listing-trust";
+import { recomputeListingTrustStatus } from "@/lib/listing-trust-server";
 import { loadSiteSettings } from "@/lib/site-settings";
 
 const DESCRIPTION_MAX = 5000;
@@ -149,6 +150,10 @@ export async function deleteDraftImage(formData: FormData): Promise<void> {
     );
   }
 
+  // Photo deletion can drop imageCount below the 3-photo verified
+  // threshold — re-derive trust before redirecting.
+  await recomputeListingTrustStatus(listingId);
+
   revalidatePath(`/listings/new/${listingId}/photos`);
   redirect(`/listings/new/${listingId}/photos`);
 }
@@ -281,6 +286,7 @@ export async function saveDraftPhotos(formData: FormData): Promise<void> {
     }
   }
 
+  await recomputeListingTrustStatus(listingId);
   revalidatePath(stepUrl);
   redirect(`/listings/new/${listingId}/style`);
 }
@@ -321,6 +327,7 @@ export async function saveDraftStyle(formData: FormData): Promise<void> {
     ],
   );
 
+  await recomputeListingTrustStatus(listingId);
   revalidatePath(stepUrl);
   redirect(`/listings/new/${listingId}/measurements`);
 }
@@ -376,6 +383,7 @@ export async function saveDraftMeasurements(
     ],
   );
 
+  await recomputeListingTrustStatus(listingId);
   revalidatePath(stepUrl);
   redirect(`/listings/new/${listingId}/condition`);
 }
@@ -408,6 +416,7 @@ export async function saveDraftCondition(formData: FormData): Promise<void> {
     ],
   );
 
+  await recomputeListingTrustStatus(listingId);
   revalidatePath(stepUrl);
   redirect(`/listings/new/${listingId}/publish`);
 }
