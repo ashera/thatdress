@@ -19,6 +19,11 @@ const TOOLS: Array<{
     title: "Alterations cost",
     desc: "What to budget at the tailor — hem, bust, straps, beading, zippers.",
   },
+  {
+    href: "/tools/buyers-checklist",
+    title: "Buyer's checklist",
+    desc: "Due-diligence list for vetting a pre-loved designer dress before you pay.",
+  },
 ];
 
 export async function generateMetadata(): Promise<Metadata> {

@@ -226,6 +226,10 @@ export default async function Home({
                 href: "/tools/alterations-cost",
                 label: "Alterations cost",
               },
+              {
+                href: "/tools/buyers-checklist",
+                label: "Buyer's checklist",
+              },
             ].map((t) => (
               <li key={t.href}>
                 <Link href={t.href} className="hero-toolbox-link">
