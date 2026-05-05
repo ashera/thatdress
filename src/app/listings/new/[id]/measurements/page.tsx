@@ -76,7 +76,7 @@ export default async function WizardMeasurementsPage({
   return (
     <WizardShell
       step="measurements"
-      draftId={draft.id}
+      draft={draft}
       errorMessage={errorMessage}
     >
       <WizardHero

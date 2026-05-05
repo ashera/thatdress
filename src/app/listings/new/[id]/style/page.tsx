@@ -62,7 +62,7 @@ export default async function WizardStylePage({
   const d: DraftRow = draft;
 
   return (
-    <WizardShell step="style" draftId={draft.id} errorMessage={errorMessage}>
+    <WizardShell step="style" draft={draft} errorMessage={errorMessage}>
       <WizardHero
         icon="shield"
         headline="The look"

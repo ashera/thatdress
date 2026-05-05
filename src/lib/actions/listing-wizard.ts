@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { query } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { getCurrentRegionId } from "@/lib/regions";
+import { deriveTrustStatus, isTrustStatus } from "@/lib/listing-trust";
 
 const DESCRIPTION_MAX = 5000;
 const PRICE_MAX_DOLLARS = 1_000_000;
@@ -423,20 +424,59 @@ export async function publishDraftListing(formData: FormData): Promise<void> {
     ? formRegionId
     : await getCurrentRegionId();
 
-  // Final readiness check: everything required by parseListingFields must
-  // be present on the row. Fail back to the relevant step if not.
+  const isAuthenticDeclared = getCheckbox(formData, "is_authentic_declared");
+  if (!isAuthenticDeclared) {
+    redirect(`${stepUrl}?error=authenticity-required`);
+  }
+  const includesLabelLiningPhotos = getCheckbox(
+    formData,
+    "includes_label_lining_photos",
+  );
+
+  // Final readiness check: everything required must be present on the
+  // row, plus the snapshot we'll need to compute trust_status.
   const r = await query<{
     title: string | null;
     designer_id: string | null;
     model: string | null;
+    year: number | null;
     occasion_id: string | null;
     condition_id: string | null;
+    size_id: string | null;
+    silhouette_id: string | null;
+    fabric_id: string | null;
+    neckline_id: string | null;
+    sleeve_style_id: string | null;
+    length_id: string | null;
+    color: string | null;
+    bust_inches: string | null;
+    waist_inches: string | null;
+    hips_inches: string | null;
+    original_retail_cents: number | null;
+    has_original_receipt: boolean | null;
+    trust_status: string | null;
+    image_count: string;
   }>(
     `SELECT title,
             designer_id::text,
             model,
+            year,
             occasion_id::text,
-            condition_id::text
+            condition_id::text,
+            size_id::text,
+            silhouette_id::text,
+            fabric_id::text,
+            neckline_id::text,
+            sleeve_style_id::text,
+            length_id::text,
+            color,
+            bust_inches::text,
+            waist_inches::text,
+            hips_inches::text,
+            original_retail_cents,
+            has_original_receipt,
+            trust_status,
+            (SELECT COUNT(*)::text FROM listing_images WHERE listing_id = listings.id) AS image_count
        FROM listings WHERE id = $1::bigint LIMIT 1`,
     [listingId],
   );
@@ -452,6 +492,44 @@ export async function publishDraftListing(formData: FormData): Promise<void> {
     redirect(`/listings/new/${listingId}/condition?error=incomplete`);
   }
 
+  // Compute trust_status from the snapshot above + the just-submitted
+  // declaration checkboxes + the description being saved on this turn.
+  function num(s: string | null): number | null {
+    if (s == null || s === "") return null;
+    const n = Number(s);
+    return Number.isFinite(n) ? n : null;
+  }
+  const currentTrust =
+    row.trust_status && isTrustStatus(row.trust_status)
+      ? row.trust_status
+      : "self-declared";
+  const nextTrust = deriveTrustStatus({
+    current: currentTrust,
+    health: {
+      designerId: row.designer_id,
+      model: row.model,
+      year: row.year,
+      occasionId: row.occasion_id,
+      conditionId: row.condition_id,
+      sizeId: row.size_id,
+      silhouetteId: row.silhouette_id,
+      fabricId: row.fabric_id,
+      necklineId: row.neckline_id,
+      sleeveStyleId: row.sleeve_style_id,
+      lengthId: row.length_id,
+      color: row.color,
+      bustInches: num(row.bust_inches),
+      waistInches: num(row.waist_inches),
+      hipsInches: num(row.hips_inches),
+      originalRetailCents: row.original_retail_cents,
+      hasOriginalReceipt: !!row.has_original_receipt,
+      isAuthenticDeclared,
+      includesLabelLiningPhotos,
+      description,
+      imageCount: Number(row.image_count ?? 0),
+    },
+  });
+
   await query(
     `UPDATE listings
         SET description = $2,
@@ -459,6 +537,9 @@ export async function publishDraftListing(formData: FormData): Promise<void> {
             location_postal = $4,
             region_id = NULLIF($5, '')::bigint,
             offers_enabled = $6,
+            is_authentic_declared = $7,
+            includes_label_lining_photos = $8,
+            trust_status = $9,
             is_draft = FALSE,
             is_published = TRUE
       WHERE id = $1::bigint`,
@@ -469,6 +550,9 @@ export async function publishDraftListing(formData: FormData): Promise<void> {
       location_postal,
       regionId ?? "",
       getCheckbox(formData, "offers_enabled"),
+      isAuthenticDeclared,
+      includesLabelLiningPhotos,
+      nextTrust,
     ],
   );
 

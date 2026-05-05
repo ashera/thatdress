@@ -14,6 +14,7 @@ import {
   getListingStats,
   trackListingView,
 } from "@/lib/listing-views";
+import { isTrustStatus } from "@/lib/listing-trust";
 import { Button, ButtonLink, Icon } from "../../_components/ui";
 import {
   ListingGallery,
@@ -56,6 +57,7 @@ type ListingRow = {
   original_retail_cents: number | null;
   alterations_text: string | null;
   has_original_receipt: boolean | null;
+  trust_status: string | null;
 };
 
 type ImageRow = {
@@ -99,7 +101,8 @@ const LISTING_SELECT = `
   l.hips_inches::text,
   l.original_retail_cents,
   l.alterations_text,
-  l.has_original_receipt
+  l.has_original_receipt,
+  l.trust_status
 `;
 
 const LISTING_JOINS = `
@@ -598,6 +601,46 @@ export default async function ListingDetailPage({
               "Pre-loved dress"}
           </p>
           <h1 className="detail-title">{l.title}</h1>
+          {(() => {
+            const ts =
+              l.trust_status && isTrustStatus(l.trust_status)
+                ? l.trust_status
+                : null;
+            if (!ts || ts === "self-declared" || ts === "flagged") return null;
+            const isAuth = ts === "authenticated";
+            return (
+              <div
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "6px 14px",
+                  borderRadius: 999,
+                  background: isAuth ? "#1c1816" : "var(--volt-100)",
+                  color: isAuth ? "#fff" : "var(--volt-700)",
+                  border: isAuth
+                    ? "1px solid #1c1816"
+                    : "1px solid var(--volt-200)",
+                  fontFamily: "var(--font-mono)",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  letterSpacing: "0.12em",
+                  textTransform: "uppercase",
+                  margin: "var(--s-3) 0",
+                }}
+                title={
+                  isAuth
+                    ? "Authenticated by frockd — verified by our authentication partner."
+                    : "Verified — this listing meets frockd's photo, condition, and authenticity criteria."
+                }
+              >
+                <span aria-hidden style={{ fontSize: 14, lineHeight: 1 }}>
+                  ✓
+                </span>
+                {isAuth ? "Authenticated" : "Verified by frockd"}
+              </div>
+            );
+          })()}
           <div className="detail-price">{price}</div>
 
           <div className="detail-seller">

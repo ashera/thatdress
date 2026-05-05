@@ -317,6 +317,7 @@ async function fetchListings(
               l.hips_inches::text,
               l.original_retail_cents,
               l.has_original_receipt,
+              l.trust_status,
               l.is_published,
               l.sold_at::text,
               (

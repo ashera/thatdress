@@ -411,6 +411,23 @@ ALTER TABLE regions
 ALTER TABLE listings
   ADD COLUMN IF NOT EXISTS region_id BIGINT REFERENCES regions(id) ON DELETE SET NULL;
 
+-- Trust + authenticity ladder. Sellers declare authenticity in the
+-- publish step; listings that meet the photo/measurement/health
+-- criteria auto-elevate to 'verified' and earn a public badge.
+-- 'authenticated' is reserved for a future third-party verification
+-- partnership; 'flagged' is the path back down when admin reviews
+-- a buyer report.
+ALTER TABLE listings
+  ADD COLUMN IF NOT EXISTS is_authentic_declared        BOOLEAN NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS includes_label_lining_photos BOOLEAN NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS trust_status                 TEXT    NOT NULL DEFAULT 'self-declared';
+
+ALTER TABLE listings
+  DROP CONSTRAINT IF EXISTS listings_trust_status_check;
+ALTER TABLE listings
+  ADD CONSTRAINT listings_trust_status_check
+    CHECK (trust_status IN ('self-declared', 'verified', 'authenticated', 'flagged'));
+
 CREATE INDEX IF NOT EXISTS listings_region_idx ON listings (region_id);
 
 INSERT INTO regions (slug, label, short_name, match_pattern, sort_order) VALUES

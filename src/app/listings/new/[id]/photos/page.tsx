@@ -57,7 +57,7 @@ export default async function WizardPhotosPage({
   const images = await fetchDraftImages(draft.id);
 
   return (
-    <WizardShell step="photos" draftId={draft.id} errorMessage={errorMessage}>
+    <WizardShell step="photos" draft={draft} errorMessage={errorMessage}>
       <WizardHero
         icon="camera"
         headline="Lead with a great photo"

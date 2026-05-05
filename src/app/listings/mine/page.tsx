@@ -4,6 +4,10 @@ import { redirect } from "next/navigation";
 import { query } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { startDraftListing } from "@/lib/actions/listing-wizard";
+import {
+  HEALTH_THRESHOLD_VERIFIED,
+  computeHealth,
+} from "@/lib/listing-health";
 import { Button } from "../../_components/ui";
 import {
   ListingRow,
@@ -25,6 +29,35 @@ type DraftItem = {
   has_basics: boolean;
   has_style: boolean;
   has_condition: boolean;
+  /** Health score 0–100 — surfaces as a small progress chip next to
+   *  each draft so the seller sees how complete the listing is. */
+  health_score: number;
+};
+
+type DraftRowFromDb = {
+  id: string;
+  title: string | null;
+  designer_id: string | null;
+  model: string | null;
+  year: number | null;
+  occasion_id: string | null;
+  condition_id: string | null;
+  size_id: string | null;
+  silhouette_id: string | null;
+  fabric_id: string | null;
+  neckline_id: string | null;
+  sleeve_style_id: string | null;
+  length_id: string | null;
+  color: string | null;
+  bust_inches: string | null;
+  waist_inches: string | null;
+  hips_inches: string | null;
+  original_retail_cents: number | null;
+  has_original_receipt: boolean | null;
+  is_authentic_declared: boolean | null;
+  includes_label_lining_photos: boolean | null;
+  description: string | null;
+  image_count: string;
 };
 
 function nextStepFor(d: DraftItem): string {
@@ -36,18 +69,63 @@ function nextStepFor(d: DraftItem): string {
 
 async function fetchDrafts(userId: string): Promise<DraftItem[]> {
   try {
-    const r = await query<DraftItem>(
-      `SELECT id::text,
-              title,
-              (title <> '' AND designer_id IS NOT NULL AND model IS NOT NULL) AS has_basics,
-              (occasion_id IS NOT NULL) AS has_style,
-              (condition_id IS NOT NULL) AS has_condition
+    const r = await query<DraftRowFromDb>(
+      `SELECT id::text, title,
+              designer_id::text, model, year,
+              occasion_id::text, condition_id::text, size_id::text,
+              silhouette_id::text, fabric_id::text, neckline_id::text,
+              sleeve_style_id::text, length_id::text, color,
+              bust_inches::text, waist_inches::text, hips_inches::text,
+              original_retail_cents, has_original_receipt,
+              is_authentic_declared, includes_label_lining_photos,
+              description,
+              (SELECT COUNT(*)::text FROM listing_images WHERE listing_id = listings.id) AS image_count
          FROM listings
         WHERE seller_id = $1::bigint AND is_draft = TRUE
         ORDER BY created_at DESC`,
       [userId],
     );
-    return r.rows;
+    return r.rows.map((d) => {
+      const num = (s: string | null): number | null => {
+        if (s == null || s === "") return null;
+        const n = Number(s);
+        return Number.isFinite(n) ? n : null;
+      };
+      const { score } = computeHealth({
+        designerId: d.designer_id,
+        model: d.model,
+        year: d.year,
+        occasionId: d.occasion_id,
+        conditionId: d.condition_id,
+        sizeId: d.size_id,
+        silhouetteId: d.silhouette_id,
+        fabricId: d.fabric_id,
+        necklineId: d.neckline_id,
+        sleeveStyleId: d.sleeve_style_id,
+        lengthId: d.length_id,
+        color: d.color,
+        bustInches: num(d.bust_inches),
+        waistInches: num(d.waist_inches),
+        hipsInches: num(d.hips_inches),
+        originalRetailCents: d.original_retail_cents,
+        hasOriginalReceipt: !!d.has_original_receipt,
+        isAuthenticDeclared: !!d.is_authentic_declared,
+        includesLabelLiningPhotos: !!d.includes_label_lining_photos,
+        description: d.description,
+        imageCount: Number(d.image_count ?? 0),
+      });
+      return {
+        id: d.id,
+        title: d.title,
+        has_basics:
+          (d.title?.length ?? 0) > 0 &&
+          d.designer_id != null &&
+          d.model != null,
+        has_style: d.occasion_id != null,
+        has_condition: d.condition_id != null,
+        health_score: score,
+      };
+    });
   } catch {
     return [];
   }
@@ -87,6 +165,7 @@ async function fetchOwnListings(
               l.hips_inches::text,
               l.original_retail_cents,
               l.has_original_receipt,
+              l.trust_status,
               l.sold_at::text,
               (
                 SELECT COUNT(DISTINCT buyer_id)::text FROM conversations
@@ -244,18 +323,53 @@ export default async function MyListingsPage() {
                   borderRadius: 10,
                 }}
               >
-                <div>
+                <div style={{ minWidth: 0, flex: "1 1 auto" }}>
                   <div style={{ fontWeight: 600, color: "var(--ink-1)" }}>
                     {d.title?.trim() || "Untitled draft"}
                   </div>
-                  <div style={{ fontSize: 13, color: "var(--ink-3)" }}>
-                    {!d.has_basics
-                      ? "Step 1 of 5 — photos & basics"
-                      : !d.has_style
-                      ? "Step 2 of 5 — style"
-                      : !d.has_condition
-                      ? "Step 4 of 5 — condition"
-                      : "Step 5 of 5 — publish"}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      fontSize: 13,
+                      color: "var(--ink-3)",
+                      marginTop: 2,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <span>
+                      {!d.has_basics
+                        ? "Step 1 of 5 — photos & basics"
+                        : !d.has_style
+                        ? "Step 2 of 5 — style"
+                        : !d.has_condition
+                        ? "Step 4 of 5 — condition"
+                        : "Step 5 of 5 — publish"}
+                    </span>
+                    <span aria-hidden style={{ color: "var(--hairline-strong)" }}>
+                      ·
+                    </span>
+                    <span
+                      style={{
+                        fontFamily: "var(--font-mono)",
+                        fontSize: 11,
+                        letterSpacing: "0.08em",
+                        color:
+                          d.health_score >= HEALTH_THRESHOLD_VERIFIED
+                            ? "var(--volt-700)"
+                            : "var(--ink-3)",
+                        fontWeight: 700,
+                      }}
+                      title={
+                        d.health_score >= HEALTH_THRESHOLD_VERIFIED
+                          ? "Listing health is high enough to earn the Verified badge on publish."
+                          : `Reach ${HEALTH_THRESHOLD_VERIFIED} to earn the Verified badge.`
+                      }
+                    >
+                      Health {d.health_score}/100
+                      {d.health_score >= HEALTH_THRESHOLD_VERIFIED && " ✓"}
+                    </span>
                   </div>
                 </div>
                 <Link

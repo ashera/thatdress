@@ -31,7 +31,7 @@ export default async function WizardConditionPage({
   return (
     <WizardShell
       step="condition"
-      draftId={draft.id}
+      draft={draft}
       errorMessage={errorMessage}
     >
       <WizardHero

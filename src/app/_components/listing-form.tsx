@@ -25,6 +25,8 @@ export type ListingFormDefaults = {
   original_retail_dollars?: string;
   alterations_text?: string | null;
   has_original_receipt?: boolean;
+  is_authentic_declared?: boolean;
+  includes_label_lining_photos?: boolean;
 };
 
 type Props = {
@@ -369,6 +371,53 @@ export function ListingForm({
           <span>Has original receipt or proof of purchase</span>
         </label>
       </details>
+
+      <section className="form-card">
+        <h2 className="card-heading">Trust &amp; authenticity</h2>
+        <p className="card-sub">
+          Both ticked plus a complete listing earns the public Verified
+          badge.
+        </p>
+        <label className="check-row" style={{ alignItems: "flex-start" }}>
+          <input
+            type="checkbox"
+            name="is_authentic_declared"
+            defaultChecked={!!defaults.is_authentic_declared}
+            required
+            style={{ marginTop: 4 }}
+          />
+          <span style={{ display: "block" }}>
+            <strong style={{ color: "var(--ink-1)" }}>
+              I confirm this dress is authentic
+            </strong>
+            <span
+              style={{
+                display: "block",
+                color: "var(--ink-3)",
+                fontSize: "var(--t-body-s)",
+                marginTop: 2,
+              }}
+            >
+              Required. Knowingly listing a counterfeit gets the listing
+              removed.
+            </span>
+          </span>
+        </label>
+        <label className="check-row" style={{ alignItems: "flex-start" }}>
+          <input
+            type="checkbox"
+            name="includes_label_lining_photos"
+            defaultChecked={!!defaults.includes_label_lining_photos}
+            style={{ marginTop: 4 }}
+          />
+          <span style={{ display: "block" }}>
+            <strong style={{ color: "var(--ink-1)" }}>
+              My photos include a designer-label close-up and a lining /
+              wrong-side shot
+            </strong>
+          </span>
+        </label>
+      </section>
 
       {showPhotos && (
         <section className="form-card">

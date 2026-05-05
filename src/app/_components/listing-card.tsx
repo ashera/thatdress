@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { ButtonLink, Icon } from "./ui";
 import { toggleShortlist } from "@/lib/actions/shortlist";
+import {
+  TRUST_BADGE_LABELS,
+  isTrustStatus,
+  type TrustStatus,
+} from "@/lib/listing-trust";
 
 export type ListingCardStat = {
   value: string;
@@ -24,6 +29,7 @@ export type ListingCardData = {
   isShortlisted?: boolean;
   showShortlist?: boolean;
   interestedCount?: number;
+  trustStatus?: TrustStatus;
 };
 
 export type ListingCardRow = {
@@ -51,6 +57,7 @@ export type ListingCardRow = {
   hips_inches: string | null;
   original_retail_cents: number | null;
   has_original_receipt: boolean | null;
+  trust_status?: string | null;
   is_published?: boolean | null;
   sold_at?: string | null;
   conversation_count?: string | number | null;
@@ -146,7 +153,53 @@ export function listingFromRow(
     showShortlist,
     interestedCount:
       row.conversation_count != null ? Number(row.conversation_count) : 0,
+    trustStatus:
+      row.trust_status && isTrustStatus(row.trust_status)
+        ? row.trust_status
+        : undefined,
   };
+}
+
+/** Small inline trust pill for listing cards. Only renders for the
+ *  verified / authenticated tiers; the default 'self-declared' is the
+ *  baseline so we don't add visual noise to every card. */
+function TrustBadge({ status }: { status: TrustStatus | undefined }) {
+  if (!status || status === "self-declared" || status === "flagged") {
+    return null;
+  }
+  const isAuthenticated = status === "authenticated";
+  return (
+    <span
+      title={
+        isAuthenticated
+          ? "Authenticated by frockd"
+          : "Verified — meets frockd's listing-quality and authenticity criteria"
+      }
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 4,
+        padding: "3px 8px",
+        borderRadius: 999,
+        background: isAuthenticated ? "#1c1816" : "var(--volt-100)",
+        color: isAuthenticated ? "#fff" : "var(--volt-700)",
+        border: isAuthenticated
+          ? "1px solid #1c1816"
+          : "1px solid var(--volt-200)",
+        fontFamily: "var(--font-mono)",
+        fontSize: 10,
+        fontWeight: 700,
+        letterSpacing: "0.1em",
+        textTransform: "uppercase",
+        whiteSpace: "nowrap",
+      }}
+    >
+      <span aria-hidden style={{ fontSize: 11, lineHeight: 1 }}>
+        ✓
+      </span>
+      {TRUST_BADGE_LABELS[status]}
+    </span>
+  );
 }
 
 function ShortlistButton({
@@ -212,6 +265,11 @@ export function ListingRow({ data }: { data: ListingCardData }) {
 
       <div className="listing-row-info">
         <h3 className="listing-row-title">{data.title}</h3>
+        {data.trustStatus && data.trustStatus !== "self-declared" && (
+          <div style={{ marginTop: 2 }}>
+            <TrustBadge status={data.trustStatus} />
+          </div>
+        )}
         <div className="listing-row-chips">
           {data.chips.map((c, i) => (
             <span
@@ -270,15 +328,26 @@ export function ListingCard({ data }: { data: ListingCardData }) {
   return (
     <article className="listing">
       <div className="listing-head">
-        <div className="listing-chips">
-          {data.chips.map((c, i) => (
-            <span
-              key={i}
-              className={`listing-chip ${c === PLACEHOLDER ? "is-empty" : ""}`}
-            >
-              {c}
-            </span>
-          ))}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 8,
+            flexWrap: "wrap",
+          }}
+        >
+          <div className="listing-chips">
+            {data.chips.map((c, i) => (
+              <span
+                key={i}
+                className={`listing-chip ${c === PLACEHOLDER ? "is-empty" : ""}`}
+              >
+                {c}
+              </span>
+            ))}
+          </div>
+          <TrustBadge status={data.trustStatus} />
         </div>
         <h3 className="listing-title">{data.title}</h3>
       </div>

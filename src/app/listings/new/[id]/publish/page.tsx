@@ -158,7 +158,7 @@ export default async function WizardPublishPage({
   return (
     <WizardShell
       step="publish"
-      draftId={draft.id}
+      draft={draft}
       errorMessage={errorMessage}
     >
       <WizardHero
@@ -319,6 +319,67 @@ export default async function WizardPublishPage({
               defaultChecked={!!draft.offers_enabled}
             />
             <span>Open to offers — buyers can propose a different price</span>
+          </label>
+        </section>
+
+        <section className="form-card">
+          <h2 className="card-heading">Trust &amp; authenticity</h2>
+          <p className="card-sub">
+            Tick both to qualify for the public Verified badge. Buyers
+            see the badge on your listing card and detail page; listings
+            with it sell faster.
+          </p>
+
+          <label className="check-row" style={{ alignItems: "flex-start" }}>
+            <input
+              type="checkbox"
+              name="is_authentic_declared"
+              defaultChecked={!!draft.is_authentic_declared}
+              required
+              style={{ marginTop: 4 }}
+            />
+            <span style={{ display: "block" }}>
+              <strong style={{ color: "var(--ink-1)" }}>
+                I confirm this dress is authentic
+              </strong>
+              <span
+                style={{
+                  display: "block",
+                  color: "var(--ink-3)",
+                  fontSize: "var(--t-body-s)",
+                  marginTop: 2,
+                }}
+              >
+                Required to publish. Knowingly listing a counterfeit gets
+                the listing removed.
+              </span>
+            </span>
+          </label>
+
+          <label className="check-row" style={{ alignItems: "flex-start" }}>
+            <input
+              type="checkbox"
+              name="includes_label_lining_photos"
+              defaultChecked={!!draft.includes_label_lining_photos}
+              style={{ marginTop: 4 }}
+            />
+            <span style={{ display: "block" }}>
+              <strong style={{ color: "var(--ink-1)" }}>
+                My photos include a designer-label close-up and a
+                lining / wrong-side shot
+              </strong>
+              <span
+                style={{
+                  display: "block",
+                  color: "var(--ink-3)",
+                  fontSize: "var(--t-body-s)",
+                  marginTop: 2,
+                }}
+              >
+                Optional, but it&rsquo;s the single biggest signal that
+                separates legitimate listings from sketchy ones.
+              </span>
+            </span>
           </label>
         </section>
 

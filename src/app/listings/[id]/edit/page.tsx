@@ -67,6 +67,8 @@ type ListingRow = {
   original_retail_cents: number | null;
   alterations_text: string | null;
   has_original_receipt: boolean | null;
+  is_authentic_declared: boolean | null;
+  includes_label_lining_photos: boolean | null;
   location_postal: string | null;
 };
 
@@ -110,7 +112,8 @@ export default async function EditListingPage({
               length_id::text, color,
               bust_inches::text, waist_inches::text, hips_inches::text,
               original_retail_cents, alterations_text,
-              has_original_receipt, location_postal
+              has_original_receipt, is_authentic_declared,
+              includes_label_lining_photos, location_postal
          FROM listings
         WHERE id = $1::bigint
         LIMIT 1`,
@@ -157,6 +160,8 @@ export default async function EditListingPage({
     original_retail_dollars: dollarsFromCents(listing.original_retail_cents),
     alterations_text: listing.alterations_text,
     has_original_receipt: !!listing.has_original_receipt,
+    is_authentic_declared: !!listing.is_authentic_declared,
+    includes_label_lining_photos: !!listing.includes_label_lining_photos,
     location_postal: listing.location_postal,
   };
 

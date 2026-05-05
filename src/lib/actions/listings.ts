@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { query, withTransaction } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { getCurrentRegionId } from "@/lib/regions";
+import { deriveTrustStatus, isTrustStatus } from "@/lib/listing-trust";
 
 const DESCRIPTION_MAX = 5000;
 const PRICE_MAX_DOLLARS = 1_000_000;
@@ -103,6 +104,8 @@ type ListingFields = {
   original_retail_cents: number | null;
   alterations_text: string | null;
   has_original_receipt: boolean;
+  is_authentic_declared: boolean;
+  includes_label_lining_photos: boolean;
   offers_enabled: boolean;
 };
 
@@ -192,6 +195,11 @@ function parseListingFields(formData: FormData): ParseResult {
         getString(formData, "alterations_text", ALTERATIONS_MAX),
       ),
       has_original_receipt: getCheckbox(formData, "has_original_receipt"),
+      is_authentic_declared: getCheckbox(formData, "is_authentic_declared"),
+      includes_label_lining_photos: getCheckbox(
+        formData,
+        "includes_label_lining_photos",
+      ),
       offers_enabled: getCheckbox(formData, "offers_enabled"),
     },
   };
@@ -222,7 +230,9 @@ const UPDATE_SET = `
   alterations_text = $21,
   has_original_receipt = $22,
   offers_enabled = $23,
-  region_id = NULLIF($24, '')::bigint
+  region_id = NULLIF($24, '')::bigint,
+  is_authentic_declared = $25,
+  includes_label_lining_photos = $26
 `;
 
 function collectImageFiles(formData: FormData): File[] {
@@ -374,7 +384,7 @@ export async function updateListing(formData: FormData): Promise<void> {
   await query(
     `UPDATE listings SET ${UPDATE_SET}
       WHERE id = $1::bigint
-        AND (seller_id = $25::bigint OR $26::boolean)`,
+        AND (seller_id = $27::bigint OR $28::boolean)`,
     [
       listingId,
       f.description,
@@ -400,6 +410,8 @@ export async function updateListing(formData: FormData): Promise<void> {
       f.has_original_receipt,
       f.offers_enabled,
       regionId,
+      f.is_authentic_declared,
+      f.includes_label_lining_photos,
       user.id,
       user.isAdmin,
     ],
@@ -414,6 +426,56 @@ export async function updateListing(formData: FormData): Promise<void> {
       WHERE id = $1::bigint`,
     [listingId],
   );
+
+  // Recompute trust_status. Edits can move the listing up or down the
+  // ladder (e.g. seller untickeds the authenticity box, or adds the
+  // missing measurements that push score over the verified threshold).
+  const trustRow = await query<{
+    trust_status: string;
+    image_count: string;
+  }>(
+    `SELECT trust_status,
+            (SELECT COUNT(*)::text FROM listing_images WHERE listing_id = listings.id) AS image_count
+       FROM listings WHERE id = $1::bigint LIMIT 1`,
+    [listingId],
+  );
+  const currentTrust =
+    trustRow.rows[0]?.trust_status &&
+    isTrustStatus(trustRow.rows[0].trust_status)
+      ? trustRow.rows[0].trust_status
+      : "self-declared";
+  const nextTrust = deriveTrustStatus({
+    current: currentTrust,
+    health: {
+      designerId: f.designer_id,
+      model: f.model,
+      year: f.year,
+      occasionId: f.occasion_id,
+      conditionId: f.condition_id,
+      sizeId: f.size_id,
+      silhouetteId: f.silhouette_id,
+      fabricId: f.fabric_id,
+      necklineId: f.neckline_id,
+      sleeveStyleId: f.sleeve_style_id,
+      lengthId: f.length_id,
+      color: f.color,
+      bustInches: f.bust_inches,
+      waistInches: f.waist_inches,
+      hipsInches: f.hips_inches,
+      originalRetailCents: f.original_retail_cents,
+      hasOriginalReceipt: f.has_original_receipt,
+      isAuthenticDeclared: f.is_authentic_declared,
+      includesLabelLiningPhotos: f.includes_label_lining_photos,
+      description: f.description,
+      imageCount: Number(trustRow.rows[0]?.image_count ?? 0),
+    },
+  });
+  if (nextTrust !== currentTrust) {
+    await query(
+      `UPDATE listings SET trust_status = $1 WHERE id = $2::bigint`,
+      [nextTrust, listingId],
+    );
+  }
 
   revalidatePath(`/listings/${listingId}`);
   revalidatePath(`/listings/${listingId}/edit`);
