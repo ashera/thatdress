@@ -390,108 +390,51 @@ async function OwnerHealthCard({
   return (
     <div
       style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        flexWrap: "wrap",
         margin: "var(--s-2) 0 var(--s-3)",
-        padding: "10px 14px",
+        padding: "6px 10px",
         background: meetsVerified
           ? "var(--volt-50)"
           : "var(--surface-sunken)",
         border: `1px solid ${
           meetsVerified ? "var(--volt-200)" : "var(--hairline)"
         }`,
-        borderRadius: 10,
+        borderRadius: 8,
+        fontSize: 12,
       }}
     >
-      <div
+      <span
         style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          flexWrap: "wrap",
+          fontFamily: "var(--font-mono)",
+          fontSize: 10,
+          letterSpacing: "0.14em",
+          textTransform: "uppercase",
+          color: "var(--ink-3)",
         }}
       >
-        <div
-          style={{
-            fontFamily: "var(--font-mono)",
-            fontSize: 10,
-            letterSpacing: "0.16em",
-            textTransform: "uppercase",
-            color: "var(--ink-3)",
-          }}
-        >
-          Listing health
-        </div>
-        <div
-          style={{
-            fontFamily: "var(--font-display)",
-            fontSize: 16,
-            color: "var(--ink-1)",
-            letterSpacing: "-0.01em",
-            lineHeight: 1,
-          }}
-        >
-          {score}
-          <span
-            style={{
-              color: "var(--ink-4)",
-              fontSize: 12,
-              fontWeight: 400,
-            }}
-          >
-            {" / 100"}
-          </span>
-        </div>
-        {meetsVerified ? (
-          <span
-            style={{
-              fontFamily: "var(--font-mono)",
-              fontSize: 10,
-              letterSpacing: "0.12em",
-              textTransform: "uppercase",
-              color: "#92400e",
-              fontWeight: 700,
-              background: "#fef3c7",
-              border: "1px solid #fcd34d",
-              padding: "2px 8px",
-              borderRadius: 999,
-            }}
-          >
-            ✓ Verified-eligible
-          </span>
-        ) : (
-          <span
-            style={{
-              fontFamily: "var(--font-mono)",
-              fontSize: 10,
-              letterSpacing: "0.12em",
-              textTransform: "uppercase",
-              color: "var(--ink-3)",
-            }}
-          >
-            {verifiedThreshold - score} pts to Verified
-          </span>
-        )}
-        <Link
-          href={`/listings/${listing.id}/edit`}
-          style={{
-            marginLeft: "auto",
-            fontFamily: "var(--font-mono)",
-            fontSize: 11,
-            color: "var(--ink-2)",
-            textDecoration: "underline",
-            textDecorationColor: "var(--hairline-strong)",
-            textUnderlineOffset: 3,
-          }}
-        >
-          Edit →
-        </Link>
-      </div>
-
+        Health
+      </span>
+      <span
+        style={{
+          fontFamily: "var(--font-mono)",
+          fontSize: 12,
+          fontWeight: 700,
+          color: "var(--ink-1)",
+        }}
+      >
+        {score}
+        <span style={{ color: "var(--ink-4)", fontWeight: 400 }}>/100</span>
+      </span>
       <div
         style={{
+          flex: "1 1 80px",
+          minWidth: 60,
           height: 4,
           background: "var(--hairline)",
           borderRadius: 999,
-          marginTop: 8,
           overflow: "hidden",
         }}
         aria-hidden
@@ -501,44 +444,36 @@ async function OwnerHealthCard({
             width: `${score}%`,
             height: "100%",
             background: meetsVerified ? "#fcd34d" : "var(--ink-2)",
-            transition: "width 200ms",
           }}
         />
       </div>
-
+      <span
+        style={{
+          fontFamily: "var(--font-mono)",
+          fontSize: 10,
+          letterSpacing: "0.1em",
+          textTransform: "uppercase",
+          color: meetsVerified ? "#92400e" : "var(--ink-3)",
+          fontWeight: meetsVerified ? 700 : 400,
+        }}
+      >
+        {meetsVerified
+          ? "✓ Verified-eligible"
+          : `${verifiedThreshold - score} pts to Verified`}
+      </span>
       {top.length > 0 && (
-        <div
+        <Link
+          href={`/listings/new/${listing.id}/${top[0]!.step}`}
           style={{
-            marginTop: 8,
             fontSize: 12,
             color: "var(--ink-2)",
-            display: "flex",
-            gap: 6,
-            alignItems: "baseline",
+            textDecoration: "underline",
+            textDecorationColor: "var(--hairline-strong)",
+            textUnderlineOffset: 3,
           }}
         >
-          <span
-            style={{
-              fontFamily: "var(--font-mono)",
-              fontSize: 10,
-              color: "#92400e",
-              fontWeight: 700,
-            }}
-          >
-            +{top[0]!.points}
-          </span>
-          <Link
-            href={`/listings/new/${listing.id}/${top[0]!.step}`}
-            style={{
-              color: "var(--ink-1)",
-              textDecoration: "underline",
-              textDecorationColor: "var(--hairline-strong)",
-              textUnderlineOffset: 3,
-            }}
-          >
-            {top[0]!.text}
-          </Link>
-        </div>
+          +{top[0]!.points} {top[0]!.text}
+        </Link>
       )}
     </div>
   );
@@ -845,8 +780,8 @@ export default async function ListingDetailPage({
                   </h1>
                 </div>
                 {ts && (
-                  <div style={{ flex: "0 0 auto", marginTop: 4 }}>
-                    <TrustBadge status={ts} size="large" />
+                  <div style={{ flex: "0 0 auto", marginTop: 6 }}>
+                    <TrustBadge status={ts} size="small" />
                   </div>
                 )}
               </div>
