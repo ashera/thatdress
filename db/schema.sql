@@ -788,6 +788,13 @@ CREATE TABLE IF NOT EXISTS site_settings (
   updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Listing-health threshold above which a listing auto-elevates to
+-- trust_status='verified'. Tunable from /admin/site-settings; existing
+-- listings re-evaluate on the next edit/publish so the change is
+-- eventually consistent across the marketplace.
+ALTER TABLE site_settings
+  ADD COLUMN IF NOT EXISTS health_threshold_verified INTEGER NOT NULL DEFAULT 75;
+
 INSERT INTO site_settings (id) VALUES (1)
 ON CONFLICT (id) DO NOTHING;
 

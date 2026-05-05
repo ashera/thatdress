@@ -16,7 +16,11 @@
  *                    suppresses any verified badge.
  */
 
-import { HEALTH_THRESHOLD_VERIFIED, type HealthInput, computeHealth } from "@/lib/listing-health";
+import {
+  HEALTH_THRESHOLD_VERIFIED,
+  type HealthInput,
+  computeHealth,
+} from "@/lib/listing-health";
 
 export type TrustStatus =
   | "self-declared"
@@ -35,12 +39,18 @@ export const TRUST_BADGE_LABELS: Record<TrustStatus, string> = {
  * Compute the trust_status a listing should have based on its current
  * fields. Never overrides 'authenticated' or 'flagged' — those are
  * admin-managed states.
+ *
+ * Threshold defaults to the constant in listing-health.ts but callers
+ * (server actions) should pass the live value from site_settings so
+ * admin tweaks take effect immediately.
  */
 export function deriveTrustStatus(opts: {
   current: TrustStatus;
   health: HealthInput;
+  /** 0-100 score required to qualify for verified. */
+  threshold?: number;
 }): TrustStatus {
-  const { current } = opts;
+  const { current, threshold = HEALTH_THRESHOLD_VERIFIED } = opts;
 
   // Admin-managed states win. Don't auto-demote 'flagged' or override
   // a future 'authenticated' partnership badge.
@@ -53,7 +63,7 @@ export function deriveTrustStatus(opts: {
     opts.health.isAuthenticDeclared &&
     opts.health.includesLabelLiningPhotos &&
     opts.health.imageCount >= 3 &&
-    score >= HEALTH_THRESHOLD_VERIFIED;
+    score >= threshold;
 
   return eligibleForVerified ? "verified" : "self-declared";
 }

@@ -15,6 +15,7 @@ import {
   trackListingView,
 } from "@/lib/listing-views";
 import { isTrustStatus } from "@/lib/listing-trust";
+import { setListingTrustStatus } from "@/lib/actions/listing-trust";
 import { Button, ButtonLink, Icon } from "../../_components/ui";
 import {
   ListingGallery,
@@ -754,6 +755,30 @@ export default async function ListingDetailPage({
               >
                 {isOwner ? "Edit listing" : "Edit (admin)"}
               </ButtonLink>
+            )}
+            {isAdmin && (
+              <form action={setListingTrustStatus}>
+                <input type="hidden" name="listingId" value={l.id} />
+                {l.trust_status === "flagged" ? (
+                  <>
+                    <input
+                      type="hidden"
+                      name="status"
+                      value="self-declared"
+                    />
+                    <Button type="submit" variant="quiet" size="lg">
+                      Restore (un-flag)
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <input type="hidden" name="status" value="flagged" />
+                    <Button type="submit" variant="quiet" size="lg">
+                      Flag for review
+                    </Button>
+                  </>
+                )}
+              </form>
             )}
           </div>
         </div>

@@ -4,10 +4,8 @@ import { redirect } from "next/navigation";
 import { query } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { startDraftListing } from "@/lib/actions/listing-wizard";
-import {
-  HEALTH_THRESHOLD_VERIFIED,
-  computeHealth,
-} from "@/lib/listing-health";
+import { computeHealth } from "@/lib/listing-health";
+import { loadSiteSettings } from "@/lib/site-settings";
 import { Button } from "../../_components/ui";
 import {
   ListingRow,
@@ -210,10 +208,12 @@ export default async function MyListingsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const [result, drafts] = await Promise.all([
+  const [result, drafts, settings] = await Promise.all([
     fetchOwnListings(user.id),
     fetchDrafts(user.id),
+    loadSiteSettings(),
   ]);
+  const verifiedThreshold = settings.healthThresholdVerified;
   const total = result.ok ? result.rows.length : 0;
   const hidden = result.ok
     ? result.rows.filter((r) => !r.is_published).length
@@ -356,19 +356,19 @@ export default async function MyListingsPage() {
                         fontSize: 11,
                         letterSpacing: "0.08em",
                         color:
-                          d.health_score >= HEALTH_THRESHOLD_VERIFIED
+                          d.health_score >= verifiedThreshold
                             ? "var(--volt-700)"
                             : "var(--ink-3)",
                         fontWeight: 700,
                       }}
                       title={
-                        d.health_score >= HEALTH_THRESHOLD_VERIFIED
+                        d.health_score >= verifiedThreshold
                           ? "Listing health is high enough to earn the Verified badge on publish."
-                          : `Reach ${HEALTH_THRESHOLD_VERIFIED} to earn the Verified badge.`
+                          : `Reach ${verifiedThreshold} to earn the Verified badge.`
                       }
                     >
                       Health {d.health_score}/100
-                      {d.health_score >= HEALTH_THRESHOLD_VERIFIED && " ✓"}
+                      {d.health_score >= verifiedThreshold && " ✓"}
                     </span>
                   </div>
                 </div>

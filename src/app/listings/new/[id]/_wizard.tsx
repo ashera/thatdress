@@ -5,11 +5,11 @@ import { query } from "@/lib/db";
 import { getCurrentUser, type User } from "@/lib/auth";
 import { abandonDraftListing } from "@/lib/actions/listing-wizard";
 import {
-  HEALTH_THRESHOLD_VERIFIED,
   computeHealth,
   type HealthInput,
   type HealthSuggestion,
 } from "@/lib/listing-health";
+import { loadSiteSettings } from "@/lib/site-settings";
 import { Button, Icon } from "../../../_components/ui";
 import type { ComponentProps } from "react";
 
@@ -165,14 +165,18 @@ export function draftToHealthInput(d: DraftRow): HealthInput {
 /** Seller-only listing-health indicator, sticky-ish at the top of the
  *  wizard. Score updates as the seller fills more fields; suggestions
  *  surface the highest-impact missing items as quick links to the
- *  relevant step. Crosses 75 → unlocks the public Verified badge. */
-function HealthBar({
+ *  relevant step. Crossing the verified threshold → unlocks the
+ *  public Verified badge. Threshold is loaded from site_settings so
+ *  admin tweaks take effect immediately. */
+async function HealthBar({
   draft,
 }: {
   draft: DraftRow;
 }) {
+  const settings = await loadSiteSettings();
+  const verifiedThreshold = settings.healthThresholdVerified;
   const { score, suggestions } = computeHealth(draftToHealthInput(draft));
-  const meetsVerified = score >= HEALTH_THRESHOLD_VERIFIED;
+  const meetsVerified = score >= verifiedThreshold;
   const top = suggestions.slice(0, 3);
   return (
     <div
@@ -282,7 +286,7 @@ function HealthBar({
           >
             {meetsVerified
               ? "More improvements you could make:"
-              : `Reach ${HEALTH_THRESHOLD_VERIFIED} to earn the Verified badge — top suggestions:`}
+              : `Reach ${verifiedThreshold} to earn the Verified badge — top suggestions:`}
           </div>
           <ul
             style={{

@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
 import { loadSiteSettings } from "@/lib/site-settings";
-import { setAllowIndexing } from "@/lib/actions/site-settings";
-import { Button } from "../../_components/ui";
+import { saveSiteSettings } from "@/lib/actions/site-settings";
+import { Button, Field, Input } from "../../_components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -35,20 +35,18 @@ export default async function SiteSettingsPage({
         </p>
       )}
 
-      <section className="form-card">
-        <h2 className="card-heading">Search-engine indexing</h2>
-        <p className="card-sub">
-          When indexing is <strong>blocked</strong> (the pre-launch
-          default), every page emits{" "}
-          <code>&lt;meta name="robots" content="noindex,nofollow"&gt;</code>{" "}
-          and <code>/robots.txt</code> serves <code>Disallow: /</code> for
-          every user-agent. Crawlers that respect these directives
-          (Google, Bing, Yandex, DuckDuckGo, all the major ones) will
-          drop the site from their index. Switch this on when you&rsquo;re
-          ready to be discovered.
-        </p>
+      <form action={saveSiteSettings}>
+        <section className="form-card">
+          <h2 className="card-heading">Search-engine indexing</h2>
+          <p className="card-sub">
+            When indexing is <strong>blocked</strong> (the pre-launch
+            default), every page emits{" "}
+            <code>&lt;meta name="robots" content="noindex,nofollow"&gt;</code>{" "}
+            and <code>/robots.txt</code> serves <code>Disallow: /</code>{" "}
+            for every user-agent. Switch this on when you&rsquo;re ready
+            to be discovered.
+          </p>
 
-        <form action={setAllowIndexing}>
           <div
             style={{
               padding: "var(--s-4) var(--s-5)",
@@ -137,25 +135,59 @@ export default async function SiteSettingsPage({
               </span>
             </span>
           </label>
+        </section>
 
-          <div
-            style={{
-              display: "flex",
-              gap: "var(--s-3)",
-              justifyContent: "flex-end",
-              marginTop: "var(--s-4)",
-            }}
+        <section className="form-card" style={{ marginTop: "var(--s-5)" }}>
+          <h2 className="card-heading">Verified-badge threshold</h2>
+          <p className="card-sub">
+            Listings with a <strong>health score</strong> at or above this
+            number — plus the seller having ticked the authenticity and
+            label/lining-photo confirmations and uploaded ≥3 photos —
+            auto-elevate to <strong>Verified</strong> and earn a public
+            badge on their card and detail page.
+          </p>
+          <p className="card-sub">
+            Lower the number to make Verified easier to earn (more
+            listings carry the badge, possibly diluting its meaning).
+            Raise it to keep the badge selective. Existing listings
+            re-evaluate against the new threshold on their next save.
+          </p>
+
+          <Field
+            label="Health score required for Verified"
+            htmlFor="health_threshold_verified"
+            help="0–100. Default 75."
           >
-            <Button type="submit" variant="primary" iconRight="check">
-              Save
-            </Button>
-          </div>
-        </form>
-      </section>
+            <Input
+              id="health_threshold_verified"
+              name="health_threshold_verified"
+              type="number"
+              min={0}
+              max={100}
+              step={1}
+              defaultValue={String(settings.healthThresholdVerified)}
+              required
+            />
+          </Field>
+        </section>
+
+        <div
+          style={{
+            display: "flex",
+            gap: "var(--s-3)",
+            justifyContent: "flex-end",
+            marginTop: "var(--s-5)",
+          }}
+        >
+          <Button type="submit" variant="primary" iconRight="check">
+            Save
+          </Button>
+        </div>
+      </form>
 
       <section
         className="form-card"
-        style={{ marginTop: "var(--s-5)" }}
+        style={{ marginTop: "var(--s-7)" }}
       >
         <h2 className="card-heading">A note on crawlers that ignore robots</h2>
         <p className="card-sub">

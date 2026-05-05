@@ -6,6 +6,7 @@ import { query, withTransaction } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { getCurrentRegionId } from "@/lib/regions";
 import { deriveTrustStatus, isTrustStatus } from "@/lib/listing-trust";
+import { loadSiteSettings } from "@/lib/site-settings";
 
 const DESCRIPTION_MAX = 5000;
 const PRICE_MAX_DOLLARS = 1_000_000;
@@ -444,8 +445,10 @@ export async function updateListing(formData: FormData): Promise<void> {
     isTrustStatus(trustRow.rows[0].trust_status)
       ? trustRow.rows[0].trust_status
       : "self-declared";
+  const settings = await loadSiteSettings();
   const nextTrust = deriveTrustStatus({
     current: currentTrust,
+    threshold: settings.healthThresholdVerified,
     health: {
       designerId: f.designer_id,
       model: f.model,

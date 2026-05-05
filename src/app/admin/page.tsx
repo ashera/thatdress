@@ -30,9 +30,14 @@ const ADMIN_LINKS: Array<{ href: string; title: string; desc: string }> = [
     desc: "Write articles to attract visitors and support SEO.",
   },
   {
+    href: "/admin/listings/flagged",
+    title: "Flagged Listings",
+    desc: "Review listings flagged for suspect authenticity or accuracy.",
+  },
+  {
     href: "/admin/site-settings",
     title: "Site Settings",
-    desc: "Block crawlers pre-launch and other site-wide switches.",
+    desc: "Block crawlers pre-launch, set the Verified-badge threshold, other site-wide switches.",
   },
   {
     href: "/admin/database",
