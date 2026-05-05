@@ -34,7 +34,7 @@ let cachedLogoDataUrl: string | null | undefined;
 async function getLogoDataUrl(): Promise<string | null> {
   if (cachedLogoDataUrl !== undefined) return cachedLogoDataUrl;
   try {
-    const path = join(process.cwd(), "public", "frockd-logo-new.png");
+    const path = join(process.cwd(), "public", "frockd-logo-new-tr-back.png");
     const bytes = await readFile(path);
     cachedLogoDataUrl = `data:image/png;base64,${bytes.toString("base64")}`;
   } catch {

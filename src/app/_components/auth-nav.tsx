@@ -79,7 +79,7 @@ export async function AuthNav() {
       <div className="brand-row">
         <Link href="/" className="brand" aria-label="frockd home">
           <Image
-            src="/frockd-logo-new.png"
+            src="/frockd-logo-new-tr-back.png"
             alt="frockd"
             width={1411}
             height={512}
