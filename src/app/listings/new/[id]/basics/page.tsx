@@ -9,6 +9,7 @@ import {
   WizardShell,
   WizardTip,
 } from "../_wizard";
+import { DesignerPicker } from "./_designer-picker";
 
 export const dynamic = "force-dynamic";
 
@@ -55,36 +56,10 @@ export default async function WizardBasicsPage({
             helps buyers tell which season&rsquo;s collection you have.
           </p>
 
-          <Field label="Designer" htmlFor="designer_id">
-            <select
-              id="designer_id"
-              name="designer_id"
-              className="input"
-              defaultValue={draft.designer_id ?? ""}
-              required
-            >
-              <option value="">Select a designer</option>
-              {refs.designers.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.label}
-                </option>
-              ))}
-              <option value="new">+ My designer isn&rsquo;t listed</option>
-            </select>
-          </Field>
-
-          <Field
-            label="Designer name (only if not in the list)"
-            htmlFor="designer_name_new"
-            help="Pick &lsquo;My designer isn&rsquo;t listed&rsquo; above and type the brand here. We&rsquo;ll add it to our list — admin can tidy it up later."
-          >
-            <Input
-              id="designer_name_new"
-              name="designer_name_new"
-              maxLength={80}
-              placeholder="e.g. Indie Boutique Brand"
-            />
-          </Field>
+          <DesignerPicker
+            designers={refs.designers}
+            defaultDesignerId={draft.designer_id}
+          />
 
           <div className="grid-2">
             <Field
