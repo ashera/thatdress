@@ -787,10 +787,7 @@ export default async function ListingDetailPage({
               ? "Only you can see this listing."
               : "Visible to admins only."}{" "}
             {isOwner && (
-              <>
-                Toggle visibility on the{" "}
-                <Link href={`/listings/${l.id}/edit`}>edit page</Link>.
-              </>
+              <>Use the &ldquo;Show to buyers&rdquo; button below to publish it again.</>
             )}
           </span>
         </div>
