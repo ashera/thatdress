@@ -69,25 +69,37 @@ const STEPS: { key: WizardStep; label: string; n: number }[] = [
   { key: "publish", label: "Publish", n: 6 },
 ];
 
-/** Per-step pose for our seamstress mascot. The PNG sheet at
- *  /public/frockd-seamstress.png is a 5-column × 2-row grid (1408×768),
- *  so we drive a single image as a CSS sprite with percentage
- *  background-position. Each line is the seamstress's voice for the
- *  step — short, warm, in-character. */
-const SEAMSTRESS_POSE: Record<
-  WizardStep,
-  { x: string; y: string; line: string }
-> = {
+/** Per-step pose for our seamstress mascot. The default poses come
+ *  from the PNG sheet at /public/frockd-seamstress.png — a 5×2 grid
+ *  (1408×768) we drive as a CSS sprite via percentage
+ *  background-position. A step can opt out of the sprite by setting
+ *  `src` to a dedicated single-image asset; the photos step uses
+ *  this for the camera-in-hand pose, which lives as its own JPG. */
+type SeamstressPose = {
+  x: string;
+  y: string;
+  line: string;
+  /** Optional standalone image overriding the sprite for this step. */
+  src?: string;
+  /** object-position when `src` is set. Defaults to "center center". */
+  objectPosition?: string;
+};
+
+const SEAMSTRESS_POSE: Record<WizardStep, SeamstressPose> = {
   // (4,0) — standing by the mannequin, presenting / introducing
   basics: {
     x: "100%",
     y: "0%",
     line: "Let's start with who made her.",
   },
-  // (0,1) — holding the dress up overhead, "let's see her"
+  // Standalone JPG of the seamstress with a camera — photos step gets
+  // its own image rather than a slot from the sprite. x/y are unused
+  // when `src` is set.
   photos: {
     x: "0%",
-    y: "100%",
+    y: "0%",
+    src: "/frockd-seamstress-photographer.jpg",
+    objectPosition: "center 30%",
     line: "Show me every angle — including the label and lining.",
   },
   // (2,0) — holding fabric, considering the cloth
@@ -118,22 +130,43 @@ const SEAMSTRESS_POSE: Record<
 
 function SeamstressMascot({ step }: { step: WizardStep }) {
   const pose = SEAMSTRESS_POSE[step];
+  const baseStyle: React.CSSProperties = {
+    flex: "0 0 auto",
+    width: 96,
+    height: 131,
+    borderRadius: 14,
+    backgroundColor: "var(--surface-sunken)",
+    border: "1px solid var(--hairline)",
+    overflow: "hidden",
+  };
+  if (pose.src) {
+    return (
+      <div role="img" aria-label="Frockd seamstress mascot" style={baseStyle}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={pose.src}
+          alt=""
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            objectPosition: pose.objectPosition ?? "center center",
+            display: "block",
+          }}
+        />
+      </div>
+    );
+  }
   return (
     <div
       role="img"
       aria-label="Frockd seamstress mascot"
       style={{
-        flex: "0 0 auto",
-        width: 96,
-        height: 131,
-        borderRadius: 14,
-        backgroundColor: "var(--surface-sunken)",
+        ...baseStyle,
         backgroundImage: "url('/frockd-seamstress.png')",
         backgroundSize: "500% 200%",
         backgroundPosition: `${pose.x} ${pose.y}`,
         backgroundRepeat: "no-repeat",
-        border: "1px solid var(--hairline)",
-        overflow: "hidden",
       }}
     />
   );
