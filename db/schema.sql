@@ -130,6 +130,24 @@ CREATE INDEX IF NOT EXISTS listing_images_listing_id_idx
 CREATE UNIQUE INDEX IF NOT EXISTS listing_images_one_primary_idx
   ON listing_images (listing_id) WHERE is_primary;
 
+-- Each listing-image can be tagged with the verification role it
+-- represents — front-on shot, back, designer label close-up, or the
+-- lining / wrong-side. NULL means the photo isn't pinned to a slot
+-- (legacy uploads, or any 'extras' added later). The wizard's photos
+-- step renders one slot per role; the unique partial index below
+-- enforces 'one photo per role per listing' so re-uploading replaces.
+ALTER TABLE listing_images
+  ADD COLUMN IF NOT EXISTS role TEXT;
+
+ALTER TABLE listing_images
+  DROP CONSTRAINT IF EXISTS listing_images_role_check;
+ALTER TABLE listing_images
+  ADD CONSTRAINT listing_images_role_check
+    CHECK (role IS NULL OR role IN ('front', 'back', 'label', 'lining'));
+
+CREATE UNIQUE INDEX IF NOT EXISTS listing_images_one_per_role_idx
+  ON listing_images (listing_id, role) WHERE role IS NOT NULL;
+
 -- =========================================================
 -- Reference data (admin-managed lookups)
 -- All tables share: id, sort_order, is_active. Slug+label

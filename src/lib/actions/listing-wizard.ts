@@ -151,7 +151,10 @@ export async function deleteDraftImage(formData: FormData): Promise<void> {
   }
 
   // Photo deletion can drop imageCount below the 3-photo verified
-  // threshold — re-derive trust before redirecting.
+  // threshold AND can flip includes_label_lining_photos from true to
+  // false (if the deleted image was a label or lining slot). Refresh
+  // both before redirecting.
+  await refreshLabelLiningFlag(listingId);
   await recomputeListingTrustStatus(listingId);
 
   revalidatePath(`/listings/new/${listingId}/photos`);
@@ -278,7 +281,39 @@ export async function saveDraftBasics(formData: FormData): Promise<void> {
   redirect(`/listings/new/${listingId}/photos`);
 }
 
-export async function saveDraftPhotos(formData: FormData): Promise<void> {
+/** Recompute listings.includes_label_lining_photos from the current
+ *  set of role-tagged photos. The flag becomes true iff both a 'label'
+ *  and 'lining' photo are attached to the listing. Auto-derived now
+ *  that the wizard captures these as named slots — no separate
+ *  declaration checkbox needed. */
+async function refreshLabelLiningFlag(listingId: string): Promise<void> {
+  await query(
+    `UPDATE listings
+        SET includes_label_lining_photos = (
+          SELECT COUNT(*) FILTER (WHERE role = 'label') > 0
+             AND COUNT(*) FILTER (WHERE role = 'lining') > 0
+            FROM listing_images
+            WHERE listing_id = $1::bigint
+        )
+      WHERE id = $1::bigint`,
+    [listingId],
+  );
+}
+
+const SLOT_ROLES = new Set(["front", "back", "label", "lining"]);
+
+/** Upload (or replace) the photo attached to a single verification
+ *  slot. Each call: validates the role, validates the file, deletes
+ *  any existing image for that role, inserts the new image with the
+ *  role tag, then re-derives the label/lining flag and trust status.
+ *
+ *  When role='front', the image is also marked is_primary so the
+ *  listing card and detail-page hero use it. is_primary is cleared
+ *  on every other image in the listing first so we don't violate the
+ *  one-primary unique index. */
+export async function uploadDraftSlotPhoto(
+  formData: FormData,
+): Promise<void> {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
@@ -289,34 +324,88 @@ export async function saveDraftPhotos(formData: FormData): Promise<void> {
 
   const stepUrl = `/listings/new/${listingId}/photos`;
 
-  const files = collectImageFiles(formData);
-  const imageErr = validateImages(files);
-  if (imageErr) redirect(`${stepUrl}?error=${imageErr}`);
+  const role = String(formData.get("role") ?? "");
+  if (!SLOT_ROLES.has(role)) redirect(`${stepUrl}?error=invalid-role`);
 
-  if (files.length > 0) {
-    try {
-      await appendImages(listingId, files);
-    } catch {
-      redirect(`${stepUrl}?error=upload-failed`);
-    }
+  const file = formData.get("image");
+  if (!(file instanceof File) || file.size === 0) {
+    redirect(`${stepUrl}?error=invalid-image`);
+  }
+  if (file.size > MAX_IMAGE_BYTES) {
+    redirect(`${stepUrl}?error=too-large`);
+  }
+  if (!ALLOWED_IMAGE_MIMES.has(file.type)) {
+    redirect(`${stepUrl}?error=bad-type`);
   }
 
-  // The label/lining declaration moved here — it's about the photos the
-  // seller has uploaded, so it belongs on the photos step rather than
-  // buried at publish.
-  const includesLabelLiningPhotos = getCheckbox(
-    formData,
-    "includes_label_lining_photos",
-  );
+  const buf = Buffer.from(await file.arrayBuffer());
+
   await query(
-    `UPDATE listings
-        SET includes_label_lining_photos = $2
-      WHERE id = $1::bigint`,
-    [listingId, includesLabelLiningPhotos],
+    `DELETE FROM listing_images
+       WHERE listing_id = $1::bigint AND role = $2`,
+    [listingId, role],
   );
 
+  // 'front' becomes the primary image. Clear other primaries first so
+  // we don't fight the listing_images_one_primary_idx unique constraint.
+  if (role === "front") {
+    await query(
+      `UPDATE listing_images SET is_primary = FALSE
+        WHERE listing_id = $1::bigint`,
+      [listingId],
+    );
+  }
+
+  // Position deterministic by role so the gallery has a sensible order
+  // even with no manual reordering.
+  const positionByRole: Record<string, number> = {
+    front: 0,
+    back: 1,
+    label: 2,
+    lining: 3,
+  };
+  const isPrimary = role === "front";
+
+  try {
+    await query(
+      `INSERT INTO listing_images
+        (listing_id, mime_type, bytes, byte_size, position, is_primary, role)
+       VALUES ($1::bigint, $2, $3, $4, $5, $6, $7)`,
+      [
+        listingId,
+        file.type,
+        buf,
+        file.size,
+        positionByRole[role] ?? 0,
+        isPrimary,
+        role,
+      ],
+    );
+  } catch {
+    redirect(`${stepUrl}?error=upload-failed`);
+  }
+
+  await refreshLabelLiningFlag(listingId);
   await recomputeListingTrustStatus(listingId);
   revalidatePath(stepUrl);
+  redirect(stepUrl);
+}
+
+export async function saveDraftPhotos(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const listingId = String(formData.get("listingId") ?? "");
+  if (!(await ensureWizardOwnership(listingId, user))) {
+    redirect("/listings/mine");
+  }
+
+  // Slot uploads happen via uploadDraftSlotPhoto on each slot's own
+  // form. This 'continue' submission has nothing to save — but we
+  // still re-derive the label/lining flag and trust as a defensive
+  // refresh in case the row drifted (legacy data, manual SQL, etc.).
+  await refreshLabelLiningFlag(listingId);
+  await recomputeListingTrustStatus(listingId);
   redirect(`/listings/new/${listingId}/style`);
 }
 
