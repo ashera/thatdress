@@ -19,21 +19,25 @@ const SLOTS = [
     role: "front",
     label: "Full-length front",
     desc: "On a hanger, dress form, or model. Show the whole silhouette in soft daylight against a plain wall.",
+    guide: "/seamstress-formal-front.jpg",
   },
   {
     role: "back",
     label: "Back",
     desc: "Closures, train, anything that's different from the front.",
+    guide: "/seamstress-formal-back.jpg",
   },
   {
     role: "label",
     label: "Designer label",
     desc: "Macro shot of the brand label sewn at the neckline or waist. The single biggest signal that separates legitimate listings from sketchy ones.",
+    guide: "/seamstress-formal-label.jpg",
   },
   {
     role: "lining",
     label: "Lining / wrong-side",
     desc: "The inside of the dress. Buyers (and our verifiers) use this to spot fakes.",
+    guide: "/seamstress-formal-lining.jpg",
   },
 ] as const;
 
@@ -239,7 +243,7 @@ function SlotPanel({
   existing,
 }: {
   listingId: string;
-  slot: { role: string; label: string; desc: string };
+  slot: { role: string; label: string; desc: string; guide: string };
   existing: DraftImageRow | null;
 }) {
   return (
@@ -284,56 +288,93 @@ function SlotPanel({
         {slot.desc}
       </div>
 
-      {existing && (
-        <div
-          style={{
-            position: "relative",
-            aspectRatio: "1 / 1",
-            width: "100%",
-            borderRadius: 8,
-            overflow: "hidden",
-            background: "var(--surface)",
-            border: "1px solid var(--hairline)",
-          }}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={`/api/listings/${listingId}/images/${existing.id}`}
-            alt=""
-            style={{
-              position: "absolute",
-              inset: 0,
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-            }}
-          />
-          <form
-            action={deleteDraftImage}
-            style={{ position: "absolute", top: 6, right: 6 }}
-          >
-            <input type="hidden" name="listingId" value={listingId} />
-            <input type="hidden" name="imageId" value={existing.id} />
-            <button
-              type="submit"
-              title="Remove this photo"
+      <div
+        style={{
+          position: "relative",
+          aspectRatio: "1 / 1",
+          width: "100%",
+          borderRadius: 8,
+          overflow: "hidden",
+          background: "var(--surface)",
+          border: existing
+            ? "1px solid var(--hairline)"
+            : "1px dashed var(--hairline-strong)",
+        }}
+      >
+        {existing ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={`/api/listings/${listingId}/images/${existing.id}`}
+              alt=""
               style={{
-                width: 28,
-                height: 28,
-                border: 0,
-                borderRadius: "50%",
-                background: "rgba(28, 24, 22, 0.7)",
-                color: "#fff",
-                cursor: "pointer",
-                fontSize: 14,
-                lineHeight: 1,
+                position: "absolute",
+                inset: 0,
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+              }}
+            />
+            <form
+              action={deleteDraftImage}
+              style={{ position: "absolute", top: 6, right: 6 }}
+            >
+              <input type="hidden" name="listingId" value={listingId} />
+              <input type="hidden" name="imageId" value={existing.id} />
+              <button
+                type="submit"
+                title="Remove this photo"
+                style={{
+                  width: 28,
+                  height: 28,
+                  border: 0,
+                  borderRadius: "50%",
+                  background: "rgba(28, 24, 22, 0.7)",
+                  color: "#fff",
+                  cursor: "pointer",
+                  fontSize: 14,
+                  lineHeight: 1,
+                }}
+              >
+                ✕
+              </button>
+            </form>
+          </>
+        ) : (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={slot.guide}
+              alt=""
+              aria-hidden
+              style={{
+                position: "absolute",
+                inset: 0,
+                width: "100%",
+                height: "100%",
+                objectFit: "contain",
+                opacity: 0.32,
+              }}
+            />
+            <span
+              style={{
+                position: "absolute",
+                bottom: 8,
+                left: 0,
+                right: 0,
+                textAlign: "center",
+                fontFamily: "var(--font-mono)",
+                fontSize: 10,
+                letterSpacing: "0.14em",
+                textTransform: "uppercase",
+                color: "var(--ink-3)",
               }}
             >
-              ✕
-            </button>
-          </form>
-        </div>
-      )}
+              Example shot
+            </span>
+          </>
+        )}
+      </div>
 
       <form
         action={uploadDraftSlotPhoto}
