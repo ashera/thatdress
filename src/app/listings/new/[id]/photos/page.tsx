@@ -11,6 +11,7 @@ import {
   WizardHero,
   WizardShell,
 } from "../_wizard";
+import { SlotUploadButton } from "./_slot-upload-button";
 
 export const dynamic = "force-dynamic";
 
@@ -388,40 +389,11 @@ function SlotPanel({
       <form
         action={uploadDraftSlotPhoto}
         encType="multipart/form-data"
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: 6,
-          marginTop: 4,
-        }}
+        style={{ marginTop: 4 }}
       >
         <input type="hidden" name="listingId" value={listingId} />
         <input type="hidden" name="role" value={slot.role} />
-        <input
-          type="file"
-          name="image"
-          accept="image/jpeg,image/png,image/webp"
-          required
-          className="file-input"
-          style={{ fontSize: 12 }}
-        />
-        <button
-          type="submit"
-          style={{
-            padding: "6px 12px",
-            borderRadius: 999,
-            background: existing ? "transparent" : "var(--ink-1)",
-            color: existing ? "var(--ink-2)" : "#fff",
-            border: existing
-              ? "1px solid var(--hairline-strong)"
-              : "1px solid var(--ink-1)",
-            fontWeight: 600,
-            fontSize: 13,
-            cursor: "pointer",
-          }}
-        >
-          {existing ? "Replace" : "Upload"}
-        </button>
+        <SlotUploadButton hasExisting={!!existing} />
       </form>
     </div>
   );
