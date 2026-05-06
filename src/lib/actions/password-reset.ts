@@ -8,7 +8,7 @@ import { hashPassword } from "@/lib/auth";
 import {
   emailLayout,
   escapeHtml,
-  getBaseUrl,
+  getEmailBaseUrl,
   sendEmail,
 } from "@/lib/email";
 
@@ -50,7 +50,7 @@ export async function requestPasswordReset(formData: FormData): Promise<void> {
         [userId, hashToken(token), expiresAt],
       );
 
-      const baseUrl = await getBaseUrl();
+      const baseUrl = await getEmailBaseUrl();
       const url = `${baseUrl}/reset/${token}`;
       const body = `
         <p>Someone (hopefully you) asked to reset the password for the frockd account at <strong>${escapeHtml(email)}</strong>.</p>

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { query } from "@/lib/db";
-import { getBaseUrl } from "@/lib/email";
+import { getEmailBaseUrl } from "@/lib/email";
 import {
   emailSavedSearchDigest,
   findNewMatches,
@@ -50,7 +50,7 @@ export async function GET(req: Request) {
     );
   }
 
-  const baseUrl = await getBaseUrl();
+  const baseUrl = await getEmailBaseUrl();
   const stats = { searches: rows.length, sent: 0, errors: 0 };
 
   for (const row of rows) {

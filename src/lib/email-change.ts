@@ -4,7 +4,7 @@ import { query } from "@/lib/db";
 import {
   emailLayout,
   escapeHtml,
-  getBaseUrl,
+  getEmailBaseUrl,
   sendEmail,
 } from "@/lib/email";
 
@@ -42,7 +42,7 @@ export async function dispatchEmailChangeRequest(
     [userId, newEmail, hashToken(token), expiresAt],
   );
 
-  const baseUrl = await getBaseUrl();
+  const baseUrl = await getEmailBaseUrl();
   const url = `${baseUrl}/email-change/${token}`;
 
   const send = await sendEmail({

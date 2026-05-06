@@ -3,7 +3,7 @@ import { query } from "@/lib/db";
 import {
   emailLayout,
   escapeHtml,
-  getBaseUrl,
+  getEmailBaseUrl,
   sendEmail,
 } from "@/lib/email";
 
@@ -38,7 +38,7 @@ export async function notifyMessageRecipient(
     const row = r.rows[0];
     if (!row?.to_email) return;
 
-    const baseUrl = await getBaseUrl();
+    const baseUrl = await getEmailBaseUrl();
     const url = `${baseUrl}/messages/${conversationId}`;
     const subject = row.listing_title
       ? `New message about: ${row.listing_title}`
@@ -113,7 +113,7 @@ export async function notifyTicketReply(
     }
     if (recipients.length === 0) return;
 
-    const baseUrl = await getBaseUrl();
+    const baseUrl = await getEmailBaseUrl();
     const url = `${baseUrl}/support/${ticketId}`;
     const subject = `Reply on ticket: ${ticket.subject}`;
     const preview =

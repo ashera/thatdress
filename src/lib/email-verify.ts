@@ -4,7 +4,7 @@ import { query } from "@/lib/db";
 import {
   emailLayout,
   escapeHtml,
-  getBaseUrl,
+  getEmailBaseUrl,
   sendEmail,
 } from "@/lib/email";
 
@@ -33,7 +33,7 @@ export async function dispatchVerificationEmail(
       [userId, hashToken(token), expiresAt],
     );
 
-    const baseUrl = await getBaseUrl();
+    const baseUrl = await getEmailBaseUrl();
     const url = `${baseUrl}/verify/${token}`;
 
     await sendEmail({

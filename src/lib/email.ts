@@ -53,17 +53,20 @@ export async function sendEmail(opts: {
   }
 }
 
-/** Resolve the public base URL for canonical/OG/email links.
- *
- *  Prefers the request's own host (so a page fetched at
- *  www.frockd.com.au declares its canonical on www.frockd.com.au, not
- *  whatever internal hostname APP_URL is set to). Falls back to
- *  APP_URL for request-less contexts (e.g. cron jobs sending the
- *  saved-search digest). Hardcoded final fallback prevents broken
- *  URLs in tests / build-time edge cases.
+/** Resolve the public base URL for canonical / OG / sitemap links —
+ *  i.e. URLs that should match the host the page was actually served
+ *  at, so a request to www.frockd.com.au declares its canonical on
+ *  www.frockd.com.au and not whatever internal hostname APP_URL is
+ *  set to. Falls back to APP_URL for request-less contexts (cron
+ *  jobs); hardcoded final fallback prevents broken URLs in
+ *  tests / build-time edge cases.
  *
  *  Bare-hostname env values (e.g. Railway's
- *  "frockd-production.up.railway.app") are normalised to https://. */
+ *  "frockd-production.up.railway.app") are normalised to https://.
+ *
+ *  *Do not use this for transactional emails* — emails sent from a
+ *  local dev server would carry localhost links the recipient can't
+ *  reach. Use {@link getEmailBaseUrl} instead. */
 export async function getBaseUrl(): Promise<string> {
   try {
     const h = await headers();
@@ -73,11 +76,31 @@ export async function getBaseUrl(): Promise<string> {
   } catch {
     // No request context — fall through to APP_URL.
   }
+  return appUrlOrDefault();
+}
+
+/** Resolve the base URL for absolute links inside transactional emails
+ *  (verify, password reset, notifications, saved-search digest).
+ *
+ *  Prefers `APP_URL` when set so emails sent from a local dev server
+ *  still link to a publicly-reachable domain — otherwise the recipient
+ *  clicks a `http://localhost:3000/verify?token=...` link from their
+ *  inbox and gets "this site can't be reached". Only falls back to the
+ *  request host when APP_URL is unset (i.e. a deployment without that
+ *  env var, where the request host is necessarily public). */
+export async function getEmailBaseUrl(): Promise<string> {
+  const fromEnv = appUrlOrDefault({ skipHardcoded: true });
+  if (fromEnv) return fromEnv;
+  return getBaseUrl();
+}
+
+function appUrlOrDefault(opts?: { skipHardcoded?: boolean }): string {
   const raw = process.env.APP_URL?.trim().replace(/\/+$/, "");
   if (raw) {
     if (/^https?:\/\//i.test(raw)) return raw;
     return `https://${raw}`;
   }
+  if (opts?.skipHardcoded) return "";
   return "https://www.frockd.com.au";
 }
 
