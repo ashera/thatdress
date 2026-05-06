@@ -30,6 +30,11 @@ const ADMIN_LINKS: Array<{ href: string; title: string; desc: string }> = [
     desc: "Write articles to attract visitors and support SEO.",
   },
   {
+    href: "/admin/listings",
+    title: "All Listings",
+    desc: "Search, sort, and drill into any listing — see who's messaged the seller and how active each listing is.",
+  },
+  {
     href: "/admin/listings/flagged",
     title: "Flagged Listings",
     desc: "Review listings flagged for suspect authenticity or accuracy.",
