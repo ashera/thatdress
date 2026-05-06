@@ -283,8 +283,32 @@ async function HealthBar({
 }) {
   const settings = await loadSiteSettings();
   const verifiedThreshold = settings.healthThresholdVerified;
-  const { score, suggestions } = computeHealth(draftToHealthInput(draft));
-  const meetsVerified = score >= verifiedThreshold;
+  const healthInput = draftToHealthInput(draft);
+  const { score, suggestions } = computeHealth(healthInput);
+
+  // The Verified badge needs all four gates, not just the score —
+  // see deriveTrustStatus in src/lib/listing-trust.ts.
+  const scoreOk = score >= verifiedThreshold;
+  const photosOk = healthInput.imageCount >= 3;
+  const labelLiningOk = healthInput.includesLabelLiningPhotos;
+  const authenticityOk = healthInput.isAuthenticDeclared;
+  const meetsVerified =
+    scoreOk && photosOk && labelLiningOk && authenticityOk;
+
+  // What's still blocking the badge — only one item so we can show
+  // it inline next to the score with the right call-to-action.
+  let blocker: string | null = null;
+  if (!meetsVerified) {
+    if (!scoreOk) blocker = `${verifiedThreshold - score} pts to Verified`;
+    else if (!photosOk) {
+      const need = 3 - healthInput.imageCount;
+      blocker = `Add ${need} more photo${need === 1 ? "" : "s"} for Verified`;
+    } else if (!labelLiningOk)
+      blocker = "Add label + lining photos for Verified";
+    else if (!authenticityOk)
+      blocker = "Confirm authenticity at publish for Verified";
+  }
+
   const top = suggestions.slice(0, 3);
   return (
     <div
@@ -335,24 +359,37 @@ async function HealthBar({
             {" / 100"}
           </span>
         </div>
-        {meetsVerified && (
+        {meetsVerified ? (
           <span
             style={{
               fontFamily: "var(--font-mono)",
               fontSize: 11,
               letterSpacing: "0.12em",
               textTransform: "uppercase",
-              color: "var(--volt-700)",
+              color: "#92400e",
               fontWeight: 700,
-              background: "#fff",
-              border: "1px solid var(--volt-200)",
+              background: "#fef3c7",
+              border: "1px solid #fcd34d",
               padding: "4px 10px",
               borderRadius: 999,
             }}
           >
             ✓ Earns Verified badge
           </span>
-        )}
+        ) : blocker ? (
+          <span
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: 11,
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+              color: "var(--ink-3)",
+              fontWeight: 600,
+            }}
+          >
+            {blocker}
+          </span>
+        ) : null}
       </div>
 
       <div
@@ -394,7 +431,7 @@ async function HealthBar({
           >
             {meetsVerified
               ? "More improvements you could make:"
-              : `Reach ${verifiedThreshold} to earn the Verified badge — top suggestions:`}
+              : "Top suggestions to keep improving the listing:"}
           </div>
           <ul
             style={{
