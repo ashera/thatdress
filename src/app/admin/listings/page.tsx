@@ -25,11 +25,11 @@ const SORT_OPTIONS = [
 type SortValue = (typeof SORT_OPTIONS)[number]["value"];
 
 const STATUS_OPTIONS = [
+  { value: "convs", label: "With conversations (not sold)" },
   { value: "active", label: "Active (live)" },
   { value: "all", label: "All (incl. hidden + sold)" },
   { value: "sold", label: "Sold" },
   { value: "hidden", label: "Hidden" },
-  { value: "convs", label: "With conversations only" },
 ] as const;
 
 type StatusValue = (typeof STATUS_OPTIONS)[number]["value"];
@@ -78,6 +78,7 @@ async function fetchListings(opts: {
   } else if (status === "convs") {
     where.push(
       "EXISTS (SELECT 1 FROM conversations WHERE listing_id = l.id)",
+      "l.sold_at IS NULL",
     );
   }
   // 'all' adds nothing.
@@ -193,10 +194,10 @@ export default async function AdminListingsPage({
   const search = (sp.q ?? "").slice(0, 200);
   const sort: SortValue =
     (SORT_OPTIONS.find((o) => o.value === sp.sort)?.value as SortValue) ??
-    "newest";
+    "active";
   const status: StatusValue =
     (STATUS_OPTIONS.find((o) => o.value === sp.status)?.value as StatusValue) ??
-    "active";
+    "convs";
 
   const rows = await fetchListings({ search, sort, status });
 
@@ -345,7 +346,7 @@ export default async function AdminListingsPage({
         >
           Apply
         </button>
-        {(search || sort !== "newest" || status !== "active") && (
+        {(search || sort !== "active" || status !== "convs") && (
           <Link
             href="/admin/listings"
             style={{
