@@ -73,11 +73,18 @@ export type RefOption = { id: string; label: string };
 
 export async function listActiveRefOptions(t: RefTable): Promise<RefOption[]> {
   const displaySql = t.schema === "name" ? "name" : "label";
+  // Name-schema tables (designers) sort alphabetically — that's how
+  // sellers and buyers expect to scan a brand list. Slug-label tables
+  // (occasions, silhouettes, condition grades, etc.) carry deliberate
+  // admin-curated sort_order so the picker presents them in a logical
+  // order (e.g. condition grades New → Excellent → Good → …).
+  const orderBy =
+    t.schema === "name" ? `LOWER(${displaySql}), id` : "sort_order, id";
   const result = await query<{ id: string; label: string }>(
     `SELECT id::text, ${displaySql} AS label
        FROM ${t.table}
       WHERE is_active = TRUE
-      ORDER BY sort_order, id`,
+      ORDER BY ${orderBy}`,
   );
   return result.rows;
 }
