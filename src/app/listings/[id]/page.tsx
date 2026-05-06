@@ -739,9 +739,27 @@ export default async function ListingDetailPage({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }}
         />
       )}
-      <Link href="/listings" className="back-link">
-        ← Back to browse
-      </Link>
+      <div
+        style={{
+          display: "flex",
+          gap: 16,
+          alignItems: "center",
+          flexWrap: "wrap",
+        }}
+      >
+        <Link href="/listings" className="back-link">
+          ← Back to browse
+        </Link>
+        {isAdmin && (
+          <Link
+            href="/admin/listings"
+            className="back-link"
+            style={{ color: "var(--ink-2)" }}
+          >
+            ← Admin: all listings
+          </Link>
+        )}
+      </div>
 
       {l.sold_at && (
         <div className="sold-banner">
