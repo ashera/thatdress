@@ -274,6 +274,11 @@ function SlotPanel({
           fontWeight: 700,
           fontSize: 15,
           color: "var(--ink-1)",
+          // Reserve two lines so 'Lining / wrong-side' (which wraps in
+          // narrow slots) lines up vertically with single-line labels
+          // like 'Back' across all four panels.
+          minHeight: "2.6em",
+          lineHeight: 1.3,
         }}
       >
         {slot.label}
@@ -283,6 +288,10 @@ function SlotPanel({
           fontSize: 13,
           color: "var(--ink-2)",
           lineHeight: 1.4,
+          // Reserve five lines for the longest description (the label
+          // slot's 2-sentence guidance) so every slot's preview tile
+          // and upload form sit at the same vertical position.
+          minHeight: "7em",
         }}
       >
         {slot.desc}
