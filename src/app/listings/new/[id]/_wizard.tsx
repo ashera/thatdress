@@ -16,6 +16,7 @@ import type { ComponentProps } from "react";
 type IconName = ComponentProps<typeof Icon>["name"];
 
 export type WizardStep =
+  | "basics"
   | "photos"
   | "style"
   | "measurements"
@@ -60,11 +61,12 @@ export type DraftRow = {
 };
 
 const STEPS: { key: WizardStep; label: string; n: number }[] = [
-  { key: "photos", label: "Photos & basics", n: 1 },
-  { key: "style", label: "Style", n: 2 },
-  { key: "measurements", label: "Size & fit", n: 3 },
-  { key: "condition", label: "Condition", n: 4 },
-  { key: "publish", label: "Publish", n: 5 },
+  { key: "basics", label: "Basics", n: 1 },
+  { key: "photos", label: "Photos", n: 2 },
+  { key: "style", label: "Style", n: 3 },
+  { key: "measurements", label: "Size & fit", n: 4 },
+  { key: "condition", label: "Condition", n: 5 },
+  { key: "publish", label: "Publish", n: 6 },
 ];
 
 /** Per-step pose for our seamstress mascot. The PNG sheet at
@@ -76,11 +78,17 @@ const SEAMSTRESS_POSE: Record<
   WizardStep,
   { x: string; y: string; line: string }
 > = {
+  // (4,0) — standing by the mannequin, presenting / introducing
+  basics: {
+    x: "100%",
+    y: "0%",
+    line: "Let's start with who made her.",
+  },
   // (0,1) — holding the dress up overhead, "let's see her"
   photos: {
     x: "0%",
     y: "100%",
-    line: "First — let's get her under the lights.",
+    line: "Show me every angle — including the label and lining.",
   },
   // (2,0) — holding fabric, considering the cloth
   style: {

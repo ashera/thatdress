@@ -59,7 +59,7 @@ type DraftRowFromDb = {
 };
 
 function nextStepFor(d: DraftItem): string {
-  if (!d.has_basics) return `/listings/new/${d.id}/photos`;
+  if (!d.has_basics) return `/listings/new/${d.id}/basics`;
   if (!d.has_style) return `/listings/new/${d.id}/style`;
   if (!d.has_condition) return `/listings/new/${d.id}/condition`;
   return `/listings/new/${d.id}/publish`;

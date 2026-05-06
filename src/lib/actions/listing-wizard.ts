@@ -115,7 +115,7 @@ export async function startDraftListing(): Promise<void> {
     [user.id, regionId],
   );
   const listingId = r.rows[0]!.id;
-  redirect(`/listings/new/${listingId}/photos`);
+  redirect(`/listings/new/${listingId}/basics`);
 }
 
 export async function deleteDraftImage(formData: FormData): Promise<void> {
@@ -226,7 +226,7 @@ async function appendImages(
   }
 }
 
-export async function saveDraftPhotos(formData: FormData): Promise<void> {
+export async function saveDraftBasics(formData: FormData): Promise<void> {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
@@ -235,7 +235,7 @@ export async function saveDraftPhotos(formData: FormData): Promise<void> {
     redirect("/listings/mine");
   }
 
-  const stepUrl = `/listings/new/${listingId}/photos`;
+  const stepUrl = `/listings/new/${listingId}/basics`;
 
   const designer_id = getRequiredId(formData, "designer_id");
   if (!designer_id) redirect(`${stepUrl}?error=invalid-designer`);
@@ -253,13 +253,6 @@ export async function saveDraftPhotos(formData: FormData): Promise<void> {
     year = y;
   }
 
-  const files = collectImageFiles(formData);
-  const imageErr = validateImages(files);
-  if (imageErr) redirect(`${stepUrl}?error=${imageErr}`);
-
-  // Set the basics first, then derive the title from the row's own
-  // (now-current) columns so the designer-name lookup doesn't have to share
-  // a parameter slot with designer_id/model in two type contexts.
   await query(
     `UPDATE listings
         SET designer_id = $2::bigint,
@@ -268,6 +261,8 @@ export async function saveDraftPhotos(formData: FormData): Promise<void> {
       WHERE id = $1::bigint`,
     [listingId, designer_id, model, year],
   );
+  // Re-derive title from the row's own columns so the designer-name
+  // join doesn't have to share a parameter slot in two type contexts.
   await query(
     `UPDATE listings
         SET title = TRIM(BOTH FROM CONCAT_WS(' ',
@@ -278,6 +273,26 @@ export async function saveDraftPhotos(formData: FormData): Promise<void> {
     [listingId],
   );
 
+  await recomputeListingTrustStatus(listingId);
+  revalidatePath(stepUrl);
+  redirect(`/listings/new/${listingId}/photos`);
+}
+
+export async function saveDraftPhotos(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const listingId = String(formData.get("listingId") ?? "");
+  if (!(await ensureWizardOwnership(listingId, user))) {
+    redirect("/listings/mine");
+  }
+
+  const stepUrl = `/listings/new/${listingId}/photos`;
+
+  const files = collectImageFiles(formData);
+  const imageErr = validateImages(files);
+  if (imageErr) redirect(`${stepUrl}?error=${imageErr}`);
+
   if (files.length > 0) {
     try {
       await appendImages(listingId, files);
@@ -285,6 +300,20 @@ export async function saveDraftPhotos(formData: FormData): Promise<void> {
       redirect(`${stepUrl}?error=upload-failed`);
     }
   }
+
+  // The label/lining declaration moved here — it's about the photos the
+  // seller has uploaded, so it belongs on the photos step rather than
+  // buried at publish.
+  const includesLabelLiningPhotos = getCheckbox(
+    formData,
+    "includes_label_lining_photos",
+  );
+  await query(
+    `UPDATE listings
+        SET includes_label_lining_photos = $2
+      WHERE id = $1::bigint`,
+    [listingId, includesLabelLiningPhotos],
+  );
 
   await recomputeListingTrustStatus(listingId);
   revalidatePath(stepUrl);
@@ -448,10 +477,6 @@ export async function publishDraftListing(formData: FormData): Promise<void> {
   if (!isAuthenticDeclared) {
     redirect(`${stepUrl}?error=authenticity-required`);
   }
-  const includesLabelLiningPhotos = getCheckbox(
-    formData,
-    "includes_label_lining_photos",
-  );
 
   // Final readiness check: everything required must be present on the
   // row, plus the snapshot we'll need to compute trust_status.
@@ -474,6 +499,7 @@ export async function publishDraftListing(formData: FormData): Promise<void> {
     hips_inches: string | null;
     original_retail_cents: number | null;
     has_original_receipt: boolean | null;
+    includes_label_lining_photos: boolean | null;
     trust_status: string | null;
     is_draft: boolean;
     is_published: boolean;
@@ -497,6 +523,7 @@ export async function publishDraftListing(formData: FormData): Promise<void> {
             hips_inches::text,
             original_retail_cents,
             has_original_receipt,
+            includes_label_lining_photos,
             trust_status,
             is_draft,
             is_published,
@@ -507,8 +534,11 @@ export async function publishDraftListing(formData: FormData): Promise<void> {
   const row = r.rows[0];
   if (!row) redirect("/listings/mine");
   if (!row.title || !row.designer_id || !row.model) {
-    redirect(`/listings/new/${listingId}/photos?error=incomplete`);
+    redirect(`/listings/new/${listingId}/basics?error=incomplete`);
   }
+  // Read the label/lining declaration from the row — set on the photos
+  // step and not collected on this form anymore.
+  const includesLabelLiningPhotos = !!row.includes_label_lining_photos;
   if (!row.occasion_id) {
     redirect(`/listings/new/${listingId}/style?error=incomplete`);
   }
@@ -572,8 +602,7 @@ export async function publishDraftListing(formData: FormData): Promise<void> {
             region_id = NULLIF($5, '')::bigint,
             offers_enabled = $6,
             is_authentic_declared = $7,
-            includes_label_lining_photos = $8,
-            trust_status = $9${draftToggleSql}
+            trust_status = $8${draftToggleSql}
       WHERE id = $1::bigint`,
     [
       listingId,
@@ -583,7 +612,6 @@ export async function publishDraftListing(formData: FormData): Promise<void> {
       regionId ?? "",
       getCheckbox(formData, "offers_enabled"),
       isAuthenticDeclared,
-      includesLabelLiningPhotos,
       nextTrust,
     ],
   );

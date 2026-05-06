@@ -1,4 +1,3 @@
-import { loadListingRefOptions } from "@/lib/ref-data";
 import {
   deleteDraftImage,
   saveDraftPhotos,
@@ -8,7 +7,7 @@ import {
   setPrimaryImage,
 } from "@/lib/actions/listings";
 import { query } from "@/lib/db";
-import { Button, Field, Input } from "../../../../_components/ui";
+import { Button, Field } from "../../../../_components/ui";
 import {
   loadDraft,
   StepNav,
@@ -19,8 +18,6 @@ import {
 } from "../_wizard";
 
 export const dynamic = "force-dynamic";
-
-const CURRENT_YEAR = new Date().getUTCFullYear();
 
 type DraftImageRow = {
   id: string;
@@ -54,19 +51,89 @@ export default async function WizardPhotosPage({
   const { error } = await searchParams;
   const errorMessage = error ? STEP_ERRORS[error] ?? null : null;
 
-  const [{ draft }, refs] = await Promise.all([
-    loadDraft(id, "photos"),
-    loadListingRefOptions(),
-  ]);
+  const { draft } = await loadDraft(id, "photos");
   const images = await fetchDraftImages(draft.id);
 
   return (
     <WizardShell step="photos" draft={draft} errorMessage={errorMessage}>
       <WizardHero
         icon="camera"
-        headline="Lead with a great photo"
-        body="Listings with a clean front-on shot get roughly twice the inquiries. Hang the dress against a plain wall in soft daylight — no clutter, no hangers in frame."
+        headline="Photos buyers (and we) need to see"
+        body="A few great shots help your dress sell, but four specific shots help us verify it. Front-on, back, designer label close-up, lining / wrong-side. Hang the dress against a plain wall in soft daylight — no clutter, no hangers in frame."
       />
+
+      <section
+        className="form-card"
+        style={{ marginBottom: "var(--s-5)" }}
+      >
+        <h2 className="card-heading">The four shots that matter most</h2>
+        <p className="card-sub">
+          Cover these and your listing crosses every photo-related
+          Verified-badge requirement. Add as many extra angles as you
+          like — beading, hem, alterations, etc.
+        </p>
+        <ul
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+            gap: "var(--s-3)",
+            listStyle: "none",
+            padding: 0,
+            margin: "var(--s-3) 0 0",
+          }}
+        >
+          {[
+            {
+              k: "Full-length front",
+              v: "On a hanger, dress form, or model. Show the whole silhouette.",
+            },
+            {
+              k: "Back",
+              v: "Closures, train, anything that's different from the front.",
+            },
+            {
+              k: "Designer label",
+              v: "Macro shot of the brand label sewn at the neckline / waist.",
+            },
+            {
+              k: "Lining / wrong-side",
+              v: "The inside of the dress — buyers use this to spot fakes.",
+            },
+          ].map((s) => (
+            <li
+              key={s.k}
+              style={{
+                padding: "10px 12px",
+                borderRadius: 10,
+                background: "var(--surface-sunken)",
+                border: "1px solid var(--hairline)",
+              }}
+            >
+              <div
+                style={{
+                  fontFamily: "var(--font-mono)",
+                  fontSize: 10,
+                  letterSpacing: "0.12em",
+                  textTransform: "uppercase",
+                  color: "var(--ink-3)",
+                  marginBottom: 4,
+                }}
+              >
+                {s.k}
+              </div>
+              <div
+                style={{
+                  fontSize: 13,
+                  color: "var(--ink-2)",
+                  lineHeight: 1.4,
+                }}
+              >
+                {s.v}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </section>
 
       {images.length > 0 && (
         <section className="form-card" style={{ marginBottom: "var(--s-5)" }}>
@@ -264,59 +331,39 @@ export default async function WizardPhotosPage({
         </section>
 
         <section className="form-card">
-          <h2 className="card-heading">Dress basics</h2>
+          <h2 className="card-heading">Verification confirmation</h2>
           <p className="card-sub">
-            Designer and style name are required. Your listing title is built
-            automatically from these — e.g. &ldquo;Vera Wang Hayley&rdquo;.
+            Tick this when your uploaded photos cover the designer
+            label and lining shots. Required for the Verified badge.
           </p>
-
-          <Field label="Designer" htmlFor="designer_id">
-            <select
-              id="designer_id"
-              name="designer_id"
-              className="input"
-              defaultValue={draft.designer_id ?? ""}
-              required
-            >
-              <option value="">Select a designer</option>
-              {refs.designers.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </Field>
-
-          <div className="grid-2">
-            <Field
-              label="Style name / model"
-              htmlFor="model"
-              help='Free text — e.g. "Hayley", "Daphne", or the SKU.'
-            >
-              <Input
-                id="model"
-                name="model"
-                required
-                maxLength={100}
-                defaultValue={draft.model ?? ""}
-              />
-            </Field>
-            <Field label="Year (optional)" htmlFor="year" help="Season or year released, if known.">
-              <Input
-                id="year"
-                name="year"
-                type="number"
-                min={1990}
-                max={CURRENT_YEAR + 1}
-                defaultValue={
-                  draft.year != null ? String(draft.year) : ""
-                }
-              />
-            </Field>
-          </div>
+          <label className="check-row" style={{ alignItems: "flex-start" }}>
+            <input
+              type="checkbox"
+              name="includes_label_lining_photos"
+              defaultChecked={!!draft.includes_label_lining_photos}
+              style={{ marginTop: 4 }}
+            />
+            <span style={{ display: "block" }}>
+              <strong style={{ color: "var(--ink-1)" }}>
+                My photos include a designer-label close-up and a
+                lining / wrong-side shot
+              </strong>
+              <span
+                style={{
+                  display: "block",
+                  color: "var(--ink-3)",
+                  fontSize: "var(--t-body-s)",
+                  marginTop: 2,
+                }}
+              >
+                Optional, but it&rsquo;s the single biggest signal that
+                separates legitimate listings from sketchy ones.
+              </span>
+            </span>
+          </label>
         </section>
 
-        <StepNav />
+        <StepNav prevHref={`/listings/new/${draft.id}/basics`} />
       </form>
     </WizardShell>
   );

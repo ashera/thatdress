@@ -363,32 +363,6 @@ export default async function WizardPublishPage({
               </span>
             </span>
           </label>
-
-          <label className="check-row" style={{ alignItems: "flex-start" }}>
-            <input
-              type="checkbox"
-              name="includes_label_lining_photos"
-              defaultChecked={!!draft.includes_label_lining_photos}
-              style={{ marginTop: 4 }}
-            />
-            <span style={{ display: "block" }}>
-              <strong style={{ color: "var(--ink-1)" }}>
-                My photos include a designer-label close-up and a
-                lining / wrong-side shot
-              </strong>
-              <span
-                style={{
-                  display: "block",
-                  color: "var(--ink-3)",
-                  fontSize: "var(--t-body-s)",
-                  marginTop: 2,
-                }}
-              >
-                Optional, but it&rsquo;s the single biggest signal that
-                separates legitimate listings from sketchy ones.
-              </span>
-            </span>
-          </label>
         </section>
 
         <StepNav

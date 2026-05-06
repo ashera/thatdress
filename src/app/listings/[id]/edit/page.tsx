@@ -3,10 +3,10 @@ import { query } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 
 // Editing now happens through the same wizard as new-listing creation —
-// /listings/new/{id}/photos, /style, /measurements, /condition, /publish —
-// so the seller has a single consistent flow with the listing-health
-// score and trust badges visible across every step. This page just
-// authenticates and redirects.
+// /listings/new/{id}/basics, /photos, /style, /measurements, /condition,
+// /publish — so the seller has a single consistent flow with the
+// listing-health score and trust badges visible across every step.
+// This page just authenticates and redirects.
 export const dynamic = "force-dynamic";
 
 export default async function EditListingRedirect({
@@ -33,5 +33,5 @@ export default async function EditListingRedirect({
     redirect(`/listings/${id}`);
   }
 
-  redirect(`/listings/new/${id}/photos`);
+  redirect(`/listings/new/${id}/basics`);
 }
