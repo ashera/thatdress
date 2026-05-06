@@ -3690,9 +3690,10 @@ textarea.input {
   }
 }
 
-.admin-listing-tile:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--e-2);
-  border-color: var(--hairline-strong);
+.admin-listings-row {
+  transition: background 120ms;
+}
+.admin-listings-row:hover {
+  background: var(--surface-sunken) !important;
 }
 .prose th { background: var(--surface-sunken); font-weight: 600; }

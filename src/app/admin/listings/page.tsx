@@ -154,7 +154,15 @@ function timeSince(iso: string | null): string | null {
   return `${Math.floor(mo / 12)}y ago`;
 }
 
-function StatusPill({ children, color }: { children: string; color: string }) {
+function StatusPill({
+  children,
+  color,
+  textColor,
+}: {
+  children: string;
+  color: string;
+  textColor?: string;
+}) {
   return (
     <span
       style={{
@@ -162,7 +170,7 @@ function StatusPill({ children, color }: { children: string; color: string }) {
         padding: "2px 8px",
         borderRadius: 999,
         background: color,
-        color: "var(--ink-1)",
+        color: textColor ?? "var(--ink-1)",
         fontFamily: "var(--font-mono)",
         fontSize: 10,
         fontWeight: 700,
@@ -360,233 +368,257 @@ export default async function AdminListingsPage({
           </p>
         </div>
       ) : (
-        <ul
+        <div
           style={{
-            listStyle: "none",
-            padding: 0,
-            margin: 0,
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-            gap: "var(--s-4)",
+            border: "1px solid var(--hairline)",
+            borderRadius: 12,
+            overflow: "hidden",
+            background: "var(--surface)",
           }}
         >
-          {rows.map((row) => {
-            const convCount = Number(row.conversation_count ?? 0);
-            const recentCount = Number(row.recent_message_count ?? 0);
-            const lastSeen = timeSince(row.last_message_at);
-            const isSold = !!row.sold_at;
-            const isHidden = !row.is_published;
-            const isFlagged = row.trust_status === "flagged";
-            const isVerified = row.trust_status === "verified";
-            const isAuthenticated = row.trust_status === "authenticated";
-            return (
-              <li key={row.id}>
-                <Link
-                  href={`/listings/${row.id}`}
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 8,
-                    padding: 0,
-                    borderRadius: 12,
-                    overflow: "hidden",
-                    border: "1px solid var(--hairline)",
-                    background: "var(--surface)",
-                    color: "var(--ink-1)",
-                    textDecoration: "none",
-                    height: "100%",
-                    transition: "transform 120ms, box-shadow 120ms",
-                  }}
-                  className="admin-listing-tile"
+          <table
+            className="admin-listings-table"
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              fontSize: 13,
+            }}
+          >
+            <thead
+              style={{
+                background: "var(--surface-sunken)",
+                borderBottom: "1px solid var(--hairline)",
+              }}
+            >
+              <tr>
+                <th style={thStyle("48px")}></th>
+                <th style={thStyle("auto", "left")}>Listing</th>
+                <th style={thStyle("220px", "left")}>Seller</th>
+                <th style={thStyle("100px", "right")}>Price</th>
+                <th style={thStyle("160px", "left")}>Status</th>
+                <th
+                  style={thStyle("70px", "right")}
+                  title="Conversations"
                 >
-                  <div
+                  💬
+                </th>
+                <th style={thStyle("130px", "left")}>Last activity</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, i) => {
+                const convCount = Number(row.conversation_count ?? 0);
+                const recentCount = Number(row.recent_message_count ?? 0);
+                const lastSeen = timeSince(row.last_message_at);
+                const isSold = !!row.sold_at;
+                const isHidden = !row.is_published;
+                const isFlagged = row.trust_status === "flagged";
+                const isVerified = row.trust_status === "verified";
+                const isAuthenticated = row.trust_status === "authenticated";
+                const detailHref = `/listings/${row.id}`;
+                return (
+                  <tr
+                    key={row.id}
+                    className="admin-listings-row"
                     style={{
-                      width: "100%",
-                      aspectRatio: "3 / 4",
-                      background: "var(--surface-sunken)",
-                      position: "relative",
+                      borderBottom:
+                        i === rows.length - 1
+                          ? "none"
+                          : "1px solid var(--hairline)",
+                      background: i % 2 === 0 ? "var(--surface)" : "var(--surface-sunken-soft, var(--surface))",
                     }}
                   >
-                    {row.primary_image_id ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={`/api/listings/${row.id}/images/${row.primary_image_id}`}
-                        alt=""
-                        loading="lazy"
-                        style={{
-                          position: "absolute",
-                          inset: 0,
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "cover",
-                        }}
-                      />
-                    ) : (
-                      <span
-                        style={{
-                          position: "absolute",
-                          inset: 0,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          color: "var(--ink-4)",
-                          fontFamily: "var(--font-mono)",
-                          fontSize: 11,
-                          letterSpacing: "0.1em",
-                          textTransform: "uppercase",
-                        }}
+                    <td style={{ ...tdStyle, width: 48 }}>
+                      <Link
+                        href={detailHref}
+                        style={{ display: "block" }}
+                        aria-label={`Open ${row.title}`}
                       >
-                        No photo
-                      </span>
-                    )}
-                    {isSold && (
-                      <span
+                        <span
+                          style={{
+                            display: "block",
+                            width: 36,
+                            aspectRatio: "3 / 4",
+                            borderRadius: 4,
+                            overflow: "hidden",
+                            background: "var(--surface-sunken)",
+                            position: "relative",
+                          }}
+                        >
+                          {row.primary_image_id && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={`/api/listings/${row.id}/images/${row.primary_image_id}`}
+                              alt=""
+                              loading="lazy"
+                              style={{
+                                position: "absolute",
+                                inset: 0,
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover",
+                              }}
+                            />
+                          )}
+                        </span>
+                      </Link>
+                    </td>
+                    <td style={tdStyle}>
+                      <Link
+                        href={detailHref}
                         style={{
-                          position: "absolute",
-                          top: 8,
-                          left: 8,
-                          padding: "3px 8px",
-                          borderRadius: 999,
-                          background: "var(--ink-1)",
-                          color: "#fff",
-                          fontFamily: "var(--font-mono)",
-                          fontSize: 10,
-                          fontWeight: 700,
-                          letterSpacing: "0.12em",
-                          textTransform: "uppercase",
-                        }}
-                      >
-                        Sold
-                      </span>
-                    )}
-                    {recentCount > 0 && !isSold && (
-                      <span
-                        title={`${recentCount} message${recentCount === 1 ? "" : "s"} in the last 7 days`}
-                        style={{
-                          position: "absolute",
-                          top: 8,
-                          right: 8,
-                          padding: "3px 8px",
-                          borderRadius: 999,
-                          background: "#22c55e",
-                          color: "#fff",
-                          fontFamily: "var(--font-mono)",
-                          fontSize: 10,
-                          fontWeight: 700,
-                          letterSpacing: "0.12em",
-                          textTransform: "uppercase",
-                        }}
-                      >
-                        ● Active
-                      </span>
-                    )}
-                  </div>
-
-                  <div
-                    style={{
-                      padding: "10px 12px 12px",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 6,
-                      flex: 1,
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontFamily: "var(--font-mono)",
-                        fontSize: 10,
-                        letterSpacing: "0.12em",
-                        textTransform: "uppercase",
-                        color: "var(--ink-3)",
-                      }}
-                    >
-                      {row.designer_name ?? "—"}
-                    </div>
-                    <div
-                      style={{
-                        fontWeight: 700,
-                        fontSize: 14,
-                        lineHeight: 1.3,
-                        color: "var(--ink-1)",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        display: "-webkit-box",
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: "vertical",
-                      }}
-                    >
-                      {row.title}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 13,
-                        color: "var(--ink-2)",
-                      }}
-                    >
-                      {priceLabel(row.price_cents)}
-                    </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: 4,
-                        flexWrap: "wrap",
-                        marginTop: 2,
-                      }}
-                    >
-                      {isHidden && (
-                        <StatusPill color="#f3e8ff">Hidden</StatusPill>
-                      )}
-                      {isFlagged && (
-                        <StatusPill color="#fee2e2">Flagged</StatusPill>
-                      )}
-                      {isVerified && (
-                        <StatusPill color="#fef3c7">Verified</StatusPill>
-                      )}
-                      {isAuthenticated && (
-                        <StatusPill color="#1c1816">
-                          Authenticated
-                        </StatusPill>
-                      )}
-                    </div>
-                    <div
-                      style={{
-                        marginTop: "auto",
-                        paddingTop: 8,
-                        borderTop: "1px solid var(--hairline)",
-                        fontSize: 12,
-                        color: "var(--ink-3)",
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 2,
-                      }}
-                    >
-                      <div>
-                        💬{" "}
-                        <strong style={{ color: "var(--ink-1)" }}>
-                          {convCount}
-                        </strong>{" "}
-                        conversation{convCount === 1 ? "" : "s"}
-                        {lastSeen ? ` · last ${lastSeen}` : ""}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: 11,
-                          color: "var(--ink-4)",
+                          color: "var(--ink-1)",
+                          textDecoration: "none",
+                          fontWeight: 600,
+                          display: "block",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
                           whiteSpace: "nowrap",
                         }}
                       >
-                        {row.seller_email ?? "(no seller)"}
+                        {row.title}
+                      </Link>
+                      <div
+                        style={{
+                          fontFamily: "var(--font-mono)",
+                          fontSize: 10,
+                          letterSpacing: "0.12em",
+                          textTransform: "uppercase",
+                          color: "var(--ink-3)",
+                          marginTop: 2,
+                        }}
+                      >
+                        {row.designer_name ?? "—"}
                       </div>
-                    </div>
-                  </div>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+                    </td>
+                    <td
+                      style={{
+                        ...tdStyle,
+                        fontSize: 12,
+                        color: "var(--ink-2)",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                        maxWidth: 220,
+                      }}
+                    >
+                      {row.seller_email ?? (
+                        <span style={{ color: "var(--ink-4)" }}>(none)</span>
+                      )}
+                    </td>
+                    <td
+                      style={{
+                        ...tdStyle,
+                        textAlign: "right",
+                        fontVariantNumeric: "tabular-nums",
+                      }}
+                    >
+                      {priceLabel(row.price_cents)}
+                    </td>
+                    <td style={tdStyle}>
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: 4,
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        {isSold && (
+                          <StatusPill color="#1c1816" textColor="#fff">
+                            Sold
+                          </StatusPill>
+                        )}
+                        {isHidden && (
+                          <StatusPill color="#f3e8ff">Hidden</StatusPill>
+                        )}
+                        {isFlagged && (
+                          <StatusPill color="#fee2e2">Flagged</StatusPill>
+                        )}
+                        {isVerified && (
+                          <StatusPill color="#fef3c7">Verified</StatusPill>
+                        )}
+                        {isAuthenticated && (
+                          <StatusPill color="#1c1816" textColor="#fff">
+                            Authenticated
+                          </StatusPill>
+                        )}
+                        {!isSold &&
+                          !isHidden &&
+                          !isFlagged &&
+                          !isVerified &&
+                          !isAuthenticated && (
+                            <span
+                              style={{
+                                fontSize: 11,
+                                color: "var(--ink-4)",
+                              }}
+                            >
+                              —
+                            </span>
+                          )}
+                      </div>
+                    </td>
+                    <td
+                      style={{
+                        ...tdStyle,
+                        textAlign: "right",
+                        fontVariantNumeric: "tabular-nums",
+                        fontWeight: convCount > 0 ? 600 : 400,
+                        color:
+                          convCount > 0 ? "var(--ink-1)" : "var(--ink-4)",
+                      }}
+                    >
+                      {convCount}
+                    </td>
+                    <td style={{ ...tdStyle, fontSize: 12 }}>
+                      {lastSeen ? (
+                        <span style={{ color: "var(--ink-2)" }}>
+                          {recentCount > 0 && !isSold && (
+                            <span
+                              title={`${recentCount} message${recentCount === 1 ? "" : "s"} in the last 7 days`}
+                              style={{
+                                color: "#16a34a",
+                                marginRight: 4,
+                              }}
+                            >
+                              ●
+                            </span>
+                          )}
+                          {lastSeen}
+                        </span>
+                      ) : (
+                        <span style={{ color: "var(--ink-4)" }}>—</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );
 }
+
+function thStyle(
+  width: string,
+  align: "left" | "right" | "center" = "center",
+): React.CSSProperties {
+  return {
+    width,
+    padding: "10px 12px",
+    textAlign: align,
+    fontFamily: "var(--font-mono)",
+    fontSize: 10,
+    fontWeight: 700,
+    letterSpacing: "0.12em",
+    textTransform: "uppercase",
+    color: "var(--ink-3)",
+  };
+}
+
+const tdStyle: React.CSSProperties = {
+  padding: "10px 12px",
+  verticalAlign: "middle",
+};
