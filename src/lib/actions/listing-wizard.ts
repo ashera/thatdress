@@ -92,6 +92,49 @@ async function ensureWizardOwnership(
   return user.isAdmin || row.seller_id === user.id;
 }
 
+/** Look up an existing designer by case-insensitive name, or create
+ *  a new one flagged is_user_submitted. The TRIM/LOWER comparison
+ *  prevents trivial duplicates ('Vera Wang' / 'vera wang' /
+ *  '  VERA WANG  ' all collapse to the same row).
+ *
+ *  Returns the designer id as a string. */
+async function resolveOrCreateDesigner(
+  rawName: string,
+  userId: string,
+): Promise<string | null> {
+  const name = rawName.trim();
+  if (!name) return null;
+
+  const existing = await query<{ id: string }>(
+    `SELECT id::text FROM designers
+      WHERE LOWER(TRIM(name)) = LOWER($1) LIMIT 1`,
+    [name],
+  );
+  if (existing.rows[0]) return existing.rows[0].id;
+
+  try {
+    const inserted = await query<{ id: string }>(
+      `INSERT INTO designers (name, is_active, is_user_submitted, created_by_user_id)
+         VALUES ($1, TRUE, TRUE, $2::bigint)
+         RETURNING id::text`,
+      [name, userId],
+    );
+    return inserted.rows[0]?.id ?? null;
+  } catch (err) {
+    // 23505 is unique_violation — race with another seller adding the
+    // same name at the same moment. Re-read.
+    if ((err as { code?: string }).code === "23505") {
+      const retry = await query<{ id: string }>(
+        `SELECT id::text FROM designers
+          WHERE LOWER(TRIM(name)) = LOWER($1) LIMIT 1`,
+        [name],
+      );
+      return retry.rows[0]?.id ?? null;
+    }
+    throw err;
+  }
+}
+
 /** Whether a listing is in the draft pre-publish state. */
 async function isListingDraft(listingId: string): Promise<boolean> {
   const r = await query<{ is_draft: boolean }>(
@@ -240,7 +283,24 @@ export async function saveDraftBasics(formData: FormData): Promise<void> {
 
   const stepUrl = `/listings/new/${listingId}/basics`;
 
-  const designer_id = getRequiredId(formData, "designer_id");
+  // Designer can come either as an existing id from the dropdown, or
+  // as a free-text name when the seller's brand isn't in the curated
+  // list. Treat the typed name as the source of truth when present —
+  // case-insensitive match against existing rows so we don't churn
+  // duplicates like 'Vera Wang' / 'vera wang' / 'VERA WANG'; insert a
+  // new row flagged is_user_submitted otherwise.
+  const designerSelection = String(formData.get("designer_id") ?? "");
+  const newDesignerName = getString(formData, "designer_name_new", 80);
+
+  let designer_id: string | null = null;
+  if (designerSelection === "new" || (newDesignerName && !/^\d+$/.test(designerSelection))) {
+    if (!newDesignerName) {
+      redirect(`${stepUrl}?error=designer-name-required`);
+    }
+    designer_id = await resolveOrCreateDesigner(newDesignerName, user.id);
+  } else {
+    designer_id = /^\d+$/.test(designerSelection) ? designerSelection : null;
+  }
   if (!designer_id) redirect(`${stepUrl}?error=invalid-designer`);
 
   const model = getString(formData, "model", 100);

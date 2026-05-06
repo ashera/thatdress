@@ -69,7 +69,21 @@ export default async function WizardBasicsPage({
                   {o.label}
                 </option>
               ))}
+              <option value="new">+ My designer isn&rsquo;t listed</option>
             </select>
+          </Field>
+
+          <Field
+            label="Designer name (only if not in the list)"
+            htmlFor="designer_name_new"
+            help="Pick &lsquo;My designer isn&rsquo;t listed&rsquo; above and type the brand here. We&rsquo;ll add it to our list — admin can tidy it up later."
+          >
+            <Input
+              id="designer_name_new"
+              name="designer_name_new"
+              maxLength={80}
+              placeholder="e.g. Indie Boutique Brand"
+            />
           </Field>
 
           <div className="grid-2">
@@ -103,8 +117,10 @@ export default async function WizardBasicsPage({
           </div>
 
           <WizardTip>
-            Can&rsquo;t see your designer in the list? Pick the closest
-            match for now — you can always edit it after we publish.
+            Can&rsquo;t see your designer? Pick &ldquo;My designer
+            isn&rsquo;t listed&rdquo; from the dropdown and type the
+            name in the box. It&rsquo;ll be added to our list so other
+            sellers (and buyers) can find it too.
           </WizardTip>
         </section>
 

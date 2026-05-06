@@ -168,6 +168,15 @@ CREATE TABLE IF NOT EXISTS designers (
 ALTER TABLE designers
   ADD COLUMN IF NOT EXISTS tier TEXT NOT NULL DEFAULT 'mid';
 
+-- Tracks designers added on-the-fly by sellers from the listing wizard
+-- when their dress's brand isn't in the curated list. Admins can sort
+-- on this column from /admin/reference-data and decide whether to
+-- merge with an existing entry, set a tier, or leave alone.
+ALTER TABLE designers
+  ADD COLUMN IF NOT EXISTS is_user_submitted BOOLEAN NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS created_by_user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
 ALTER TABLE designers
   DROP CONSTRAINT IF EXISTS designers_tier_check;
 ALTER TABLE designers
