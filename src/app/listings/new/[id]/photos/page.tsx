@@ -1,6 +1,7 @@
 import {
   deleteDraftImage,
   saveDraftPhotos,
+  uploadDraftExtraPhotos,
   uploadDraftSlotPhoto,
 } from "@/lib/actions/listing-wizard";
 import { query } from "@/lib/db";
@@ -127,36 +128,65 @@ export default async function WizardPhotosPage({
           })}
         </div>
 
-        {legacyImages.length > 0 && (
+        <div
+          style={{
+            marginTop: "var(--s-5)",
+            paddingTop: "var(--s-4)",
+            borderTop: "1px solid var(--hairline)",
+          }}
+        >
           <div
             style={{
-              marginTop: "var(--s-5)",
-              paddingTop: "var(--s-4)",
-              borderTop: "1px solid var(--hairline)",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "flex-start",
+              gap: "var(--s-3)",
+              flexWrap: "wrap",
+              marginBottom: "var(--s-3)",
             }}
           >
-            <h3
-              style={{
-                fontFamily: "var(--font-mono)",
-                fontSize: 11,
-                letterSpacing: "0.12em",
-                textTransform: "uppercase",
-                color: "var(--ink-3)",
-                margin: "0 0 var(--s-3)",
-              }}
+            <div style={{ flex: "1 1 320px", minWidth: 0 }}>
+              <h3
+                style={{
+                  fontFamily: "var(--font-mono)",
+                  fontSize: 11,
+                  letterSpacing: "0.12em",
+                  textTransform: "uppercase",
+                  color: "var(--ink-3)",
+                  margin: "0 0 6px",
+                }}
+              >
+                Other photos that will really sell this dress
+              </h3>
+              <p
+                style={{
+                  fontSize: "var(--t-body-s)",
+                  color: "var(--ink-3)",
+                  margin: 0,
+                }}
+              >
+                A close-up on the beading, a shot of the hem, the dress
+                worn under good light, alterations or boning detail —
+                anything that helps a buyer fall in love. Add as many
+                as you like.
+              </p>
+            </div>
+            <form
+              action={uploadDraftExtraPhotos}
+              encType="multipart/form-data"
+              style={{ flex: "0 0 auto" }}
             >
-              Other photos already on this listing
-            </h3>
-            <p
-              style={{
-                fontSize: "var(--t-body-s)",
-                color: "var(--ink-3)",
-                margin: "0 0 var(--s-3)",
-              }}
-            >
-              These were uploaded before the slot system. Remove any
-              you no longer want, and re-upload them into a slot above.
-            </p>
+              <input type="hidden" name="listingId" value={draft.id} />
+              <SlotUploadButton
+                multiple
+                inputName="images"
+                label="Add photos"
+                variant="primary"
+              />
+            </form>
+          </div>
+
+          {legacyImages.length > 0 && (
             <div
               style={{
                 display: "grid",
@@ -226,8 +256,8 @@ export default async function WizardPhotosPage({
                 </div>
               ))}
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </section>
 
       <form action={saveDraftPhotos}>

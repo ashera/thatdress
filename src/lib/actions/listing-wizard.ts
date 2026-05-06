@@ -391,6 +391,40 @@ export async function uploadDraftSlotPhoto(
   redirect(stepUrl);
 }
 
+/** Upload extra (un-roled) photos to the listing — anything beyond the
+ *  four verification slots. Photos are appended at the end of the
+ *  gallery with role NULL, position after the existing maximum, and
+ *  is_primary only if no primary exists yet. */
+export async function uploadDraftExtraPhotos(
+  formData: FormData,
+): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const listingId = String(formData.get("listingId") ?? "");
+  if (!(await ensureWizardOwnership(listingId, user))) {
+    redirect("/listings/mine");
+  }
+
+  const stepUrl = `/listings/new/${listingId}/photos`;
+
+  const files = collectImageFiles(formData);
+  const imageErr = validateImages(files);
+  if (imageErr) redirect(`${stepUrl}?error=${imageErr}`);
+  if (files.length === 0) redirect(stepUrl);
+
+  try {
+    await appendImages(listingId, files);
+  } catch {
+    redirect(`${stepUrl}?error=upload-failed`);
+  }
+
+  await refreshLabelLiningFlag(listingId);
+  await recomputeListingTrustStatus(listingId);
+  revalidatePath(stepUrl);
+  redirect(stepUrl);
+}
+
 export async function saveDraftPhotos(formData: FormData): Promise<void> {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
