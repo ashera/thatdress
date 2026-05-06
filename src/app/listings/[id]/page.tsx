@@ -386,11 +386,39 @@ async function OwnerHealthCard({
 }) {
   const settings = await loadSiteSettings();
   const verifiedThreshold = settings.healthThresholdVerified;
-  const { score, suggestions } = computeHealth(
-    rowToHealthInput(listing, imageCount),
-  );
-  const meetsVerified = score >= verifiedThreshold;
+  const healthInput = rowToHealthInput(listing, imageCount);
+  const { score, suggestions } = computeHealth(healthInput);
+
+  // The score alone doesn't qualify a listing for the Verified badge —
+  // it also needs the seller's authenticity declaration, both
+  // label/lining photos, and at least 3 photos total. Build the
+  // status text from the *actual* gating conditions so the strip
+  // can't say "Verified-eligible" while the badge stays absent.
+  const scoreOk = score >= verifiedThreshold;
+  const photosOk = healthInput.imageCount >= 3;
+  const labelLiningOk = healthInput.includesLabelLiningPhotos;
+  const authenticityOk = healthInput.isAuthenticDeclared;
+  const eligible = scoreOk && photosOk && labelLiningOk && authenticityOk;
+
+  let statusText: string;
+  if (eligible) {
+    statusText = "✓ Verified-eligible";
+  } else if (!scoreOk) {
+    statusText = `${verifiedThreshold - score} pts to Verified`;
+  } else if (!authenticityOk) {
+    statusText = "Confirm authenticity at publish";
+  } else if (!labelLiningOk) {
+    statusText = "Add label + lining photos";
+  } else if (!photosOk) {
+    statusText = `Add ${3 - healthInput.imageCount} more photo${3 - healthInput.imageCount === 1 ? "" : "s"}`;
+  } else {
+    statusText = "Verified-eligible";
+  }
+
   const top = suggestions.slice(0, 1);
+  // Visual treatment: only flip to gold when all gates are green so
+  // the strip's colour matches the trust badge state.
+  const meetsVerified = eligible;
   return (
     <div
       style={{
@@ -457,13 +485,11 @@ async function OwnerHealthCard({
           fontSize: 10,
           letterSpacing: "0.1em",
           textTransform: "uppercase",
-          color: meetsVerified ? "#92400e" : "var(--ink-3)",
-          fontWeight: meetsVerified ? 700 : 400,
+          color: eligible ? "#92400e" : "var(--ink-3)",
+          fontWeight: eligible ? 700 : 400,
         }}
       >
-        {meetsVerified
-          ? "✓ Verified-eligible"
-          : `${verifiedThreshold - score} pts to Verified`}
+        {statusText}
       </span>
       {top.length > 0 && (
         <Link
