@@ -11,8 +11,8 @@ const ADMIN_LINKS: Array<{ href: string; title: string; desc: string }> = [
   },
   {
     href: "/admin/listings/flagged",
-    title: "Flagged Listings",
-    desc: "Review listings flagged for suspect authenticity or accuracy.",
+    title: "Listings Under Review",
+    desc: "Admin-flagged listings plus open buyer reports — read the reason, decide whether to flag, dismiss, or hide.",
   },
   {
     href: "/admin/users",

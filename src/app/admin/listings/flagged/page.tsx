@@ -17,9 +17,11 @@ type FlaggedRow = {
   created_at: string;
   designer_name: string | null;
   primary_image_id: string | null;
+  trust_status: string | null;
   flag_reason: string | null;
   flag_created_at: string | null;
   flag_by_email: string | null;
+  flag_by_is_admin: boolean | null;
   flag_count: string | null;
 };
 
@@ -32,6 +34,7 @@ async function fetchFlagged(): Promise<FlaggedRow[]> {
               l.is_published,
               l.sold_at::text,
               l.created_at::text,
+              l.trust_status,
               u.email AS seller_email,
               l.seller_id::text,
               d.name  AS designer_name,
@@ -44,6 +47,7 @@ async function fetchFlagged(): Promise<FlaggedRow[]> {
               fl.reason         AS flag_reason,
               fl.created_at::text AS flag_created_at,
               fbu.email         AS flag_by_email,
+              fbu.is_admin      AS flag_by_is_admin,
               (
                 SELECT COUNT(*)::text FROM listing_flags
                   WHERE listing_id = l.id
@@ -60,7 +64,14 @@ async function fetchFlagged(): Promise<FlaggedRow[]> {
             LIMIT 1
          ) fl ON TRUE
          LEFT JOIN users     fbu ON fbu.id = fl.flagged_by_user_id
-        WHERE l.trust_status = 'flagged'
+        WHERE (
+          l.trust_status = 'flagged'
+          OR EXISTS (
+            SELECT 1 FROM listing_flags lf2
+              WHERE lf2.listing_id = l.id
+                AND lf2.resolved_at IS NULL
+          )
+        )
           AND l.is_draft = FALSE
         ORDER BY COALESCE(fl.created_at, l.created_at) DESC
         LIMIT 200`,
@@ -121,12 +132,15 @@ export default async function FlaggedListingsPage({
       </Link>
 
       <header className="admin-header">
-        <p className="eyebrow">Admin · Listings · Flagged</p>
-        <h1>Flagged listings</h1>
+        <p className="eyebrow">Admin · Listings · Reports</p>
+        <h1>Listings under review</h1>
         <p className="sub">
-          Listings flagged for review. Restore (un-flag) when the
-          report turns out to be false; otherwise leave flagged and
-          consider hiding the listing on its detail page.
+          Listings admins have flagged plus open buyer reports.
+          Click into one to read the report, see the listing, and
+          decide. <strong>Dismiss reports</strong> closes open
+          reports without changing trust state;{" "}
+          <strong>Restore</strong> (visible only on currently-flagged
+          listings) un-flags and closes reports together.
         </p>
       </header>
 
@@ -138,10 +152,10 @@ export default async function FlaggedListingsPage({
 
       {rows.length === 0 ? (
         <div className="empty-state">
-          <h3>Nothing flagged</h3>
+          <h3>Nothing under review</h3>
           <p style={{ margin: 0 }}>
-            Flag a listing from its detail page (admin actions section)
-            to send it here for review.
+            No admin-flagged listings and no open buyer reports right
+            now.
           </p>
         </div>
       ) : (
@@ -193,6 +207,39 @@ export default async function FlaggedListingsPage({
                 ) : null}
               </div>
               <div style={{ minWidth: 0 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    flexWrap: "wrap",
+                    marginBottom: 2,
+                  }}
+                >
+                  <span
+                    style={{
+                      fontFamily: "var(--font-mono)",
+                      fontSize: 10,
+                      letterSpacing: "0.12em",
+                      textTransform: "uppercase",
+                      fontWeight: 700,
+                      padding: "2px 8px",
+                      borderRadius: 999,
+                      background:
+                        row.trust_status === "flagged"
+                          ? "#fee2e2"
+                          : "#fef3c7",
+                      color:
+                        row.trust_status === "flagged"
+                          ? "#991b1b"
+                          : "#92400e",
+                    }}
+                  >
+                    {row.trust_status === "flagged"
+                      ? "Flagged"
+                      : "Pending review"}
+                  </span>
+                </div>
                 <Link
                   href={`/listings/${row.id}`}
                   style={{
@@ -250,12 +297,13 @@ export default async function FlaggedListingsPage({
                         marginBottom: 4,
                       }}
                     >
-                      Flagged by {row.flag_by_email ?? "(unknown)"}{" "}
+                      Reported by {row.flag_by_email ?? "(unknown)"}
+                      {row.flag_by_is_admin ? " (admin)" : " (buyer)"}
                       {row.flag_created_at
-                        ? `· ${formatFlagDateTime(row.flag_created_at)}`
+                        ? ` · ${formatFlagDateTime(row.flag_created_at)}`
                         : ""}
                       {row.flag_count && Number(row.flag_count) > 1
-                        ? ` · ${row.flag_count} total flags`
+                        ? ` · ${row.flag_count} total reports`
                         : ""}
                     </div>
                     <div
@@ -277,11 +325,13 @@ export default async function FlaggedListingsPage({
                   <input type="hidden" name="status" value="self-declared" />
                   <input type="hidden" name="next" value="queue" />
                   <Button type="submit" variant="primary" size="sm">
-                    Restore
+                    {row.trust_status === "flagged"
+                      ? "Restore"
+                      : "Dismiss reports"}
                   </Button>
                 </form>
                 <Link
-                  href={`/listings/${row.id}/edit`}
+                  href={`/listings/${row.id}`}
                   style={{
                     fontSize: "var(--t-body-s)",
                     color: "var(--ink-2)",
@@ -290,7 +340,7 @@ export default async function FlaggedListingsPage({
                     textDecoration: "underline",
                   }}
                 >
-                  Edit / hide
+                  Open listing
                 </Link>
               </div>
             </li>

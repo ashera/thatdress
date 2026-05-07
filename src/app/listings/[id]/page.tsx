@@ -23,6 +23,7 @@ import { computeHealth, type HealthInput } from "@/lib/listing-health";
 import { loadSiteSettings } from "@/lib/site-settings";
 import { TrustBadge } from "../../_components/trust-badge";
 import { FlagListingDialog } from "../../_components/flag-listing-dialog";
+import { ReportListingDialog } from "../../_components/report-listing-dialog";
 import { Button, ButtonLink, Icon } from "../../_components/ui";
 import {
   ListingGallery,
@@ -587,10 +588,14 @@ async function fetchConversationsForListing(
 
 export default async function ListingDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ reported?: string }>;
 }) {
   const { id } = await params;
+  const sp = await searchParams;
+  const reportedFlag = sp.reported ?? null;
   const [result, currentUser, regionId] = await Promise.all([
     fetchListing(id),
     getCurrentUser(),
@@ -805,6 +810,38 @@ export default async function ListingDetailPage({
         </div>
       )}
 
+      {reportedFlag === "1" && (
+        <div
+          style={{
+            margin: "var(--s-3) 0",
+            padding: "10px 14px",
+            background: "var(--volt-50)",
+            border: "1px solid var(--volt-200)",
+            borderRadius: 10,
+            color: "var(--ink-1)",
+            fontSize: 14,
+          }}
+        >
+          <strong>Thanks for the report.</strong> The frockd team will
+          review it.
+        </div>
+      )}
+      {reportedFlag === "duplicate" && (
+        <div
+          style={{
+            margin: "var(--s-3) 0",
+            padding: "10px 14px",
+            background: "var(--surface-sunken)",
+            border: "1px solid var(--hairline)",
+            borderRadius: 10,
+            color: "var(--ink-2)",
+            fontSize: 14,
+          }}
+        >
+          You&rsquo;ve already reported this listing — your earlier
+          report is still open.
+        </div>
+      )}
       {!l.is_published && (isOwner || isAdmin) && (
         <div className="hidden-banner">
           <strong>Hidden from browse.</strong>
@@ -995,6 +1032,9 @@ export default async function ListingDetailPage({
             )}
             {isAdmin && l.trust_status !== "flagged" && (
               <FlagListingDialog listingId={l.id} next="detail" />
+            )}
+            {!isOwner && !isAdmin && currentUser && !l.sold_at && (
+              <ReportListingDialog listingId={l.id} />
             )}
           </div>
 

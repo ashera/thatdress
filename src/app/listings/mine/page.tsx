@@ -5,6 +5,7 @@ import { query } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { startDraftListing } from "@/lib/actions/listing-wizard";
 import { computeHealth } from "@/lib/listing-health";
+import { getSellerStats, type SellerStats } from "@/lib/listing-views";
 import { loadSiteSettings } from "@/lib/site-settings";
 import { Button } from "../../_components/ui";
 import {
@@ -208,10 +209,11 @@ export default async function MyListingsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const [result, drafts, settings] = await Promise.all([
+  const [result, drafts, settings, stats] = await Promise.all([
     fetchOwnListings(user.id),
     fetchDrafts(user.id),
     loadSiteSettings(),
+    getSellerStats(user.id),
   ]);
   const verifiedThreshold = settings.healthThresholdVerified;
   const total = result.ok ? result.rows.length : 0;
@@ -225,10 +227,14 @@ export default async function MyListingsPage() {
         <p className="eyebrow">Your wardrobe</p>
         <h1>Sell a dress</h1>
         <p className="sub">
-          We&rsquo;ll walk you through it in five short steps: photos &amp;
-          basics, style, size &amp; fit, condition, and pricing.
+          We&rsquo;ll walk you through it in six short steps: basics,
+          photos, style, size &amp; fit, condition, and pricing.
         </p>
       </header>
+
+      {(stats.activeListings > 0 || stats.soldListings > 0) && (
+        <SellerStatsPanel stats={stats} />
+      )}
 
       <section
         className="form-card"
@@ -446,5 +452,178 @@ export default async function MyListingsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+function StatTile({
+  value,
+  label,
+  hint,
+}: {
+  value: number | string;
+  label: string;
+  hint?: string;
+}) {
+  return (
+    <div
+      style={{
+        background: "var(--surface)",
+        border: "1px solid var(--hairline)",
+        borderRadius: 10,
+        padding: "12px 14px",
+        display: "flex",
+        flexDirection: "column",
+        gap: 4,
+      }}
+    >
+      <div
+        style={{
+          fontFamily: "var(--font-display)",
+          fontSize: 24,
+          color: "var(--ink-1)",
+          letterSpacing: "-0.01em",
+          lineHeight: 1,
+        }}
+      >
+        {value}
+      </div>
+      <div
+        style={{
+          fontFamily: "var(--font-mono)",
+          fontSize: 10,
+          letterSpacing: "0.14em",
+          textTransform: "uppercase",
+          color: "var(--ink-3)",
+        }}
+      >
+        {label}
+      </div>
+      {hint && (
+        <div style={{ fontSize: 12, color: "var(--ink-4)" }}>{hint}</div>
+      )}
+    </div>
+  );
+}
+
+function SellerStatsPanel({ stats }: { stats: SellerStats }) {
+  return (
+    <section
+      style={{
+        marginBottom: "var(--s-7)",
+        padding: "var(--s-5) var(--s-6)",
+        background: "var(--surface-sunken)",
+        border: "1px solid var(--hairline)",
+        borderRadius: 14,
+      }}
+    >
+      <h2
+        style={{
+          fontFamily: "var(--font-display)",
+          fontSize: "var(--t-h3)",
+          margin: "0 0 var(--s-3)",
+          color: "var(--ink-1)",
+        }}
+      >
+        Your stats
+      </h2>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+          gap: "var(--s-3)",
+        }}
+      >
+        <StatTile
+          value={stats.activeListings}
+          label="Active listings"
+          hint={
+            stats.soldListings > 0
+              ? `${stats.soldListings} sold`
+              : undefined
+          }
+        />
+        <StatTile
+          value={stats.viewsLast7}
+          label="Views (7 days)"
+          hint={`${stats.totalViews} all-time`}
+        />
+        <StatTile
+          value={stats.uniqueViewers}
+          label="Unique viewers"
+        />
+        <StatTile
+          value={stats.conversations}
+          label="Buyer conversations"
+        />
+        <StatTile
+          value={stats.openOffers}
+          label="Open offers"
+        />
+      </div>
+
+      {stats.topListing && stats.topListing.views7 > 0 && (
+        <Link
+          href={`/listings/${stats.topListing.id}`}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--s-3)",
+            marginTop: "var(--s-4)",
+            padding: "10px 12px",
+            background: "var(--surface)",
+            border: "1px solid var(--hairline)",
+            borderRadius: 10,
+            textDecoration: "none",
+            color: "var(--ink-1)",
+          }}
+        >
+          {stats.topListing.primary_image_id && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={`/api/listings/${stats.topListing.id}/images/${stats.topListing.primary_image_id}`}
+              alt=""
+              style={{
+                width: 40,
+                height: 53,
+                objectFit: "cover",
+                borderRadius: 6,
+                background: "var(--surface-sunken)",
+              }}
+            />
+          )}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div
+              style={{
+                fontFamily: "var(--font-mono)",
+                fontSize: 10,
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                color: "var(--ink-3)",
+              }}
+            >
+              Top listing this week
+            </div>
+            <div
+              style={{
+                fontWeight: 700,
+                fontSize: 14,
+                color: "var(--ink-1)",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {stats.topListing.title}
+            </div>
+            <div style={{ fontSize: 12, color: "var(--ink-3)" }}>
+              {stats.topListing.views7} views in the last 7 days
+            </div>
+          </div>
+          <span aria-hidden style={{ color: "var(--ink-3)" }}>
+            →
+          </span>
+        </Link>
+      )}
+    </section>
   );
 }

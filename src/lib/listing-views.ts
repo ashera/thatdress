@@ -109,3 +109,133 @@ export async function getListingStats(
     return { total: 0, last7: 0, uniqueViewers: 0 };
   }
 }
+
+export type SellerStats = {
+  /** Live listings the seller has on the marketplace right now. */
+  activeListings: number;
+  /** Listings already marked sold. */
+  soldListings: number;
+  /** Total page-views across every listing the seller has ever had. */
+  totalViews: number;
+  /** Page-views in the last 7 days. */
+  viewsLast7: number;
+  /** Distinct viewers (signed-in user id, or hashed IP for guests). */
+  uniqueViewers: number;
+  /** Conversations buyers have started with the seller. */
+  conversations: number;
+  /** Open offers waiting on the seller. */
+  openOffers: number;
+  /** Top-performing live listing by 7-day views. */
+  topListing: {
+    id: string;
+    title: string;
+    views7: number;
+    primary_image_id: string | null;
+  } | null;
+};
+
+export async function getSellerStats(userId: string): Promise<SellerStats> {
+  const empty: SellerStats = {
+    activeListings: 0,
+    soldListings: 0,
+    totalViews: 0,
+    viewsLast7: 0,
+    uniqueViewers: 0,
+    conversations: 0,
+    openOffers: 0,
+    topListing: null,
+  };
+  if (!/^\d+$/.test(userId)) return empty;
+
+  try {
+    // Single round-trip for the headline counters. listing_views joins
+    // back to listings to filter by seller; subqueries on listings give
+    // us the active/sold counts without a separate query.
+    const head = await query<{
+      active_listings: string;
+      sold_listings: string;
+      total_views: string;
+      views_last7: string;
+      unique_viewers: string;
+      conversations: string;
+      open_offers: string;
+    }>(
+      `SELECT
+        (SELECT COUNT(*)::text FROM listings
+            WHERE seller_id = $1::bigint
+              AND is_draft = FALSE
+              AND is_published = TRUE
+              AND sold_at IS NULL)                        AS active_listings,
+        (SELECT COUNT(*)::text FROM listings
+            WHERE seller_id = $1::bigint
+              AND sold_at IS NOT NULL)                     AS sold_listings,
+        (SELECT COUNT(*)::text FROM listing_views v
+            JOIN listings l ON l.id = v.listing_id
+            WHERE l.seller_id = $1::bigint)                AS total_views,
+        (SELECT COUNT(*)::text FROM listing_views v
+            JOIN listings l ON l.id = v.listing_id
+            WHERE l.seller_id = $1::bigint
+              AND v.viewed_at > NOW() - INTERVAL '7 days') AS views_last7,
+        (SELECT COUNT(DISTINCT COALESCE(v.viewer_id::text, v.ip_hash))::text
+            FROM listing_views v
+            JOIN listings l ON l.id = v.listing_id
+            WHERE l.seller_id = $1::bigint)                AS unique_viewers,
+        (SELECT COUNT(*)::text FROM conversations c
+            JOIN listings l ON l.id = c.listing_id
+            WHERE l.seller_id = $1::bigint)                AS conversations,
+        (SELECT COUNT(*)::text FROM offers o
+            JOIN listings l ON l.id = o.listing_id
+            WHERE l.seller_id = $1::bigint
+              AND o.status = 'pending')                    AS open_offers`,
+      [userId],
+    );
+    const row = head.rows[0];
+
+    // Top live listing by 7-day views — only listings still on sale.
+    const top = await query<{
+      id: string;
+      title: string;
+      views7: string;
+      primary_image_id: string | null;
+    }>(
+      `SELECT l.id::text,
+              l.title,
+              COUNT(v.id) FILTER (WHERE v.viewed_at > NOW() - INTERVAL '7 days')::text AS views7,
+              (SELECT li.id::text FROM listing_images li
+                  WHERE li.listing_id = l.id
+                  ORDER BY li.is_primary DESC, li.position, li.id
+                  LIMIT 1) AS primary_image_id
+         FROM listings l
+         LEFT JOIN listing_views v ON v.listing_id = l.id
+        WHERE l.seller_id = $1::bigint
+          AND l.is_draft = FALSE
+          AND l.is_published = TRUE
+          AND l.sold_at IS NULL
+        GROUP BY l.id, l.title
+        ORDER BY views7 DESC, l.created_at DESC
+        LIMIT 1`,
+      [userId],
+    );
+    const t = top.rows[0];
+
+    return {
+      activeListings: Number(row?.active_listings ?? 0),
+      soldListings: Number(row?.sold_listings ?? 0),
+      totalViews: Number(row?.total_views ?? 0),
+      viewsLast7: Number(row?.views_last7 ?? 0),
+      uniqueViewers: Number(row?.unique_viewers ?? 0),
+      conversations: Number(row?.conversations ?? 0),
+      openOffers: Number(row?.open_offers ?? 0),
+      topListing: t
+        ? {
+            id: t.id,
+            title: t.title,
+            views7: Number(t.views7 ?? 0),
+            primary_image_id: t.primary_image_id,
+          }
+        : null,
+    };
+  } catch {
+    return empty;
+  }
+}
