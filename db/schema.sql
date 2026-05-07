@@ -76,7 +76,28 @@ ALTER TABLE users
   ADD COLUMN IF NOT EXISTS town              TEXT,
   ADD COLUMN IF NOT EXISTS postcode          TEXT,
   ADD COLUMN IF NOT EXISTS suspended_at      TIMESTAMPTZ,
-  ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMPTZ;
+  ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMPTZ,
+  -- Referral programme. Every user gets a personal referral_code they
+  -- can share — friends who arrive via /?ref=<code> and then sign up
+  -- get this user's id stored as referred_by_user_id, so we can credit
+  -- the referrer when the friend creates a verified listing.
+  ADD COLUMN IF NOT EXISTS referral_code        TEXT,
+  ADD COLUMN IF NOT EXISTS referred_by_user_id  BIGINT REFERENCES users(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS referred_at          TIMESTAMPTZ;
+
+CREATE UNIQUE INDEX IF NOT EXISTS users_referral_code_idx
+  ON users (referral_code) WHERE referral_code IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS users_referred_by_idx
+  ON users (referred_by_user_id) WHERE referred_by_user_id IS NOT NULL;
+
+-- Backfill referral_code for accounts that pre-date the column. MD5
+-- of (id || email) is deterministic, easy to express in pure SQL, and
+-- collision-resistant (email is itself UNIQUE), so each user gets a
+-- unique 8-char code without needing a server-side loop.
+UPDATE users
+   SET referral_code = UPPER(SUBSTRING(MD5(id::text || email) FROM 1 FOR 8))
+ WHERE referral_code IS NULL;
 
 CREATE TABLE IF NOT EXISTS sessions (
   id          TEXT         PRIMARY KEY,

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { updateProfile } from "@/lib/actions/auth";
@@ -71,6 +72,27 @@ export default async function ProfilePage({
               Not verified
             </span>
           )}
+        </p>
+        <p
+          style={{
+            color: "var(--ink-2)",
+            margin: "0 0 var(--s-5)",
+            fontSize: 14,
+          }}
+        >
+          Got a friend with great dresses sitting in the back of a
+          wardrobe?{" "}
+          <Link
+            href="/profile/refer"
+            style={{
+              color: "var(--ink-1)",
+              textDecoration: "underline",
+              textDecorationColor: "var(--hairline-strong)",
+              textUnderlineOffset: 3,
+            }}
+          >
+            Get your referral link →
+          </Link>
         </p>
         {!user.emailVerified && (
           <p

@@ -20,6 +20,11 @@ const ADMIN_LINKS: Array<{ href: string; title: string; desc: string }> = [
     desc: "View accounts, edit profiles, suspend, and DM users directly.",
   },
   {
+    href: "/admin/referrals",
+    title: "Referrals",
+    desc: "See who's referring whom, and how many of those referrals have led to Verified listings.",
+  },
+  {
     href: "/admin/tickets",
     title: "Support Tickets",
     desc: "Triage open tickets and reply to users.",

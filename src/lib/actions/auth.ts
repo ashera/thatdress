@@ -1,5 +1,6 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { query } from "@/lib/db";
@@ -11,6 +12,11 @@ import {
   verifyPassword,
 } from "@/lib/auth";
 import { dispatchVerificationEmail } from "@/lib/email-verify";
+import {
+  ensureReferralCode,
+  findReferrerByCode,
+  REFERRAL_COOKIE,
+} from "@/lib/referral";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -44,11 +50,20 @@ export async function register(formData: FormData): Promise<void> {
 
   const password_hash = await hashPassword(password);
 
+  // Resolve any active ?ref= cookie into a referrer user id BEFORE
+  // we INSERT, so we can stamp referred_by_user_id and referred_at in
+  // the same row write.
+  const cookieStore = await cookies();
+  const refCode = cookieStore.get(REFERRAL_COOKIE)?.value ?? null;
+  const referrerId = refCode ? await findReferrerByCode(refCode) : null;
+
   let userId: string;
   try {
     const result = await query<{ id: string }>(
-      "INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING id::text",
-      [email, password_hash],
+      `INSERT INTO users (email, password_hash, referred_by_user_id, referred_at)
+         VALUES ($1, $2, $3::bigint, CASE WHEN $3 IS NULL THEN NULL ELSE NOW() END)
+         RETURNING id::text`,
+      [email, password_hash, referrerId],
     );
     userId = result.rows[0]!.id;
   } catch (err) {
@@ -57,6 +72,17 @@ export async function register(formData: FormData): Promise<void> {
       redirect("/register?error=email-taken");
     }
     throw err;
+  }
+
+  // Issue the new user their own referral code right away so the
+  // /profile/refer page has something to show on first visit.
+  await ensureReferralCode(userId);
+
+  // Burn the cookie now that we've credited the referrer — re-using
+  // the same code for an unrelated future signup on the same browser
+  // would be wrong attribution.
+  if (referrerId) {
+    cookieStore.delete(REFERRAL_COOKIE);
   }
 
   await createSession(userId);
