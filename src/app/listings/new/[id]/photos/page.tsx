@@ -423,7 +423,7 @@ function SlotPanel({
       >
         <input type="hidden" name="listingId" value={listingId} />
         <input type="hidden" name="role" value={slot.role} />
-        <SlotUploadButton hasExisting={!!existing} />
+        <SlotUploadButton hasExisting={!!existing} showCamera />
       </form>
     </div>
   );

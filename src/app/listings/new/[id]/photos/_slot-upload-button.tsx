@@ -3,14 +3,17 @@
 import { useRef, useState } from "react";
 
 /**
- * Single-click upload trigger. Renders a hidden file input plus a
- * visible button; clicking the button opens the native file picker,
- * and selecting a file (or files) submits the surrounding form
- * immediately. No separate 'Upload' tap required.
+ * Single-click upload trigger. Renders a hidden file input plus one
+ * or two visible buttons; clicking the button opens the native file
+ * picker (or camera, on mobile, when showCamera is set) and selecting
+ * a file submits the surrounding form immediately. No separate
+ * 'Upload' tap required.
  *
  * Used both for the four verification slot panels (single file,
- * name="image") and the extras uploader at the bottom of the card
- * (multi-file, name="images") — the props let either form opt in.
+ * name="image", with the camera shortcut enabled) and the extras
+ * uploader at the bottom of the card (multi-file, name="images",
+ * camera disabled — capture+multiple is awkward UX). The props let
+ * each form opt in.
  */
 export function SlotUploadButton({
   hasExisting = false,
@@ -18,6 +21,7 @@ export function SlotUploadButton({
   inputName = "image",
   label,
   variant,
+  showCamera = false,
 }: {
   /** Slot already has a photo — flips the default label to "Replace photo"
    *  and the styling to ghost. Ignored when `label` / `variant` set explicitly. */
@@ -31,6 +35,10 @@ export function SlotUploadButton({
   label?: string;
   /** Override the auto-derived button styling. */
   variant?: "primary" | "ghost";
+  /** Render a sibling 'Take photo' button that opens the rear camera
+   *  directly on mobile. Falls back to the regular file picker on
+   *  desktop, where the `capture` attribute is ignored by browsers. */
+  showCamera?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -39,7 +47,7 @@ export function SlotUploadButton({
     label ?? (hasExisting ? "Replace photo" : "Upload photo");
   const resolvedVariant: "primary" | "ghost" =
     variant ?? (hasExisting ? "ghost" : "primary");
-  const buttonStyle =
+  const primaryStyle =
     resolvedVariant === "ghost"
       ? {
           background: "transparent",
@@ -51,6 +59,26 @@ export function SlotUploadButton({
           color: "#fff",
           border: "1px solid var(--ink-1)",
         };
+  const ghostStyle = {
+    background: "transparent",
+    color: "var(--ink-2)",
+    border: "1px solid var(--hairline-strong)",
+  };
+
+  function trigger(useCamera: boolean) {
+    const input = inputRef.current;
+    if (!input) return;
+    // Toggle the capture attribute right before opening the picker so
+    // a single hidden input serves both flows. 'environment' = rear
+    // camera; mobile browsers open the camera UI directly. Desktop
+    // browsers ignore capture and behave like a normal file picker.
+    if (useCamera) {
+      input.setAttribute("capture", "environment");
+    } else {
+      input.removeAttribute("capture");
+    }
+    input.click();
+  }
 
   return (
     <>
@@ -72,22 +100,46 @@ export function SlotUploadButton({
           e.currentTarget.form?.requestSubmit();
         }}
       />
-      <button
-        type="button"
-        disabled={submitting}
-        onClick={() => inputRef.current?.click()}
-        style={{
-          padding: "6px 14px",
-          borderRadius: 999,
-          fontWeight: 600,
-          fontSize: 13,
-          cursor: submitting ? "wait" : "pointer",
-          opacity: submitting ? 0.6 : 1,
-          ...buttonStyle,
-        }}
-      >
-        {submitting ? "Uploading…" : resolvedLabel}
-      </button>
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+        <button
+          type="button"
+          disabled={submitting}
+          onClick={() => trigger(false)}
+          style={{
+            padding: "6px 14px",
+            borderRadius: 999,
+            fontWeight: 600,
+            fontSize: 13,
+            cursor: submitting ? "wait" : "pointer",
+            opacity: submitting ? 0.6 : 1,
+            ...primaryStyle,
+          }}
+        >
+          {submitting ? "Uploading…" : resolvedLabel}
+        </button>
+        {showCamera && (
+          <button
+            type="button"
+            disabled={submitting}
+            onClick={() => trigger(true)}
+            title="Open the camera to take this photo now"
+            style={{
+              padding: "6px 12px",
+              borderRadius: 999,
+              fontWeight: 600,
+              fontSize: 13,
+              cursor: submitting ? "wait" : "pointer",
+              opacity: submitting ? 0.6 : 1,
+              ...ghostStyle,
+            }}
+          >
+            <span aria-hidden style={{ marginRight: 4 }}>
+              📷
+            </span>
+            Take photo
+          </button>
+        )}
+      </div>
     </>
   );
 }
