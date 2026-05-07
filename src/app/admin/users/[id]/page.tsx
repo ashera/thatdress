@@ -8,7 +8,17 @@ import {
   toggleUserSuspended,
   updateUserAsAdmin,
 } from "@/lib/actions/users";
+import { listReferredUsers } from "@/lib/referral";
+import { loadSiteSettings } from "@/lib/site-settings";
 import { Button, Field, Input, Textarea } from "../../../_components/ui";
+
+function priceLabel(cents: number): string {
+  return new Intl.NumberFormat("en-AU", {
+    style: "currency",
+    currency: "AUD",
+    maximumFractionDigits: cents % 100 === 0 ? 0 : 2,
+  }).format(cents / 100);
+}
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +44,10 @@ type UserRow = {
   postcode: string | null;
   listing_count: string;
   conversation_count: string;
+  referral_code: string | null;
+  referred_at: string | null;
+  referrer_id: string | null;
+  referrer_email: string | null;
 };
 
 function formatDate(s: string | null): string {
@@ -77,16 +91,35 @@ export default async function AdminUserDetailPage({
             u.surname,
             u.town,
             u.postcode,
+            u.referral_code,
+            u.referred_at::text,
+            u.referred_by_user_id::text AS referrer_id,
+            ru.email                    AS referrer_email,
             (SELECT COUNT(*)::text FROM listings WHERE seller_id = u.id) AS listing_count,
             (SELECT COUNT(*)::text FROM conversations
               WHERE buyer_id = u.id OR seller_id = u.id) AS conversation_count
        FROM users u
+       LEFT JOIN users ru ON ru.id = u.referred_by_user_id
       WHERE u.id = $1::bigint
       LIMIT 1`,
     [id],
   );
   const user = result.rows[0];
   if (!user) notFound();
+
+  // Referral programme info — both who they were referred by, and who
+  // they've referred. Loaded in parallel with site settings so we can
+  // multiply through to per-row earnings.
+  const [referred, settings] = await Promise.all([
+    listReferredUsers(user.id),
+    loadSiteSettings(),
+  ]);
+  const commissionCents = settings.referralCommissionCents;
+  const verifiedListings = referred.reduce(
+    (sum, r) => sum + r.verified_listing_count,
+    0,
+  );
+  const earnedCents = verifiedListings * commissionCents;
 
   const isMe = user.id === me.id;
   const isSuspended = !!user.suspended_at;
@@ -137,6 +170,237 @@ export default async function AdminUserDetailPage({
           <dt>Conversations</dt>
           <dd>{user.conversation_count}</dd>
         </div>
+      </section>
+
+      <section className="form-card" style={{ marginBottom: "var(--s-5)" }}>
+        <h2 className="card-heading">Referrals</h2>
+        <div className="kv-list">
+          <dt>Their referral code</dt>
+          <dd>
+            {user.referral_code ? (
+              <span
+                style={{
+                  fontFamily: "var(--font-mono)",
+                  letterSpacing: "0.08em",
+                }}
+              >
+                {user.referral_code}
+              </span>
+            ) : (
+              <span style={{ color: "var(--ink-4)" }}>(not generated)</span>
+            )}
+          </dd>
+          <dt>Referred by</dt>
+          <dd>
+            {user.referrer_id && user.referrer_email ? (
+              <Link
+                href={`/admin/users/${user.referrer_id}`}
+                style={{
+                  color: "var(--ink-1)",
+                  textDecoration: "underline",
+                  textDecorationColor: "var(--hairline-strong)",
+                  textUnderlineOffset: 3,
+                }}
+              >
+                {user.referrer_email}
+              </Link>
+            ) : (
+              <span style={{ color: "var(--ink-4)" }}>—</span>
+            )}
+          </dd>
+          <dt>Referrals signed up</dt>
+          <dd>{referred.length}</dd>
+          <dt>Verified listings from referrals</dt>
+          <dd>{verifiedListings}</dd>
+          <dt>Outstanding commission</dt>
+          <dd>{priceLabel(earnedCents)}</dd>
+        </div>
+
+        {referred.length > 0 ? (
+          <div
+            style={{
+              marginTop: "var(--s-4)",
+              border: "1px solid var(--hairline)",
+              borderRadius: 10,
+              overflow: "hidden",
+              background: "var(--surface)",
+            }}
+          >
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                fontSize: 13,
+              }}
+            >
+              <thead
+                style={{
+                  background: "var(--surface-sunken)",
+                  borderBottom: "1px solid var(--hairline)",
+                }}
+              >
+                <tr>
+                  <th
+                    style={{
+                      padding: "10px 12px",
+                      textAlign: "left",
+                      fontFamily: "var(--font-mono)",
+                      fontSize: 10,
+                      letterSpacing: "0.12em",
+                      textTransform: "uppercase",
+                      color: "var(--ink-3)",
+                    }}
+                  >
+                    Referred user
+                  </th>
+                  <th
+                    style={{
+                      padding: "10px 12px",
+                      textAlign: "left",
+                      fontFamily: "var(--font-mono)",
+                      fontSize: 10,
+                      letterSpacing: "0.12em",
+                      textTransform: "uppercase",
+                      color: "var(--ink-3)",
+                      width: 120,
+                    }}
+                  >
+                    Joined
+                  </th>
+                  <th
+                    style={{
+                      padding: "10px 12px",
+                      textAlign: "right",
+                      fontFamily: "var(--font-mono)",
+                      fontSize: 10,
+                      letterSpacing: "0.12em",
+                      textTransform: "uppercase",
+                      color: "var(--ink-3)",
+                      width: 90,
+                    }}
+                  >
+                    Listings
+                  </th>
+                  <th
+                    style={{
+                      padding: "10px 12px",
+                      textAlign: "right",
+                      fontFamily: "var(--font-mono)",
+                      fontSize: 10,
+                      letterSpacing: "0.12em",
+                      textTransform: "uppercase",
+                      color: "var(--ink-3)",
+                      width: 90,
+                    }}
+                  >
+                    Verified
+                  </th>
+                  <th
+                    style={{
+                      padding: "10px 12px",
+                      textAlign: "right",
+                      fontFamily: "var(--font-mono)",
+                      fontSize: 10,
+                      letterSpacing: "0.12em",
+                      textTransform: "uppercase",
+                      color: "var(--ink-3)",
+                      width: 110,
+                    }}
+                  >
+                    Earned
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {referred.map((r, i) => {
+                  const earned = r.verified_listing_count * commissionCents;
+                  return (
+                    <tr
+                      key={r.id}
+                      className="admin-listings-row"
+                      style={{
+                        borderBottom:
+                          i === referred.length - 1
+                            ? "none"
+                            : "1px solid var(--hairline)",
+                      }}
+                    >
+                      <td style={{ padding: "10px 12px" }}>
+                        <Link
+                          href={`/admin/users/${r.id}`}
+                          style={{
+                            fontWeight: 600,
+                            color: "var(--ink-1)",
+                            textDecoration: "underline",
+                            textDecorationColor:
+                              "var(--hairline-strong)",
+                            textUnderlineOffset: 3,
+                          }}
+                        >
+                          {r.email}
+                        </Link>
+                      </td>
+                      <td
+                        style={{
+                          padding: "10px 12px",
+                          fontSize: 12,
+                          color: "var(--ink-3)",
+                        }}
+                      >
+                        {formatDate(r.signed_up_at)}
+                      </td>
+                      <td
+                        style={{
+                          padding: "10px 12px",
+                          textAlign: "right",
+                          fontVariantNumeric: "tabular-nums",
+                        }}
+                      >
+                        {r.listing_count}
+                      </td>
+                      <td
+                        style={{
+                          padding: "10px 12px",
+                          textAlign: "right",
+                          fontVariantNumeric: "tabular-nums",
+                          fontWeight: 600,
+                          color:
+                            r.verified_listing_count > 0
+                              ? "#92400e"
+                              : "var(--ink-4)",
+                        }}
+                      >
+                        {r.verified_listing_count}
+                      </td>
+                      <td
+                        style={{
+                          padding: "10px 12px",
+                          textAlign: "right",
+                          fontVariantNumeric: "tabular-nums",
+                          fontWeight: 600,
+                          color:
+                            earned > 0 ? "var(--ink-1)" : "var(--ink-4)",
+                        }}
+                      >
+                        {priceLabel(earned)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p
+            style={{
+              marginTop: "var(--s-3)",
+              color: "var(--ink-3)",
+              fontSize: 14,
+            }}
+          >
+            This user hasn&rsquo;t referred anyone yet.
+          </p>
+        )}
       </section>
 
       <section className="form-card" style={{ marginBottom: "var(--s-5)" }}>
