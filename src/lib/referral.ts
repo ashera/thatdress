@@ -84,13 +84,16 @@ export type ReferredUser = {
   id: string;
   email: string;
   signed_up_at: string;
-  has_verified_listing: boolean;
+  /** All non-draft listings the referred user has on file. */
   listing_count: number;
+  /** Count of those listings currently in trust_status='verified' —
+   *  the multiplier applied to the per-listing commission rate. */
+  verified_listing_count: number;
 };
 
-/** All users who signed up with the given referrer's code, plus
- *  whether each one has at least one verified listing — the
- *  reward-trigger condition. */
+/** All users who signed up with the given referrer's code, with the
+ *  per-user listing counts the dashboard uses to compute per-row
+ *  commission. */
 export async function listReferredUsers(
   referrerId: string,
 ): Promise<ReferredUser[]> {
@@ -121,33 +124,33 @@ export async function listReferredUsers(
     id: row.id,
     email: row.email,
     signed_up_at: row.signed_up_at,
-    has_verified_listing: Number(row.verified_count ?? 0) > 0,
     listing_count: Number(row.listing_count ?? 0),
+    verified_listing_count: Number(row.verified_count ?? 0),
   }));
 }
 
 export type ReferralSummary = {
   totalReferred: number;
-  withVerifiedListing: number;
+  /** Total Verified listings across every referred user — the
+   *  per-listing earnings multiplier. */
+  totalVerifiedListings: number;
 };
 
 export async function getReferralSummary(
   referrerId: string,
 ): Promise<ReferralSummary> {
   if (!/^\d+$/.test(referrerId)) {
-    return { totalReferred: 0, withVerifiedListing: 0 };
+    return { totalReferred: 0, totalVerifiedListings: 0 };
   }
-  const r = await query<{ total: string; verified: string }>(
+  const r = await query<{ total: string; verified_listings: string }>(
     `SELECT
-        COUNT(*)::text AS total,
-        COUNT(*) FILTER (
-          WHERE EXISTS (
-            SELECT 1 FROM listings
-              WHERE seller_id = u.id
-                AND trust_status = 'verified'
-                AND is_draft = FALSE
-          )
-        )::text AS verified
+        COUNT(DISTINCT u.id)::text AS total,
+        COALESCE(SUM(
+          (SELECT COUNT(*) FROM listings
+             WHERE seller_id = u.id
+               AND trust_status = 'verified'
+               AND is_draft = FALSE)
+        ), 0)::text AS verified_listings
        FROM users u
       WHERE u.referred_by_user_id = $1::bigint`,
     [referrerId],
@@ -155,6 +158,6 @@ export async function getReferralSummary(
   const row = r.rows[0];
   return {
     totalReferred: Number(row?.total ?? 0),
-    withVerifiedListing: Number(row?.verified ?? 0),
+    totalVerifiedListings: Number(row?.verified_listings ?? 0),
   };
 }

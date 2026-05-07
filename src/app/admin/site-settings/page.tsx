@@ -174,12 +174,12 @@ export default async function SiteSettingsPage({
         <section className="form-card" style={{ marginTop: "var(--s-5)" }}>
           <h2 className="card-heading">Referral commission</h2>
           <p className="card-sub">
-            Per-friend payout to the referrer once each person they
-            referred has posted at least one Verified listing.
-            One-time per referred friend — multiple Verified listings
-            from the same friend earn the commission once. Set to{" "}
-            <code>0</code> to pause payouts; the dashboard will still
-            track referrals but show $0 earnings.
+            Per-listing payout to the referrer for{" "}
+            <strong>every</strong> Verified listing a referred user
+            posts. A friend who lists five Verified dresses earns the
+            referrer five commissions. Set to <code>0</code> to pause
+            payouts; the dashboard will still track referrals but show
+            $0 earnings.
           </p>
           <p className="card-sub">
             Commission uses the <em>current</em> rate when a referrer
@@ -189,7 +189,7 @@ export default async function SiteSettingsPage({
           </p>
 
           <Field
-            label="Commission per Verified-listing referral (AUD)"
+            label="Commission per Verified listing (AUD)"
             htmlFor="referral_commission_dollars"
             help="Whole dollars or decimals — '25', '25.00', or '12.50'."
           >

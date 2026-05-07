@@ -62,9 +62,15 @@ export default async function ReferPage() {
     listReferredUsers(user.id),
     loadSiteSettings(),
   ]);
-  const verifiedCount = referred.filter((r) => r.has_verified_listing).length;
+  const verifiedListings = referred.reduce(
+    (sum, r) => sum + r.verified_listing_count,
+    0,
+  );
+  const friendsWhoListed = referred.filter(
+    (r) => r.verified_listing_count > 0,
+  ).length;
   const commissionCents = settings.referralCommissionCents;
-  const earnedCents = commissionCents * verifiedCount;
+  const earnedCents = commissionCents * verifiedListings;
 
   return (
     <div className="page page--pad">
@@ -99,10 +105,11 @@ export default async function ReferPage() {
               lineHeight: 1.55,
             }}
           >
-            Send them your link. When they sign up and post a Verified
-            listing, you earn a referrer reward. Frockd&rsquo;s
-            inventory grows, your friend&rsquo;s wardrobe shrinks, and
-            you get something for the introduction.
+            Send them your link. You earn a commission for{" "}
+            <strong>every Verified listing</strong> they post — five
+            dresses, five commissions. Frockd&rsquo;s inventory grows,
+            your friend&rsquo;s wardrobe shrinks, and you get something
+            for the introduction.
           </p>
         </header>
 
@@ -177,22 +184,26 @@ export default async function ReferPage() {
               marginBottom: referred.length > 0 ? "var(--s-5)" : 0,
             }}
           >
-            <StatTile value={referred.length} label="Friends signed up" />
             <StatTile
-              value={verifiedCount}
-              label="Verified listings"
+              value={referred.length}
+              label="Friends signed up"
               hint={
-                referred.length > 0 && verifiedCount < referred.length
-                  ? `${referred.length - verifiedCount} still listing`
+                friendsWhoListed > 0
+                  ? `${friendsWhoListed} listing Verified dresses`
                   : undefined
               }
+            />
+            <StatTile
+              value={verifiedListings}
+              label="Verified listings"
+              hint="Total dresses listed by your referrals"
             />
             <StatTile
               value={priceLabel(earnedCents)}
               label="Earned to date"
               hint={
                 commissionCents > 0
-                  ? `${priceLabel(commissionCents)} per Verified referral`
+                  ? `${priceLabel(commissionCents)} per Verified listing`
                   : "Commission rate not yet set"
               }
             />
@@ -258,7 +269,7 @@ export default async function ReferPage() {
                       {r.listing_count === 1 ? "listing" : "listings"}
                     </div>
                   </div>
-                  {r.has_verified_listing ? (
+                  {r.verified_listing_count > 0 ? (
                     <div
                       style={{
                         flex: "0 0 auto",
@@ -284,7 +295,7 @@ export default async function ReferPage() {
                           whiteSpace: "nowrap",
                         }}
                       >
-                        ✓ Verified
+                        ✓ {r.verified_listing_count} Verified
                       </span>
                       {commissionCents > 0 && (
                         <span
@@ -295,7 +306,10 @@ export default async function ReferPage() {
                             fontWeight: 600,
                           }}
                         >
-                          +{priceLabel(commissionCents)}
+                          +
+                          {priceLabel(
+                            commissionCents * r.verified_listing_count,
+                          )}
                         </span>
                       )}
                     </div>

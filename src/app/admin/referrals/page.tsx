@@ -19,30 +19,32 @@ type Row = {
   referrer_email: string;
   referral_code: string | null;
   referred_total: string;
-  referred_with_verified: string;
+  /** Total Verified listings across every referred user — what
+   *  the per-listing commission multiplies against. */
+  verified_listings: string;
   latest_referral_at: string | null;
 };
 
 async function fetchReferrers(): Promise<Row[]> {
   try {
     const r = await query<Row>(
-      `SELECT u.id::text                                                    AS referrer_id,
-              u.email                                                       AS referrer_email,
+      `SELECT u.id::text                                                  AS referrer_id,
+              u.email                                                     AS referrer_email,
               u.referral_code,
-              COUNT(r.id)::text                                             AS referred_total,
-              COUNT(*) FILTER (
-                WHERE EXISTS (
-                  SELECT 1 FROM listings l
-                    WHERE l.seller_id = r.id
-                      AND l.trust_status = 'verified'
-                      AND l.is_draft = FALSE
-                )
-              )::text                                                       AS referred_with_verified,
-              MAX(COALESCE(r.referred_at, r.created_at))::text              AS latest_referral_at
+              COUNT(r.id)::text                                           AS referred_total,
+              COALESCE(SUM(
+                (SELECT COUNT(*) FROM listings l
+                   WHERE l.seller_id = r.id
+                     AND l.trust_status = 'verified'
+                     AND l.is_draft = FALSE)
+              ), 0)::text                                                 AS verified_listings,
+              MAX(COALESCE(r.referred_at, r.created_at))::text            AS latest_referral_at
          FROM users u
          JOIN users r ON r.referred_by_user_id = u.id
         GROUP BY u.id, u.email, u.referral_code
-        ORDER BY COUNT(r.id) DESC, MAX(COALESCE(r.referred_at, r.created_at)) DESC
+        ORDER BY verified_listings DESC,
+                 COUNT(r.id) DESC,
+                 MAX(COALESCE(r.referred_at, r.created_at)) DESC
         LIMIT 200`,
     );
     return r.rows;
@@ -75,12 +77,12 @@ export default async function AdminReferralsPage() {
   const totals = rows.reduce(
     (acc, r) => {
       acc.referred += Number(r.referred_total);
-      acc.verified += Number(r.referred_with_verified);
+      acc.verifiedListings += Number(r.verified_listings);
       return acc;
     },
-    { referred: 0, verified: 0 },
+    { referred: 0, verifiedListings: 0 },
   );
-  const totalEarnedCents = totals.verified * commissionCents;
+  const totalEarnedCents = totals.verifiedListings * commissionCents;
 
   return (
     <div className="page admin-page" style={{ maxWidth: 1024 }}>
@@ -92,10 +94,11 @@ export default async function AdminReferralsPage() {
         <p className="eyebrow">Admin · Referrals</p>
         <h1>Referrals</h1>
         <p className="sub">
-          Active referrers ranked by total people referred. The
-          &lsquo;Verified&rsquo; column shows how many of those people
-          have at least one Verified listing — that&rsquo;s the
-          reward-trigger condition.
+          Active referrers ranked by total Verified listings their
+          referrals have posted — the per-listing payout multiplier.
+          One commission is owed for <em>every</em> Verified listing,
+          so a referred seller listing five Verified dresses earns
+          five commissions for the referrer.
         </p>
       </header>
 
@@ -113,17 +116,17 @@ export default async function AdminReferralsPage() {
         />
         <SummaryTile value={totals.referred} label="Total referrals" />
         <SummaryTile
-          value={totals.verified}
-          label="Reward-eligible referrals"
-          hint="Referred users with ≥1 Verified listing"
+          value={totals.verifiedListings}
+          label="Verified listings"
+          hint="Across all referred users — payout multiplier"
         />
         <SummaryTile
           value={priceLabel(totalEarnedCents)}
           label="Outstanding commission"
           hint={
             commissionCents > 0
-              ? `${priceLabel(commissionCents)} per Verified referral · `
-              : "Commission rate is currently $0 — "
+              ? `${priceLabel(commissionCents)} per Verified listing`
+              : "Commission rate is currently $0"
           }
         />
       </div>
@@ -136,8 +139,8 @@ export default async function AdminReferralsPage() {
         }}
       >
         Commission rate is{" "}
-        <strong>{priceLabel(commissionCents)}</strong> per Verified-listing
-        referral. Adjust on{" "}
+        <strong>{priceLabel(commissionCents)}</strong> per Verified
+        listing. Adjust on{" "}
         <Link
           href="/admin/site-settings"
           style={{
@@ -311,12 +314,12 @@ export default async function AdminReferralsPage() {
                       fontVariantNumeric: "tabular-nums",
                       fontWeight: 600,
                       color:
-                        Number(row.referred_with_verified) > 0
+                        Number(row.verified_listings) > 0
                           ? "#92400e"
                           : "var(--ink-4)",
                     }}
                   >
-                    {row.referred_with_verified}
+                    {row.verified_listings}
                   </td>
                   <td
                     style={{
@@ -325,14 +328,14 @@ export default async function AdminReferralsPage() {
                       fontVariantNumeric: "tabular-nums",
                       fontWeight: 600,
                       color:
-                        Number(row.referred_with_verified) > 0 &&
+                        Number(row.verified_listings) > 0 &&
                         commissionCents > 0
                           ? "var(--ink-1)"
                           : "var(--ink-4)",
                     }}
                   >
                     {priceLabel(
-                      Number(row.referred_with_verified) * commissionCents,
+                      Number(row.verified_listings) * commissionCents,
                     )}
                   </td>
                   <td
