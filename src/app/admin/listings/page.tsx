@@ -54,13 +54,23 @@ async function fetchListings(opts: {
   search: string;
   sort: SortValue;
   status: StatusValue;
+  sellerId: string | null;
 }): Promise<Row[]> {
-  const { search, sort, status } = opts;
+  const { search, sort, status, sellerId } = opts;
   const sortSql =
     SORT_OPTIONS.find((o) => o.value === sort)?.sql ?? SORT_OPTIONS[0].sql;
 
   const params: unknown[] = [];
   const where: string[] = ["l.is_draft = FALSE"];
+
+  // Lock to a single seller when drilling in from the referrals
+  // detail page or user detail page. seller_id wins over the text
+  // search; the text search still applies on top so admins can
+  // filter the seller's catalogue by title etc.
+  if (sellerId && /^\d+$/.test(sellerId)) {
+    params.push(sellerId);
+    where.push(`l.seller_id = $${params.length}::bigint`);
+  }
 
   if (search.trim()) {
     params.push(`%${search.trim()}%`);
@@ -187,33 +197,65 @@ function StatusPill({
 export default async function AdminListingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; sort?: string; status?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    sort?: string;
+    status?: string;
+    seller_id?: string;
+  }>;
 }) {
   await requireAdmin();
   const sp = await searchParams;
   const search = (sp.q ?? "").slice(0, 200);
+  const sellerId =
+    sp.seller_id && /^\d+$/.test(sp.seller_id) ? sp.seller_id : null;
   const sort: SortValue =
     (SORT_OPTIONS.find((o) => o.value === sp.sort)?.value as SortValue) ??
-    "active";
+    (sellerId ? "newest" : "active");
+  // When scoped to a single seller, default to 'all' so the admin sees
+  // every listing the seller has — active, sold, and hidden together —
+  // unless they explicitly pick a narrower filter.
   const status: StatusValue =
     (STATUS_OPTIONS.find((o) => o.value === sp.status)?.value as StatusValue) ??
-    "convs";
+    (sellerId ? "all" : "convs");
 
-  const rows = await fetchListings({ search, sort, status });
+  // Resolve the seller's email so we can show context in the header.
+  let sellerEmail: string | null = null;
+  if (sellerId) {
+    const r = await query<{ email: string }>(
+      `SELECT email FROM users WHERE id = $1::bigint LIMIT 1`,
+      [sellerId],
+    );
+    sellerEmail = r.rows[0]?.email ?? null;
+  }
+
+  const rows = await fetchListings({ search, sort, status, sellerId });
 
   return (
     <div className="page admin-page" style={{ maxWidth: 1280 }}>
-      <Link href="/admin" className="back-link">
-        ← Admin console
+      <Link
+        href={sellerId ? "/admin/listings" : "/admin"}
+        className="back-link"
+      >
+        ← {sellerId ? "All listings" : "Admin console"}
       </Link>
 
       <header className="admin-header">
-        <p className="eyebrow">Admin · Listings</p>
-        <h1>All listings</h1>
+        <p className="eyebrow">
+          Admin · Listings{sellerId ? " · By seller" : ""}
+        </p>
+        <h1>
+          {sellerId
+            ? sellerEmail
+              ? `Listings by ${sellerEmail}`
+              : "Listings by this seller"
+            : "All listings"}
+        </h1>
         <p className="sub">
-          {rows.length} of up to 200 shown. Click any card to open the
-          listing — buyer conversations and offers appear inline on the
-          detail page for admins.
+          {rows.length} of up to 200 shown.{" "}
+          {sellerId
+            ? "Filtered to one seller; click any row to open the listing."
+            : "Click any card to open the listing — buyer conversations and offers appear inline on the detail page for admins."}
         </p>
       </header>
 
@@ -232,6 +274,9 @@ export default async function AdminListingsPage({
           border: "1px solid var(--hairline)",
         }}
       >
+        {sellerId && (
+          <input type="hidden" name="seller_id" value={sellerId} />
+        )}
         <label style={{ flex: "2 1 240px" }}>
           <span
             style={{
@@ -346,9 +391,16 @@ export default async function AdminListingsPage({
         >
           Apply
         </button>
-        {(search || sort !== "active" || status !== "convs") && (
+        {(search ||
+          (sellerId
+            ? sort !== "newest" || status !== "all"
+            : sort !== "active" || status !== "convs")) && (
           <Link
-            href="/admin/listings"
+            href={
+              sellerId
+                ? `/admin/listings?seller_id=${sellerId}`
+                : "/admin/listings"
+            }
             style={{
               alignSelf: "center",
               fontSize: 13,

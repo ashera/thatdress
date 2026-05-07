@@ -228,6 +228,7 @@ export default async function AdminReferrerDetailPage({
                 return (
                   <tr
                     key={r.id}
+                    className="admin-listings-row"
                     style={{
                       borderBottom:
                         i === referred.length - 1
@@ -236,14 +237,19 @@ export default async function AdminReferrerDetailPage({
                     }}
                   >
                     <td style={tdStyle}>
-                      <span
+                      <Link
+                        href={`/admin/listings?seller_id=${r.id}`}
+                        title="See this seller's listings"
                         style={{
                           fontWeight: 600,
                           color: "var(--ink-1)",
+                          textDecoration: "underline",
+                          textDecorationColor: "var(--hairline-strong)",
+                          textUnderlineOffset: 3,
                         }}
                       >
                         {r.email}
-                      </span>
+                      </Link>
                     </td>
                     <td
                       style={{
