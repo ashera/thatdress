@@ -2,9 +2,29 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
 import { query } from "@/lib/db";
 import { loadSiteSettings } from "@/lib/site-settings";
+import { setUserReferrer } from "@/lib/actions/referrals";
+import { Button, Field, Input } from "../../_components/ui";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Referrals — Admin" };
+
+const ATTRIBUTION_MESSAGES: Record<string, { ok: boolean; text: string }> = {
+  ok: { ok: true, text: "Attribution saved." },
+  cleared: { ok: true, text: "Attribution cleared." },
+  "missing-user": { ok: false, text: "User email is required." },
+  "user-not-found": {
+    ok: false,
+    text: "No user with that email — check the spelling.",
+  },
+  "referrer-not-found": {
+    ok: false,
+    text: "No referrer matches that email or code.",
+  },
+  "self-referral": {
+    ok: false,
+    text: "A user can't refer themselves.",
+  },
+};
 
 function priceLabel(cents: number): string {
   return new Intl.NumberFormat("en-AU", {
@@ -66,8 +86,16 @@ function formatDate(s: string | null): string {
   }
 }
 
-export default async function AdminReferralsPage() {
+export default async function AdminReferralsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ attributed?: string }>;
+}) {
   await requireAdmin();
+  const sp = await searchParams;
+  const attributionMessage = sp.attributed
+    ? ATTRIBUTION_MESSAGES[sp.attributed] ?? null
+    : null;
   const [rows, settings] = await Promise.all([
     fetchReferrers(),
     loadSiteSettings(),
@@ -353,6 +381,79 @@ export default async function AdminReferralsPage() {
           </table>
         </div>
       )}
+
+      <section
+        className="form-card"
+        style={{ marginTop: "var(--s-7)" }}
+      >
+        <h2 className="card-heading">Manually attribute a referral</h2>
+        <p className="card-sub">
+          Use this if a user signed up before clicking the right
+          referral link, or to fix any signup that came through during
+          the regex bug that dropped referrals with codes containing
+          0/1. Pass either an email or a referral code in the second
+          field — whichever you have. Leave the second field blank to
+          clear the existing attribution.
+        </p>
+
+        {attributionMessage && (
+          <p
+            className={
+              attributionMessage.ok ? "form-success" : "form-error"
+            }
+            style={{ margin: "var(--s-3) 0 var(--s-4)" }}
+          >
+            {attributionMessage.text}
+          </p>
+        )}
+
+        <form
+          action={setUserReferrer}
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "var(--s-3)",
+          }}
+        >
+          <Field
+            label="User to attribute"
+            htmlFor="user_email"
+            help="The email of the new user who was referred."
+          >
+            <Input
+              id="user_email"
+              name="user_email"
+              type="email"
+              required
+              maxLength={120}
+              placeholder="user@example.com"
+            />
+          </Field>
+          <Field
+            label="Referrer (email or code)"
+            htmlFor="referrer_lookup"
+            help="Whichever you have — either the referrer's email or their 8-char referral code. Leave blank to clear an existing attribution."
+          >
+            <Input
+              id="referrer_lookup"
+              name="referrer_lookup"
+              type="text"
+              maxLength={120}
+              placeholder="alex@example.com  or  ABC12345"
+            />
+          </Field>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+            }}
+          >
+            <Button type="submit" variant="primary" iconRight="check">
+              Apply
+            </Button>
+          </div>
+        </form>
+      </section>
     </div>
   );
 }
