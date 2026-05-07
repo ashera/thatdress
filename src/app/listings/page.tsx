@@ -188,6 +188,10 @@ function buildFilters(
   const params: unknown[] = [];
   const active: ActiveFilters = {};
 
+  // Drafts never belong on the browse page — even for admins. The
+  // wizard / mine page is where in-progress listings are managed.
+  where.push("l.is_draft = FALSE");
+
   // Mode: for-sale (default), sold, or shortlist (user's saved dresses).
   if (mode === "sold") {
     where.push("l.sold_at IS NOT NULL");
