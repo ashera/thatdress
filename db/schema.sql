@@ -878,6 +878,15 @@ ALTER TABLE site_settings
 ALTER TABLE site_settings
   ADD COLUMN IF NOT EXISTS referral_commission_cents INTEGER NOT NULL DEFAULT 0;
 
+-- Maintenance window. NULL = nothing scheduled. Future timestamp =
+-- countdown banner shows on every page; admins keep working. Past
+-- timestamp = maintenance is active; non-admins see the polite
+-- maintenance page, admins still get full access plus a banner so
+-- they remember they're behind a curtain. Cleared by setting back
+-- to NULL.
+ALTER TABLE site_settings
+  ADD COLUMN IF NOT EXISTS maintenance_at TIMESTAMPTZ;
+
 INSERT INTO site_settings (id) VALUES (1)
 ON CONFLICT (id) DO NOTHING;
 

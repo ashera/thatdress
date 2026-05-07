@@ -6,6 +6,7 @@ import { requireAdmin } from "@/lib/auth";
 import {
   DEFAULT_SITE_SETTINGS,
   loadSiteSettings,
+  setMaintenanceAt,
   updateSiteSettings,
 } from "@/lib/site-settings";
 
@@ -61,6 +62,10 @@ export async function saveSiteSettings(formData: FormData): Promise<void> {
     allowIndexing,
     healthThresholdVerified,
     referralCommissionCents,
+    // maintenance_at is owned by updateMaintenanceMode — leave it
+    // untouched here so saving the indexing/threshold/commission
+    // form doesn't accidentally cancel a scheduled window.
+    maintenanceAt: current.maintenanceAt,
   });
 
   // The metadata layout function reads site_settings on every request,
@@ -74,4 +79,42 @@ export async function saveSiteSettings(formData: FormData): Promise<void> {
   revalidatePath("/admin/referrals");
 
   redirect(`${PAGE_PATH}?saved=1`);
+}
+
+/** Schedule, activate, or cancel maintenance mode. Single action,
+ *  three modes: 'now' flips the gate immediately, 'schedule' sets a
+ *  countdown N minutes out, 'cancel' clears any active or pending
+ *  window. */
+export async function updateMaintenanceMode(
+  formData: FormData,
+): Promise<void> {
+  await requireAdmin();
+  const mode = String(formData.get("mode") ?? "");
+
+  let next: Date | null = null;
+  if (mode === "now") {
+    next = new Date();
+  } else if (mode === "schedule") {
+    const minutes = Number.parseInt(
+      String(formData.get("minutes") ?? ""),
+      10,
+    );
+    if (!Number.isFinite(minutes) || minutes <= 0 || minutes > 1440) {
+      redirect(`${PAGE_PATH}?maintenance=invalid`);
+    }
+    next = new Date(Date.now() + minutes * 60_000);
+  } else if (mode === "cancel") {
+    next = null;
+  } else {
+    redirect(`${PAGE_PATH}?maintenance=invalid`);
+  }
+
+  await setMaintenanceAt(next);
+
+  revalidatePath("/", "layout");
+  redirect(
+    `${PAGE_PATH}?maintenance=${
+      mode === "cancel" ? "cancelled" : mode === "now" ? "activated" : "scheduled"
+    }`,
+  );
 }

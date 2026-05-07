@@ -1,9 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import { Archivo_Black, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { getCurrentUser } from "@/lib/auth";
 import { loadSiteSettings } from "@/lib/site-settings";
 import { AuthNav } from "./_components/auth-nav";
 import { Footer } from "./_components/footer";
+import { MaintenanceBanner } from "./_components/maintenance-banner";
+import { MaintenancePage } from "./_components/maintenance-page";
 import { RegionGate } from "./_components/region-gate";
 import { VerifyBanner } from "./_components/verify-banner";
 
@@ -92,23 +95,56 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // The layout already runs force-dynamic (above) so we can read the
+  // settings + the current user on every request. Fire in parallel —
+  // both queries are tiny and avoid serialising on each other.
+  const [settings, user] = await Promise.all([
+    loadSiteSettings(),
+    getCurrentUser(),
+  ]);
+
+  // Maintenance state: countdown (target in future), active (target
+  // in past), or off (null). Admins always see the full site; only
+  // non-admins are gated when active.
+  const maintenanceMs = settings.maintenanceAt
+    ? new Date(settings.maintenanceAt).getTime()
+    : null;
+  const inCountdown =
+    maintenanceMs !== null && maintenanceMs > Date.now();
+  const isActive =
+    maintenanceMs !== null && maintenanceMs <= Date.now();
+  const showMaintenancePage = isActive && !user?.isAdmin;
+  const showBanner = inCountdown || (isActive && user?.isAdmin === true);
+
   return (
     <html
       lang="en"
       className={`${archivoBlack.variable} ${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="min-h-screen flex flex-col">
-        <AuthNav />
-        <VerifyBanner />
-        <div className="flex flex-1 flex-col">
-          <RegionGate>{children}</RegionGate>
-        </div>
-        <Footer />
+        {showBanner && settings.maintenanceAt && (
+          <MaintenanceBanner
+            targetIso={settings.maintenanceAt}
+            forAdmin={!!user?.isAdmin}
+          />
+        )}
+        {showMaintenancePage ? (
+          <MaintenancePage />
+        ) : (
+          <>
+            <AuthNav />
+            <VerifyBanner />
+            <div className="flex flex-1 flex-col">
+              <RegionGate>{children}</RegionGate>
+            </div>
+            <Footer />
+          </>
+        )}
       </body>
     </html>
   );
