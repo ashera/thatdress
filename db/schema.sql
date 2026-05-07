@@ -106,6 +106,15 @@ CREATE TABLE IF NOT EXISTS sessions (
   created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
+-- Admin impersonation: when an admin clicks 'Log in as' on a user
+-- detail page we mint a new session for the target user with this
+-- column set to the original admin's id. The auth layer reads it
+-- back out so the menu bar can show 'Acting as X — switch back' and
+-- the switch-back action knows which admin to restore.
+ALTER TABLE sessions
+  ADD COLUMN IF NOT EXISTS impersonator_user_id BIGINT
+    REFERENCES users(id) ON DELETE CASCADE;
+
 CREATE INDEX IF NOT EXISTS sessions_user_id_idx ON sessions (user_id);
 CREATE INDEX IF NOT EXISTS sessions_expires_at_idx ON sessions (expires_at);
 

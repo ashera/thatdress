@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { logout } from "@/lib/actions/auth";
+import { endImpersonation } from "@/lib/actions/impersonation";
 import { getCurrentUser } from "@/lib/auth";
 import { query } from "@/lib/db";
 import { resolveCurrentRegion, getCurrentRegionId } from "@/lib/regions";
@@ -76,6 +77,44 @@ export async function AuthNav() {
 
   return (
     <header className="topbar">
+      {user?.impersonatorId && user?.impersonatorEmail && (
+        <div
+          style={{
+            background: "#fef3c7",
+            borderBottom: "1px solid #fcd34d",
+            color: "#92400e",
+            padding: "8px 16px",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            gap: 12,
+            flexWrap: "wrap",
+            fontSize: 13,
+          }}
+        >
+          <span>
+            Acting as <strong>{user.email}</strong> — admin{" "}
+            <strong>{user.impersonatorEmail}</strong>
+          </span>
+          <form action={endImpersonation}>
+            <button
+              type="submit"
+              style={{
+                padding: "4px 12px",
+                borderRadius: 999,
+                background: "#92400e",
+                color: "#fff",
+                border: 0,
+                fontWeight: 600,
+                fontSize: 12,
+                cursor: "pointer",
+              }}
+            >
+              Switch back to admin →
+            </button>
+          </form>
+        </div>
+      )}
       <div className="brand-row">
         <Link href="/" className="brand" aria-label="frockd home">
           <Image

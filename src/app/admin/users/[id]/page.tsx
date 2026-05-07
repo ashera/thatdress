@@ -8,6 +8,7 @@ import {
   toggleUserSuspended,
   updateUserAsAdmin,
 } from "@/lib/actions/users";
+import { startImpersonation } from "@/lib/actions/impersonation";
 import { listReferredUsers } from "@/lib/referral";
 import { loadSiteSettings } from "@/lib/site-settings";
 import { Button, Field, Input, Textarea } from "../../../_components/ui";
@@ -28,6 +29,9 @@ const ERRORS: Record<string, string> = {
   "self-demote": "You can't change your own admin role.",
   "self-suspend": "You can't suspend your own account.",
   "empty-message": "Message body is empty.",
+  "self-impersonate": "You can't impersonate yourself.",
+  "cannot-impersonate-suspended":
+    "Suspended accounts can't be impersonated. Unsuspend first.",
 };
 
 type UserRow = {
@@ -506,6 +510,23 @@ export default async function AdminUserDetailPage({
               disabled={isMe}
             >
               {isSuspended ? "Unsuspend account" : "Suspend account"}
+            </Button>
+          </form>
+          <form action={startImpersonation}>
+            <input type="hidden" name="targetUserId" value={user.id} />
+            <Button
+              type="submit"
+              variant="dark"
+              disabled={isMe || isSuspended}
+              title={
+                isMe
+                  ? "You can't impersonate yourself."
+                  : isSuspended
+                  ? "Unsuspend the account first."
+                  : "Open the site as this user — switch back via the menu bar."
+              }
+            >
+              Log in as this user
             </Button>
           </form>
         </div>
