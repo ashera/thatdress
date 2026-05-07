@@ -76,14 +76,18 @@ export async function AuthNav() {
   ]);
 
   return (
-    <header className="topbar">
+    <>
       {user?.impersonatorId && user?.impersonatorEmail && (
         <div
+          role="status"
+          aria-live="polite"
           style={{
+            width: "100%",
             background: "#fef3c7",
             borderBottom: "1px solid #fcd34d",
             color: "#92400e",
             padding: "8px 16px",
+            boxSizing: "border-box",
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
@@ -115,7 +119,8 @@ export async function AuthNav() {
           </form>
         </div>
       )}
-      <div className="brand-row">
+      <header className="topbar">
+        <div className="brand-row">
         <Link href="/" className="brand" aria-label="frockd home">
           <Image
             src="/frockd-logo-new-tr-back.png"
@@ -228,6 +233,7 @@ export async function AuthNav() {
           </div>
         </div>
       </MobileMenu>
-    </header>
+      </header>
+    </>
   );
 }
