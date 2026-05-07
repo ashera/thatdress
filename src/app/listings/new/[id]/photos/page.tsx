@@ -182,6 +182,7 @@ export default async function WizardPhotosPage({
                 inputName="images"
                 label="Add photos"
                 variant="primary"
+                showCamera
               />
             </form>
           </div>

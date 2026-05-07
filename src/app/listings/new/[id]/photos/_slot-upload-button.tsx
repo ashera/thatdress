@@ -10,10 +10,12 @@ import { useRef, useState } from "react";
  * 'Upload' tap required.
  *
  * Used both for the four verification slot panels (single file,
- * name="image", with the camera shortcut enabled) and the extras
- * uploader at the bottom of the card (multi-file, name="images",
- * camera disabled — capture+multiple is awkward UX). The props let
- * each form opt in.
+ * name="image") and the extras uploader at the bottom of the card
+ * (multi-file, name="images"). Each form decides whether to show
+ * the 'Take photo' shortcut via the showCamera prop. When capture
+ * is combined with multiple on mobile, the camera flow falls back
+ * to a single shot per submission — that's fine; the seller just
+ * keeps tapping 'Take photo' to add more.
  */
 export function SlotUploadButton({
   hasExisting = false,
