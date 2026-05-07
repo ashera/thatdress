@@ -20,6 +20,20 @@ export function MaintenancePage() {
       }}
     >
       <main style={{ maxWidth: 520 }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/tidy-wardrobe.jpg"
+          alt=""
+          aria-hidden
+          width={280}
+          height={280}
+          style={{
+            display: "block",
+            margin: "0 auto var(--s-5)",
+            width: "min(280px, 60vw)",
+            height: "auto",
+          }}
+        />
         <p
           style={{
             fontFamily: "var(--font-mono)",
