@@ -1,9 +1,18 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
 import { query } from "@/lib/db";
+import { loadSiteSettings } from "@/lib/site-settings";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Referrals — Admin" };
+
+function priceLabel(cents: number): string {
+  return new Intl.NumberFormat("en-AU", {
+    style: "currency",
+    currency: "AUD",
+    maximumFractionDigits: cents % 100 === 0 ? 0 : 2,
+  }).format(cents / 100);
+}
 
 type Row = {
   referrer_id: string;
@@ -57,7 +66,11 @@ function formatDate(s: string | null): string {
 
 export default async function AdminReferralsPage() {
   await requireAdmin();
-  const rows = await fetchReferrers();
+  const [rows, settings] = await Promise.all([
+    fetchReferrers(),
+    loadSiteSettings(),
+  ]);
+  const commissionCents = settings.referralCommissionCents;
 
   const totals = rows.reduce(
     (acc, r) => {
@@ -67,6 +80,7 @@ export default async function AdminReferralsPage() {
     },
     { referred: 0, verified: 0 },
   );
+  const totalEarnedCents = totals.verified * commissionCents;
 
   return (
     <div className="page admin-page" style={{ maxWidth: 1024 }}>
@@ -103,7 +117,40 @@ export default async function AdminReferralsPage() {
           label="Reward-eligible referrals"
           hint="Referred users with ≥1 Verified listing"
         />
+        <SummaryTile
+          value={priceLabel(totalEarnedCents)}
+          label="Outstanding commission"
+          hint={
+            commissionCents > 0
+              ? `${priceLabel(commissionCents)} per Verified referral · `
+              : "Commission rate is currently $0 — "
+          }
+        />
       </div>
+      <p
+        style={{
+          fontSize: 13,
+          color: "var(--ink-3)",
+          margin: "0 0 var(--s-5)",
+          lineHeight: 1.5,
+        }}
+      >
+        Commission rate is{" "}
+        <strong>{priceLabel(commissionCents)}</strong> per Verified-listing
+        referral. Adjust on{" "}
+        <Link
+          href="/admin/site-settings"
+          style={{
+            color: "var(--ink-1)",
+            textDecoration: "underline",
+            textDecorationColor: "var(--hairline-strong)",
+            textUnderlineOffset: 3,
+          }}
+        >
+          /admin/site-settings
+        </Link>
+        .
+      </p>
 
       {rows.length === 0 ? (
         <div className="empty-state">
@@ -191,6 +238,19 @@ export default async function AdminReferralsPage() {
                 <th
                   style={{
                     padding: "10px 12px",
+                    textAlign: "right",
+                    fontFamily: "var(--font-mono)",
+                    fontSize: 10,
+                    letterSpacing: "0.12em",
+                    textTransform: "uppercase",
+                    color: "var(--ink-3)",
+                  }}
+                >
+                  Earned
+                </th>
+                <th
+                  style={{
+                    padding: "10px 12px",
                     textAlign: "left",
                     fontFamily: "var(--font-mono)",
                     fontSize: 10,
@@ -261,6 +321,23 @@ export default async function AdminReferralsPage() {
                   <td
                     style={{
                       padding: "10px 12px",
+                      textAlign: "right",
+                      fontVariantNumeric: "tabular-nums",
+                      fontWeight: 600,
+                      color:
+                        Number(row.referred_with_verified) > 0 &&
+                        commissionCents > 0
+                          ? "var(--ink-1)"
+                          : "var(--ink-4)",
+                    }}
+                  >
+                    {priceLabel(
+                      Number(row.referred_with_verified) * commissionCents,
+                    )}
+                  </td>
+                  <td
+                    style={{
+                      padding: "10px 12px",
                       fontSize: 12,
                       color: "var(--ink-3)",
                     }}
@@ -282,7 +359,7 @@ function SummaryTile({
   label,
   hint,
 }: {
-  value: number;
+  value: number | string;
   label: string;
   hint?: string;
 }) {

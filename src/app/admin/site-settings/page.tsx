@@ -171,6 +171,42 @@ export default async function SiteSettingsPage({
           </Field>
         </section>
 
+        <section className="form-card" style={{ marginTop: "var(--s-5)" }}>
+          <h2 className="card-heading">Referral commission</h2>
+          <p className="card-sub">
+            Per-friend payout to the referrer once each person they
+            referred has posted at least one Verified listing.
+            One-time per referred friend — multiple Verified listings
+            from the same friend earn the commission once. Set to{" "}
+            <code>0</code> to pause payouts; the dashboard will still
+            track referrals but show $0 earnings.
+          </p>
+          <p className="card-sub">
+            Commission uses the <em>current</em> rate when a referrer
+            views their dashboard, so changing the rate retroactively
+            adjusts already-earned amounts. Decide carefully before
+            raising or lowering it.
+          </p>
+
+          <Field
+            label="Commission per Verified-listing referral (AUD)"
+            htmlFor="referral_commission_dollars"
+            help="Whole dollars or decimals — '25', '25.00', or '12.50'."
+          >
+            <Input
+              id="referral_commission_dollars"
+              name="referral_commission_dollars"
+              type="number"
+              min={0}
+              max={10000}
+              step={0.5}
+              defaultValue={(
+                settings.referralCommissionCents / 100
+              ).toString()}
+            />
+          </Field>
+        </section>
+
         <div
           style={{
             display: "flex",

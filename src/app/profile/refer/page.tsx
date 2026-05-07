@@ -6,7 +6,16 @@ import {
   ensureReferralCode,
   listReferredUsers,
 } from "@/lib/referral";
+import { loadSiteSettings } from "@/lib/site-settings";
 import { ReferralLinkCopier } from "./_referral-link-copier";
+
+function priceLabel(cents: number): string {
+  return new Intl.NumberFormat("en-AU", {
+    style: "currency",
+    currency: "AUD",
+    maximumFractionDigits: cents % 100 === 0 ? 0 : 2,
+  }).format(cents / 100);
+}
 
 export const dynamic = "force-dynamic";
 export const metadata = {
@@ -49,8 +58,13 @@ export default async function ReferPage() {
   const code = await ensureReferralCode(user.id);
   const baseUrl = await getBaseUrl();
   const referralUrl = code ? `${baseUrl}/?ref=${code}` : null;
-  const referred = await listReferredUsers(user.id);
+  const [referred, settings] = await Promise.all([
+    listReferredUsers(user.id),
+    loadSiteSettings(),
+  ]);
   const verifiedCount = referred.filter((r) => r.has_verified_listing).length;
+  const commissionCents = settings.referralCommissionCents;
+  const earnedCents = commissionCents * verifiedCount;
 
   return (
     <div className="page page--pad">
@@ -173,6 +187,15 @@ export default async function ReferPage() {
                   : undefined
               }
             />
+            <StatTile
+              value={priceLabel(earnedCents)}
+              label="Earned to date"
+              hint={
+                commissionCents > 0
+                  ? `${priceLabel(commissionCents)} per Verified referral`
+                  : "Commission rate not yet set"
+              }
+            />
           </div>
 
           {referred.length === 0 ? (
@@ -236,24 +259,46 @@ export default async function ReferPage() {
                     </div>
                   </div>
                   {r.has_verified_listing ? (
-                    <span
+                    <div
                       style={{
                         flex: "0 0 auto",
-                        padding: "3px 10px",
-                        borderRadius: 999,
-                        background: "#fef3c7",
-                        color: "#92400e",
-                        border: "1px solid #fcd34d",
-                        fontFamily: "var(--font-mono)",
-                        fontSize: 10,
-                        fontWeight: 700,
-                        letterSpacing: "0.12em",
-                        textTransform: "uppercase",
-                        whiteSpace: "nowrap",
+                        textAlign: "right",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 4,
+                        alignItems: "flex-end",
                       }}
                     >
-                      ✓ Verified
-                    </span>
+                      <span
+                        style={{
+                          padding: "3px 10px",
+                          borderRadius: 999,
+                          background: "#fef3c7",
+                          color: "#92400e",
+                          border: "1px solid #fcd34d",
+                          fontFamily: "var(--font-mono)",
+                          fontSize: 10,
+                          fontWeight: 700,
+                          letterSpacing: "0.12em",
+                          textTransform: "uppercase",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        ✓ Verified
+                      </span>
+                      {commissionCents > 0 && (
+                        <span
+                          style={{
+                            fontFamily: "var(--font-mono)",
+                            fontSize: 11,
+                            color: "var(--ink-2)",
+                            fontWeight: 600,
+                          }}
+                        >
+                          +{priceLabel(commissionCents)}
+                        </span>
+                      )}
+                    </div>
                   ) : (
                     <span
                       style={{
@@ -283,9 +328,19 @@ export default async function ReferPage() {
             margin: 0,
           }}
         >
-          Reward amounts and payout cadence are still being finalised.
-          The frockd team will be in touch as soon as you cross your
-          first Verified-listing threshold.
+          {commissionCents > 0 ? (
+            <>
+              Earnings update automatically as your referrals post
+              Verified listings. Payouts are settled out-of-band — the
+              frockd team will be in touch when you&rsquo;re due.
+            </>
+          ) : (
+            <>
+              The commission rate hasn&rsquo;t been published yet. Keep
+              referring — your earnings will backfill the moment a rate
+              is set.
+            </>
+          )}
         </p>
       </main>
     </div>
@@ -297,7 +352,7 @@ function StatTile({
   label,
   hint,
 }: {
-  value: number;
+  value: number | string;
   label: string;
   hint?: string;
 }) {

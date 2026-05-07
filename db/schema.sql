@@ -861,6 +861,14 @@ CREATE TABLE IF NOT EXISTS site_settings (
 ALTER TABLE site_settings
   ADD COLUMN IF NOT EXISTS health_threshold_verified INTEGER NOT NULL DEFAULT 75;
 
+-- Referral programme commission. Paid (manually, out-of-band) to the
+-- referrer for each friend who signs up via their /?ref=CODE link AND
+-- subsequently posts at least one Verified listing. Stored in cents
+-- (AUD) like the rest of the money fields. Default 0 means no payout
+-- — the dashboard reports earnings as $0 until an admin sets a rate.
+ALTER TABLE site_settings
+  ADD COLUMN IF NOT EXISTS referral_commission_cents INTEGER NOT NULL DEFAULT 0;
+
 INSERT INTO site_settings (id) VALUES (1)
 ON CONFLICT (id) DO NOTHING;
 
