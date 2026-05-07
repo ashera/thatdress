@@ -298,6 +298,7 @@ export default async function AdminReferralsPage({
               {rows.map((row, i) => (
                 <tr
                   key={row.referrer_id}
+                  className="admin-listings-row"
                   style={{
                     borderBottom:
                       i === rows.length - 1
@@ -306,14 +307,18 @@ export default async function AdminReferralsPage({
                   }}
                 >
                   <td style={{ padding: "10px 12px" }}>
-                    <span
+                    <Link
+                      href={`/admin/referrals/${row.referrer_id}`}
                       style={{
                         fontWeight: 600,
                         color: "var(--ink-1)",
+                        textDecoration: "underline",
+                        textDecorationColor: "var(--hairline-strong)",
+                        textUnderlineOffset: 3,
                       }}
                     >
                       {row.referrer_email}
-                    </span>
+                    </Link>
                   </td>
                   <td
                     style={{
