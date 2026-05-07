@@ -44,6 +44,14 @@ function resolveCanonicalUrl(): string {
 }
 const SITE_URL = resolveCanonicalUrl();
 
+// Layout reads loadSiteSettings() inside generateMetadata so the
+// 'robots: noindex,nofollow' tag flips with the admin toggle. Without
+// force-dynamic, Next.js can statically capture the layout metadata
+// at build time — and since allowIndexing defaults to FALSE, the
+// noindex tag would stay on the page even after an admin enables
+// indexing in production.
+export const dynamic = "force-dynamic";
+
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await loadSiteSettings();
   return {
