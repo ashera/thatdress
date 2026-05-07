@@ -125,6 +125,7 @@ export async function AuthNav() {
           <nav>
             <Link href="/listings">Browse</Link>
             <Link href="/listings/mine">Sell</Link>
+            <Link href="/how-it-works">How it works</Link>
             <Link href="/tools">Tools</Link>
             <Link href="/blog">Blog</Link>
             {user && (
