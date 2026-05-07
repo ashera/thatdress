@@ -64,12 +64,19 @@ export async function ensureReferralCode(userId: string): Promise<string | null>
 }
 
 /** Look up a user by referral code (case-insensitive, trimmed). Returns
- *  the referrer's id, or null if no match / the code is malformed. */
+ *  the referrer's id, or null if no match / the code is malformed.
+ *
+ *  Accepts the full alphanumeric range A-Z 0-9. Newly-generated codes
+ *  use the Crockford-style ALPHABET (no 0/1 to avoid hand-typing
+ *  ambiguity), but the schema's MD5-prefix backfill seeds existing
+ *  users with codes that can contain any hex digit including 0 and 1.
+ *  Tightening this regex to ALPHABET-only would silently drop those
+ *  referrals — match anything alphanumeric so both flows work. */
 export async function findReferrerByCode(
   rawCode: string,
 ): Promise<string | null> {
   const code = rawCode.trim().toUpperCase();
-  if (!/^[A-Z2-9]{4,16}$/.test(code)) return null;
+  if (!/^[A-Z0-9]{4,16}$/.test(code)) return null;
   const r = await query<{ id: string }>(
     `SELECT id::text FROM users
       WHERE referral_code = $1
