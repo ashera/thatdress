@@ -150,13 +150,18 @@ export default async function BlogPostPage({
   const url = `${baseUrl}/blog/${post.slug}`;
   const description = post.excerpt ?? stripMarkdown(post.body_md, 160);
 
+  // BlogPosting (a subtype of Article) is the schema.org type Google's
+  // rich-result tester recommends for blog content. Includes a strong
+  // publisher block with logo so the snippet can render the brand
+  // mark, and explicit inLanguage so Google doesn't have to guess.
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "Article",
+    "@type": "BlogPosting",
     headline: post.title,
     description,
     datePublished: post.published_at,
     dateModified: post.updated_at,
+    inLanguage: "en-AU",
     author: {
       "@type": "Person",
       name: authorLabel(post),
@@ -164,8 +169,14 @@ export default async function BlogPostPage({
     publisher: {
       "@type": "Organization",
       name: "frockd",
+      url: `${baseUrl}/`,
+      logo: {
+        "@type": "ImageObject",
+        url: `${baseUrl}/frockd-logo-new-tr-back.png`,
+      },
     },
     mainEntityOfPage: { "@type": "WebPage", "@id": url },
+    url,
     image: post.hero_image_id
       ? `${baseUrl}/api/blog/posts/${post.id}/hero`
       : undefined,

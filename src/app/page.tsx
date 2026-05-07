@@ -184,15 +184,55 @@ export default async function Home({
     r.kind === "selected" || r.kind === "auto" ? r.region : null;
   const regionShort = region ? regionShortName(region) : null;
   const regionId = region ? region.id : null;
-  const [stats, featured, shortlistedIds, latestPost] = await Promise.all([
+  const [stats, featured, shortlistedIds, latestPost, baseUrl] = await Promise.all([
     getMarketplaceStats(regionId),
     getFeaturedListings(regionId),
     user ? getShortlistIds(user.id) : Promise.resolve(new Set<string>()),
     getLatestPublishedPost(),
+    getBaseUrl(),
   ]);
+
+  // Organisation + WebSite JSON-LD. Organisation gives Google enough
+  // signal to build a brand entity (logo + name + URL); WebSite with a
+  // SearchAction enables the sitelinks search box on branded SERPs so
+  // searchers can search frockd directly from Google's results.
+  const organisationSchema = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "frockd",
+    url: `${baseUrl}/`,
+    logo: `${baseUrl}/frockd-logo-new-tr-back.png`,
+    description:
+      "Australia's peer-to-peer marketplace for pre-loved formal dresses and gowns.",
+    areaServed: { "@type": "Country", name: "Australia" },
+  };
+  const websiteSchema = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "frockd",
+    url: `${baseUrl}/`,
+    potentialAction: {
+      "@type": "SearchAction",
+      target: {
+        "@type": "EntryPoint",
+        urlTemplate: `${baseUrl}/listings?q={search_term_string}`,
+      },
+      "query-input": "required name=search_term_string",
+    },
+  };
 
   return (
     <div className="page">
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organisationSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
+      />
       {accountDeleted && (
         <div
           className="form-success"
