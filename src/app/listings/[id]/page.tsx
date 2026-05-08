@@ -907,7 +907,23 @@ export default async function ListingDetailPage({
           <div className="detail-seller">
             <span className="avatar">{initials(l.seller_email)}</span>
             <div>
-              <div className="who">{sellerName}</div>
+              <div className="who">
+                {l.seller_id ? (
+                  <Link
+                    href={`/sellers/${l.seller_id}`}
+                    style={{
+                      color: "inherit",
+                      textDecoration: "underline",
+                      textDecorationColor: "var(--hairline-strong)",
+                      textUnderlineOffset: 3,
+                    }}
+                  >
+                    {sellerName}
+                  </Link>
+                ) : (
+                  sellerName
+                )}
+              </div>
               <div className="when">
                 Posted {formatPostedDate(l.created_at)}
                 {l.location_postal ? ` · ${l.location_postal}` : ""}

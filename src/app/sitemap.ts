@@ -65,6 +65,33 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }));
 
+  // Public seller profiles for any user with at least one live
+  // listing. Skips sellers with no active stock (their profile
+  // would just be an empty state) and suspended accounts (the
+  // page 404s for them anyway).
+  let sellers: { id: string }[] = [];
+  try {
+    const r = await query<{ id: string }>(
+      `SELECT DISTINCT u.id::text
+         FROM users u
+         JOIN listings l ON l.seller_id = u.id
+        WHERE u.suspended_at IS NULL
+          AND l.is_published = TRUE
+          AND l.is_draft = FALSE
+          AND l.sold_at IS NULL`,
+    );
+    sellers = r.rows;
+  } catch {
+    // sitemap should still serve even if DB hiccups
+  }
+
+  const sellerEntries: MetadataRoute.Sitemap = sellers.map((s) => ({
+    url: `${baseUrl}/sellers/${s.id}`,
+    lastModified: now,
+    changeFrequency: "weekly",
+    priority: 0.6,
+  }));
+
   let tagSlugs: { slug: string }[] = [];
   try {
     const r = await query<{ slug: string }>(
@@ -89,6 +116,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     ...staticEntries,
     ...listingEntries,
+    ...sellerEntries,
     ...postEntries,
     ...tagEntries,
   ];
