@@ -334,6 +334,37 @@ export async function setListingVisibility(formData: FormData): Promise<void> {
 }
 
 /**
+ * Seller's response to a sale-nudge prompt — 'yes, still available'.
+ * Updates listings.last_active_confirmed_at = NOW() so the freshness
+ * anchor moves forward and the banner disappears for another window.
+ * Reachable from /listings/mine; sellers can re-confirm any number of
+ * times.
+ */
+export async function confirmListingStillAvailable(
+  formData: FormData,
+): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const listingId = String(formData.get("listingId") ?? "");
+  if (!(await canEditListing(listingId, user))) {
+    redirect("/listings/mine");
+  }
+
+  await query(
+    `UPDATE listings
+        SET last_active_confirmed_at = NOW()
+      WHERE id = $1::bigint
+        AND (seller_id = $2::bigint OR $3::boolean)`,
+    [listingId, user.id, user.isAdmin],
+  );
+
+  revalidatePath("/listings/mine");
+  revalidatePath(`/listings/${listingId}`);
+  redirect("/listings/mine?nudge=confirmed");
+}
+
+/**
  * One-click visibility toggle for the listing detail page. Flips
  * is_published in-SQL so the button works the same way for the seller
  * and admins. When `next` is supplied in the form, redirect there;

@@ -1,9 +1,27 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
 import { query } from "@/lib/db";
+import { sendSaleNudge } from "@/lib/actions/admin-listings";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "All listings — Admin" };
+
+const NUDGE_MESSAGES: Record<string, { ok: boolean; text: string }> = {
+  sent: {
+    ok: true,
+    text: "Sale-nudge email sent and the in-app banner is now live for the seller.",
+  },
+  invalid: { ok: false, text: "Invalid listing id." },
+  "not-found": { ok: false, text: "Listing not found." },
+  "not-eligible": {
+    ok: false,
+    text: "Listing isn't eligible for a nudge (sold, hidden, or still a draft).",
+  },
+  "no-seller": {
+    ok: false,
+    text: "No seller email on this listing — can't send.",
+  },
+};
 
 const SORT_OPTIONS = [
   { value: "newest", label: "Newest first", sql: "l.created_at DESC" },
@@ -202,10 +220,14 @@ export default async function AdminListingsPage({
     sort?: string;
     status?: string;
     seller_id?: string;
+    nudge?: string;
   }>;
 }) {
   await requireAdmin();
   const sp = await searchParams;
+  const nudgeMessage = sp.nudge
+    ? NUDGE_MESSAGES[sp.nudge] ?? null
+    : null;
   const search = (sp.q ?? "").slice(0, 200);
   const sellerId =
     sp.seller_id && /^\d+$/.test(sp.seller_id) ? sp.seller_id : null;
@@ -258,6 +280,15 @@ export default async function AdminListingsPage({
             : "Click any card to open the listing — buyer conversations and offers appear inline on the detail page for admins."}
         </p>
       </header>
+
+      {nudgeMessage && (
+        <p
+          className={nudgeMessage.ok ? "form-success" : "form-error"}
+          style={{ marginBottom: "var(--s-5)" }}
+        >
+          {nudgeMessage.text}
+        </p>
+      )}
 
       <form
         method="get"
@@ -624,24 +655,61 @@ export default async function AdminListingsPage({
                       {convCount}
                     </td>
                     <td style={{ ...tdStyle, fontSize: 12 }}>
-                      {lastSeen ? (
-                        <span style={{ color: "var(--ink-2)" }}>
-                          {recentCount > 0 && !isSold && (
-                            <span
-                              title={`${recentCount} message${recentCount === 1 ? "" : "s"} in the last 7 days`}
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 6,
+                        }}
+                      >
+                        {lastSeen ? (
+                          <span style={{ color: "var(--ink-2)" }}>
+                            {recentCount > 0 && !isSold && (
+                              <span
+                                title={`${recentCount} message${recentCount === 1 ? "" : "s"} in the last 7 days`}
+                                style={{
+                                  color: "#16a34a",
+                                  marginRight: 4,
+                                }}
+                              >
+                                ●
+                              </span>
+                            )}
+                            {lastSeen}
+                          </span>
+                        ) : (
+                          <span style={{ color: "var(--ink-4)" }}>—</span>
+                        )}
+                        {row.is_published && !isSold && (
+                          <form action={sendSaleNudge}>
+                            <input
+                              type="hidden"
+                              name="listingId"
+                              value={row.id}
+                            />
+                            <button
+                              type="submit"
+                              title="Email the seller asking 'is this still for sale?' and surface the in-app banner."
                               style={{
-                                color: "#16a34a",
-                                marginRight: 4,
+                                padding: "3px 10px",
+                                borderRadius: 999,
+                                background: "transparent",
+                                color: "var(--ink-3)",
+                                border: "1px solid var(--hairline-strong)",
+                                fontWeight: 600,
+                                fontSize: 11,
+                                cursor: "pointer",
+                                fontFamily: "var(--font-mono)",
+                                letterSpacing: "0.06em",
+                                textTransform: "uppercase",
+                                whiteSpace: "nowrap",
                               }}
                             >
-                              ●
-                            </span>
-                          )}
-                          {lastSeen}
-                        </span>
-                      ) : (
-                        <span style={{ color: "var(--ink-4)" }}>—</span>
-                      )}
+                              Send nudge
+                            </button>
+                          </form>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );

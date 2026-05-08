@@ -136,6 +136,17 @@ ALTER TABLE listings
   ADD COLUMN IF NOT EXISTS sold_at      TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS is_draft     BOOLEAN NOT NULL DEFAULT FALSE;
 
+-- Sale nudge — keeps marketplace inventory fresh by prompting the
+-- seller every ~14 days to confirm a listing is still available, or
+-- mark it sold. last_active_confirmed_at moves forward each time the
+-- seller hits 'Still for sale' on /listings/mine, pushing the next
+-- nudge another window out. last_sale_nudge_sent_at lets admins force
+-- the prompt from /admin/listings ahead of the timer (and stops
+-- duplicate emails from a future cron).
+ALTER TABLE listings
+  ADD COLUMN IF NOT EXISTS last_active_confirmed_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS last_sale_nudge_sent_at  TIMESTAMPTZ;
+
 CREATE INDEX IF NOT EXISTS listings_draft_idx
   ON listings (seller_id, is_draft) WHERE is_draft = TRUE;
 

@@ -7,6 +7,10 @@ import { startDraftListing } from "@/lib/actions/listing-wizard";
 import { computeHealth } from "@/lib/listing-health";
 import { getSellerStats, type SellerStats } from "@/lib/listing-views";
 import { loadSiteSettings } from "@/lib/site-settings";
+import {
+  confirmListingStillAvailable,
+  toggleListingSold,
+} from "@/lib/actions/listings";
 import { Button } from "../../_components/ui";
 import {
   ListingRow,
@@ -20,6 +24,12 @@ type Row = ListingCardRow & {
   is_published: boolean;
   view_count: string;
   view_count_7d: string;
+  /** Triggers the sale-nudge banner on a listing card. True when the
+   *  listing has been live for >14 days without seller confirmation,
+   *  OR when an admin force-fired a nudge more recently than the
+   *  freshness anchor. */
+  needs_nudge: boolean;
+  days_old: string;
 };
 
 type DraftItem = {
@@ -178,7 +188,28 @@ async function fetchOwnListings(
                 SELECT COUNT(*)::text FROM listing_views
                   WHERE listing_id = l.id
                     AND viewed_at > NOW() - INTERVAL '7 days'
-              ) AS view_count_7d
+              ) AS view_count_7d,
+              (
+                l.is_published = TRUE
+                AND l.is_draft = FALSE
+                AND l.sold_at IS NULL
+                AND (
+                  -- Auto-trigger: nothing fresh in the last 14 days.
+                  GREATEST(
+                    l.created_at,
+                    COALESCE(l.last_active_confirmed_at, l.created_at)
+                  ) < NOW() - INTERVAL '14 days'
+                  -- OR admin force-fired since the last activity.
+                  OR (
+                    l.last_sale_nudge_sent_at IS NOT NULL
+                    AND l.last_sale_nudge_sent_at > GREATEST(
+                      l.created_at,
+                      COALESCE(l.last_active_confirmed_at, l.created_at)
+                    )
+                  )
+                )
+              ) AS needs_nudge,
+              EXTRACT(DAY FROM NOW() - l.created_at)::text AS days_old
          FROM listings l
          LEFT JOIN users            u   ON u.id   = l.seller_id
          LEFT JOIN designers        d   ON d.id   = l.designer_id
@@ -205,9 +236,16 @@ async function fetchOwnListings(
   }
 }
 
-export default async function MyListingsPage() {
+export default async function MyListingsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ nudge?: string }>;
+}) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+
+  const sp = searchParams ? await searchParams : {};
+  const nudgeFlash = sp.nudge ?? null;
 
   const [result, drafts, settings, stats] = await Promise.all([
     fetchOwnListings(user.id),
@@ -231,6 +269,12 @@ export default async function MyListingsPage() {
           photos, style, size &amp; fit, condition, and pricing.
         </p>
       </header>
+
+      {nudgeFlash === "confirmed" && (
+        <p className="form-success" style={{ marginBottom: "var(--s-5)" }}>
+          Thanks — keeping that one on browse.
+        </p>
+      )}
 
       {(stats.activeListings > 0 || stats.soldListings > 0) && (
         <SellerStatsPanel stats={stats} />
@@ -433,6 +477,12 @@ export default async function MyListingsPage() {
               {!row.is_published && (
                 <span className="my-listing-flag">Hidden</span>
               )}
+              {row.needs_nudge && (
+                <SaleNudgeBanner
+                  listingId={row.id}
+                  daysOld={Number(row.days_old ?? 0)}
+                />
+              )}
               <ListingRow data={listingFromRow(row)} />
               <div className="my-listing-stats">
                 <span>
@@ -625,5 +675,88 @@ function SellerStatsPanel({ stats }: { stats: SellerStats }) {
         </Link>
       )}
     </section>
+  );
+}
+
+function SaleNudgeBanner({
+  listingId,
+  daysOld,
+}: {
+  listingId: string;
+  daysOld: number;
+}) {
+  return (
+    <div
+      style={{
+        margin: "0 0 var(--s-3)",
+        padding: "10px 14px",
+        background: "#fef3c7",
+        border: "1px solid #fcd34d",
+        borderRadius: 10,
+        display: "flex",
+        gap: 10,
+        flexWrap: "wrap",
+        alignItems: "center",
+      }}
+      role="status"
+    >
+      <div
+        style={{
+          flex: "1 1 240px",
+          minWidth: 0,
+          fontSize: 14,
+          color: "#92400e",
+          lineHeight: 1.45,
+        }}
+      >
+        <strong style={{ color: "#7c2d12" }}>
+          Is this dress still for sale?
+        </strong>{" "}
+        <span>
+          It&rsquo;s been on frockd for {daysOld} day
+          {daysOld === 1 ? "" : "s"}. Confirm to keep it on browse, or
+          mark sold to free up the slot.
+        </span>
+      </div>
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+        <form action={confirmListingStillAvailable}>
+          <input type="hidden" name="listingId" value={listingId} />
+          <button
+            type="submit"
+            style={{
+              padding: "6px 14px",
+              borderRadius: 999,
+              background: "#92400e",
+              color: "#fff",
+              border: 0,
+              fontWeight: 600,
+              fontSize: 13,
+              cursor: "pointer",
+            }}
+          >
+            Still for sale
+          </button>
+        </form>
+        <form action={toggleListingSold}>
+          <input type="hidden" name="listingId" value={listingId} />
+          <input type="hidden" name="next" value="/listings/mine" />
+          <button
+            type="submit"
+            style={{
+              padding: "6px 14px",
+              borderRadius: 999,
+              background: "transparent",
+              color: "#92400e",
+              border: "1px solid #fcd34d",
+              fontWeight: 600,
+              fontSize: 13,
+              cursor: "pointer",
+            }}
+          >
+            Mark as sold
+          </button>
+        </form>
+      </div>
+    </div>
   );
 }
