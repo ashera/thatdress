@@ -257,7 +257,7 @@ export default async function HowItWorksPage() {
           </div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/how-it-works.jpg"
+            src="/how-it-works.png"
             alt=""
             aria-hidden
             width={280}
