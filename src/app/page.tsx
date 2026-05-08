@@ -325,27 +325,15 @@ export default async function Home({
               <ButtonLink href="/listings/mine" variant="ghost" size="lg" icon="plus">
                 List your dress
               </ButtonLink>
-            </div>
-            <p
-              style={{
-                margin: "var(--s-3) 0 0",
-                fontSize: 14,
-                color: "var(--ink-3)",
-              }}
-            >
-              New here?{" "}
-              <Link
+              <ButtonLink
                 href="/how-it-works"
-                style={{
-                  color: "var(--ink-1)",
-                  textDecoration: "underline",
-                  textDecorationColor: "var(--hairline-strong)",
-                  textUnderlineOffset: 3,
-                }}
+                variant="ghost"
+                size="lg"
+                iconRight="arrow"
               >
-                See how frockd works →
-              </Link>
-            </p>
+                How frockd works
+              </ButtonLink>
+            </div>
           </div>
         </div>
       </section>
