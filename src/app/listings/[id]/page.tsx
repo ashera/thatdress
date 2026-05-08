@@ -24,6 +24,7 @@ import { loadSiteSettings } from "@/lib/site-settings";
 import { TrustBadge } from "../../_components/trust-badge";
 import { FlagListingDialog } from "../../_components/flag-listing-dialog";
 import { ReportListingDialog } from "../../_components/report-listing-dialog";
+import { ShareListingButton } from "../../_components/share-listing-button";
 import { Button, ButtonLink, Icon } from "../../_components/ui";
 import {
   ListingGallery,
@@ -1005,6 +1006,11 @@ export default async function ListingDetailPage({
                 </Button>
               </form>
             )}
+            <ShareListingButton
+              url={productUrl}
+              title={l.title}
+              shareText={`Found this on frockd: ${l.title}`}
+            />
             {!l.sold_at && (isOwner || isAdmin) && (
               <form action={toggleListingSold}>
                 <input type="hidden" name="listingId" value={l.id} />
