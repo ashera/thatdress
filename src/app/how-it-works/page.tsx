@@ -271,6 +271,22 @@ export default async function HowItWorksPage() {
           />
         </header>
 
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/cartoon2.jpg"
+          alt="Comic strip showing a buyer finding a dress on frockd, contacting the seller, picking it up, and wearing it to the gala."
+          width={1024}
+          height={506}
+          style={{
+            display: "block",
+            width: "100%",
+            height: "auto",
+            margin: "0 0 var(--s-7)",
+            borderRadius: 14,
+            border: "1px solid var(--hairline)",
+          }}
+        />
+
         <div
           style={{
             display: "grid",
