@@ -117,13 +117,14 @@ export function ShareListingButton({
           border: "1px solid var(--hairline-strong)",
           fontWeight: 600,
           fontSize: 13,
+          lineHeight: 1.4,
           cursor: "pointer",
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 6,
+          // Pure text to match the sibling Mark-as-sold / Save /
+          // Report buttons. The leading ↗ glyph was nudging the
+          // baseline a couple of pixels off centre and there's no
+          // obvious win in keeping it.
         }}
       >
-        <span aria-hidden>↗</span>
         Share
       </button>
 
