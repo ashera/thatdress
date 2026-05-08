@@ -211,37 +211,64 @@ export default async function HowItWorksPage() {
       />
 
       <main style={{ maxWidth: 1024, margin: "0 auto" }}>
-        <header style={{ margin: "0 0 var(--s-7)" }}>
-          <p className="eyebrow" style={{ margin: 0, color: "var(--ink-3)" }}>
-            How it works
-          </p>
-          <h1
+        <header
+          style={{
+            display: "flex",
+            gap: "var(--s-6)",
+            alignItems: "center",
+            flexWrap: "wrap",
+            margin: "0 0 var(--s-7)",
+          }}
+        >
+          <div style={{ flex: "1 1 320px", minWidth: 0 }}>
+            <p
+              className="eyebrow"
+              style={{ margin: 0, color: "var(--ink-3)" }}
+            >
+              How it works
+            </p>
+            <h1
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: "var(--t-h1)",
+                color: "var(--ink-1)",
+                margin: "var(--s-2) 0 var(--s-3)",
+                letterSpacing: "-0.02em",
+                lineHeight: 1.05,
+              }}
+            >
+              Selling — and buying — a pre-loved frock, simply.
+            </h1>
+            <p
+              style={{
+                color: "var(--ink-2)",
+                fontSize: "var(--t-body-l)",
+                margin: 0,
+                maxWidth: "60ch",
+                lineHeight: 1.55,
+              }}
+            >
+              frockd is a peer-to-peer marketplace — sellers list
+              direct, buyers reach out direct, and we don&rsquo;t take a
+              cut. Our job is the trust layer: photo verification,
+              designer data, and a Verified badge that means something.
+              Here&rsquo;s how the whole thing works.
+            </p>
+          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/how-it-works.jpg"
+            alt=""
+            aria-hidden
+            width={280}
+            height={280}
             style={{
-              fontFamily: "var(--font-display)",
-              fontSize: "var(--t-h1)",
-              color: "var(--ink-1)",
-              margin: "var(--s-2) 0 var(--s-3)",
-              letterSpacing: "-0.02em",
-              lineHeight: 1.05,
+              flex: "0 0 auto",
+              width: "min(280px, 100%)",
+              height: "auto",
+              display: "block",
             }}
-          >
-            Selling — and buying — a pre-loved frock, simply.
-          </h1>
-          <p
-            style={{
-              color: "var(--ink-2)",
-              fontSize: "var(--t-body-l)",
-              margin: 0,
-              maxWidth: "60ch",
-              lineHeight: 1.55,
-            }}
-          >
-            frockd is a peer-to-peer marketplace — sellers list direct,
-            buyers reach out direct, and we don&rsquo;t take a cut.
-            Our job is the trust layer: photo verification, designer
-            data, and a Verified badge that means something. Here&rsquo;s
-            how the whole thing works.
-          </p>
+          />
         </header>
 
         <div
