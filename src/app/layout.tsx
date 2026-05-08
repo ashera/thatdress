@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Archivo_Black, Inter, JetBrains_Mono } from "next/font/google";
+import { headers } from "next/headers";
 import "./globals.css";
 import { getCurrentUser } from "@/lib/auth";
 import { loadSiteSettings } from "@/lib/site-settings";
@@ -9,6 +10,26 @@ import { MaintenanceBanner } from "./_components/maintenance-banner";
 import { MaintenancePage } from "./_components/maintenance-page";
 import { RegionGate } from "./_components/region-gate";
 import { VerifyBanner } from "./_components/verify-banner";
+
+/** Paths that stay reachable even when maintenance mode is active.
+ *  Without this allowlist a non-logged-in admin would have no way to
+ *  log in to disable maintenance — the /login page itself would render
+ *  the maintenance takeover. /verify and /email-change cover token
+ *  links that may have been emailed before the window started. */
+const MAINTENANCE_ALLOWLIST = [
+  "/login",
+  "/logout",
+  "/forgot",
+  "/reset",
+  "/verify",
+  "/email-change",
+];
+
+function pathBypassesMaintenance(pathname: string): boolean {
+  return MAINTENANCE_ALLOWLIST.some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`),
+  );
+}
 
 const archivoBlack = Archivo_Black({
   variable: "--font-display",
@@ -110,7 +131,9 @@ export default async function RootLayout({
 
   // Maintenance state: countdown (target in future), active (target
   // in past), or off (null). Admins always see the full site; only
-  // non-admins are gated when active.
+  // non-admins are gated when active. Auth paths (/login etc.) are
+  // also allowlisted so an admin who isn't currently logged in has a
+  // way to log in and turn maintenance off.
   const maintenanceMs = settings.maintenanceAt
     ? new Date(settings.maintenanceAt).getTime()
     : null;
@@ -118,7 +141,12 @@ export default async function RootLayout({
     maintenanceMs !== null && maintenanceMs > Date.now();
   const isActive =
     maintenanceMs !== null && maintenanceMs <= Date.now();
-  const showMaintenancePage = isActive && !user?.isAdmin;
+
+  const headersList = await headers();
+  const pathname = headersList.get("x-pathname") ?? "/";
+  const onAuthPath = pathBypassesMaintenance(pathname);
+
+  const showMaintenancePage = isActive && !user?.isAdmin && !onAuthPath;
   const showBanner = inCountdown || (isActive && user?.isAdmin === true);
 
   return (
