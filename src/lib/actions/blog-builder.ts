@@ -561,7 +561,13 @@ export async function runSerpAnalysis(formData: FormData): Promise<void> {
       : "claude-error";
     // eslint-disable-next-line no-console
     console.error("[serp] Claude call failed", result.error);
-    redirect(`/admin/blog/builder/cluster/${clusterId}?error=${code}`);
+    // Cap the detail at 800 chars so we don't construct an absurd URL
+    // for a verbose stack trace; Anthropic errors are typically well
+    // under that. URI-encode so '?', '&', '#' don't break query parsing.
+    const detail = encodeURIComponent(result.error.slice(0, 800));
+    redirect(
+      `/admin/blog/builder/cluster/${clusterId}?error=${code}&detail=${detail}`,
+    );
   }
 
   const parsed = extractJson<SerpAnalysis>(result.text);
@@ -571,7 +577,10 @@ export async function runSerpAnalysis(formData: FormData): Promise<void> {
       "[serp] Could not parse SERP JSON",
       result.text.slice(0, 500),
     );
-    redirect(`/admin/blog/builder/cluster/${clusterId}?error=bad-output`);
+    const detail = encodeURIComponent(result.text.slice(0, 800));
+    redirect(
+      `/admin/blog/builder/cluster/${clusterId}?error=bad-output&detail=${detail}`,
+    );
   }
 
   await query(

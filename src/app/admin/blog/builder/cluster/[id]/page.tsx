@@ -141,12 +141,23 @@ export default async function ClusterReviewPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ saved?: string; error?: string }>;
+  searchParams: Promise<{
+    saved?: string;
+    error?: string;
+    detail?: string;
+  }>;
 }) {
   await requireAdmin();
   const { id } = await params;
-  const { saved, error } = await searchParams;
+  const { saved, error, detail } = await searchParams;
   const errorMessage = error ? ERRORS[error] ?? "Something went wrong." : null;
+  // Detail comes from runSerpAnalysis / generation actions when Claude
+  // returns an error or the response can't be parsed — it's already
+  // server-side string content (no user input), so safe to render as
+  // text after the URL-decode.
+  const errorDetail = detail
+    ? decodeURIComponent(detail).slice(0, 1000)
+    : null;
 
   if (!/^\d+$/.test(id)) notFound();
 
@@ -311,9 +322,46 @@ export default async function ClusterReviewPage({
         </p>
       )}
       {errorMessage && (
-        <p className="form-error" style={{ marginBottom: "var(--s-5)" }}>
-          {errorMessage}
-        </p>
+        <div
+          className="form-error"
+          style={{ marginBottom: "var(--s-5)" }}
+        >
+          <p style={{ margin: 0 }}>{errorMessage}</p>
+          {errorDetail && (
+            <details style={{ marginTop: 8 }}>
+              <summary
+                style={{
+                  cursor: "pointer",
+                  fontFamily: "var(--font-mono)",
+                  fontSize: 11,
+                  letterSpacing: "0.12em",
+                  textTransform: "uppercase",
+                }}
+              >
+                Show error details
+              </summary>
+              <pre
+                style={{
+                  marginTop: 8,
+                  padding: "10px 12px",
+                  background: "var(--surface)",
+                  border: "1px solid var(--hairline)",
+                  borderRadius: 8,
+                  fontSize: 12,
+                  lineHeight: 1.5,
+                  whiteSpace: "pre-wrap",
+                  wordBreak: "break-word",
+                  fontFamily: "var(--font-mono)",
+                  color: "var(--ink-2)",
+                  maxHeight: 280,
+                  overflow: "auto",
+                }}
+              >
+                {errorDetail}
+              </pre>
+            </details>
+          )}
+        </div>
       )}
 
       {cluster.last_gen_at && (
