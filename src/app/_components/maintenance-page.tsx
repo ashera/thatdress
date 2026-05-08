@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 /**
  * Polite full-screen takeover shown to non-admin viewers when
  * site_settings.maintenance_at has elapsed. The layout decides
@@ -20,20 +22,33 @@ export function MaintenancePage() {
       }}
     >
       <main style={{ maxWidth: 520 }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/tidy-wardrobe.jpg"
-          alt=""
-          aria-hidden
-          width={280}
-          height={280}
-          style={{
-            display: "block",
-            margin: "0 auto var(--s-5)",
-            width: "min(280px, 60vw)",
-            height: "auto",
-          }}
-        />
+        {/* The image doubles as the discreet 'admin escape hatch' to
+            /login during maintenance — admins not currently signed in
+            need somewhere to click to authenticate, but we don't want
+            a big visible 'admin login' button confusing regular
+            visitors. /login is allowlisted in the layout's
+            maintenance gate so the click resolves to the actual
+            login form, not back to this takeover. */}
+        <Link
+          href="/login"
+          aria-label="Sign in"
+          title="Sign in"
+          style={{ display: "block", margin: "0 auto var(--s-5)", width: "min(280px, 60vw)" }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/tidy-wardrobe.jpg"
+            alt=""
+            aria-hidden
+            width={280}
+            height={280}
+            style={{
+              display: "block",
+              width: "100%",
+              height: "auto",
+            }}
+          />
+        </Link>
         <p
           style={{
             fontFamily: "var(--font-mono)",
