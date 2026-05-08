@@ -194,7 +194,7 @@ export default async function FlaggedListingsPage({
                 {row.primary_image_id ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={`/api/listings/${row.id}/images/${row.primary_image_id}`}
+                    src={`/api/listings/${row.id}/images/${row.primary_image_id}?w=200`}
                     alt=""
                     style={{
                       position: "absolute",

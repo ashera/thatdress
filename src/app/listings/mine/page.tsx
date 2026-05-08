@@ -580,7 +580,7 @@ function SellerStatsPanel({ stats }: { stats: SellerStats }) {
           {stats.topListing.primary_image_id && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={`/api/listings/${stats.topListing.id}/images/${stats.topListing.primary_image_id}`}
+              src={`/api/listings/${stats.topListing.id}/images/${stats.topListing.primary_image_id}?w=200`}
               alt=""
               style={{
                 width: 40,

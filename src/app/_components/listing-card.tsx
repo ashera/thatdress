@@ -193,7 +193,14 @@ export function ListingRow({ data }: { data: ListingCardData }) {
     >
       <div className="listing-row-photo">
         {data.photo ? (
-          <img src={data.photo} alt={data.title} loading="lazy" />
+          // Row layout renders ~80px wide; 200 covers retina with
+          // headroom and replaces the multi-MB iPhone-resolution
+          // original that was being shipped per row.
+          <img
+            src={`${data.photo}?w=200`}
+            alt={data.title}
+            loading="lazy"
+          />
         ) : (
           <span className="listing-row-photo-empty" aria-hidden>
             dress
@@ -315,7 +322,14 @@ export function ListingCard({ data }: { data: ListingCardData }) {
           aria-label={`View ${data.title}`}
         >
           {data.photo ? (
-            <img src={data.photo} alt={data.title} loading="lazy" />
+            // Browse-grid card renders at ~280px wide; 800 covers the
+            // 2-3x retina case and is a fraction of the original
+            // iPhone shot. Sharp converts to WebP server-side.
+            <img
+              src={`${data.photo}?w=800`}
+              alt={data.title}
+              loading="lazy"
+            />
           ) : (
             <span className="listing-photo-empty">Dress photo</span>
           )}
