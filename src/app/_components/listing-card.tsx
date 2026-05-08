@@ -27,6 +27,9 @@ export type ListingCardData = {
   showShortlist?: boolean;
   interestedCount?: number;
   trustStatus?: TrustStatus;
+  /** Seller user id — used to render a 'More from this seller' link
+   *  to /sellers/{id} when the viewer isn't the seller themselves. */
+  sellerId?: string | null;
 };
 
 export type ListingCardRow = {
@@ -154,6 +157,7 @@ export function listingFromRow(
       row.trust_status && isTrustStatus(row.trust_status)
         ? row.trust_status
         : undefined,
+    sellerId: row.seller_id ?? null,
   };
 }
 
@@ -281,6 +285,21 @@ export function ListingRow({ data }: { data: ListingCardData }) {
         >
           Details
         </ButtonLink>
+        {data.sellerId && !data.isOwn && (
+          <Link
+            href={`/sellers/${data.sellerId}`}
+            style={{
+              fontSize: 12,
+              color: "var(--ink-3)",
+              textDecoration: "underline",
+              textDecorationColor: "var(--hairline-strong)",
+              textUnderlineOffset: 3,
+              marginLeft: "auto",
+            }}
+          >
+            More from seller →
+          </Link>
+        )}
       </div>
     </article>
   );
@@ -406,6 +425,22 @@ export function ListingCard({ data }: { data: ListingCardData }) {
           View Details &amp; Photos
         </ButtonLink>
       </div>
+      {data.sellerId && !data.isOwn && (
+        <Link
+          href={`/sellers/${data.sellerId}`}
+          style={{
+            display: "block",
+            marginTop: 8,
+            fontSize: 12,
+            color: "var(--ink-3)",
+            textDecoration: "underline",
+            textDecorationColor: "var(--hairline-strong)",
+            textUnderlineOffset: 3,
+          }}
+        >
+          More from this seller →
+        </Link>
+      )}
     </article>
   );
 }

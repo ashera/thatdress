@@ -182,7 +182,7 @@ export default async function ConversationPage({
             <div className="thread-thumb">
               {head.primary_image_id ? (
                 <img
-                  src={`/api/listings/${head.listing_id}/images/${head.primary_image_id}`}
+                  src={`/api/listings/${head.listing_id}/images/${head.primary_image_id}?w=200`}
                   alt=""
                 />
               ) : (

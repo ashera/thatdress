@@ -116,7 +116,7 @@ function ConversationItem({
         <div className="conversation-thumb">
           {c.primary_image_id && c.listing_id ? (
             <img
-              src={`/api/listings/${c.listing_id}/images/${c.primary_image_id}`}
+              src={`/api/listings/${c.listing_id}/images/${c.primary_image_id}?w=200`}
               alt=""
             />
           ) : (

@@ -216,9 +216,27 @@ export default async function SellerProfilePage({
   return (
     <div className="page page--pad">
       <main style={{ maxWidth: 1200, margin: "0 auto" }}>
-        <Link href="/listings" className="back-link">
-          ← Back to browse
-        </Link>
+        <div
+          style={{
+            display: "flex",
+            gap: 16,
+            alignItems: "center",
+            flexWrap: "wrap",
+          }}
+        >
+          <Link href="/listings" className="back-link">
+            ← Back to browse
+          </Link>
+          {isAdmin && (
+            <Link
+              href={`/admin/listings?seller_id=${seller.id}`}
+              className="back-link"
+              style={{ color: "var(--ink-2)" }}
+            >
+              → Admin: this seller&rsquo;s listings
+            </Link>
+          )}
+        </div>
 
         <header
           style={{

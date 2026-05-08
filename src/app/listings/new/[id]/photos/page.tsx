@@ -215,7 +215,7 @@ export default async function WizardPhotosPage({
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={`/api/listings/${draft.id}/images/${img.id}`}
+                      src={`/api/listings/${draft.id}/images/${img.id}?w=400`}
                       alt=""
                       style={{
                         position: "absolute",
@@ -346,7 +346,7 @@ function SlotPanel({
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={`/api/listings/${listingId}/images/${existing.id}`}
+              src={`/api/listings/${listingId}/images/${existing.id}?w=400`}
               alt=""
               style={{
                 position: "absolute",
