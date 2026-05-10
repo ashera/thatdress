@@ -97,10 +97,16 @@ export async function closeListingWithBuyer(
   const dressRow = dressLookup.rows[0];
   if (dressRow) {
     if (buyerId) {
+      // Schedule the first relist nudge for 90 days post-sale. Most
+      // formal events are within ~10 weeks of purchase, so by 90d the
+      // dress has usually been worn and the buyer is open to relisting.
+      // The Phase 3 cron route /api/cron/relist-nudge consumes this.
       await query(
         `UPDATE dresses
-            SET current_owner_user_id = $2::bigint,
-                disposition           = 'in-use'
+            SET current_owner_user_id    = $2::bigint,
+                disposition              = 'in-use',
+                next_relist_nudge_at     = NOW() + INTERVAL '90 days',
+                last_relist_nudge_sent_at = NULL
           WHERE id = $1::bigint`,
         [dressRow.dress_id, buyerId],
       );
