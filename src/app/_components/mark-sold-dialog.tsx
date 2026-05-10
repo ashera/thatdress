@@ -6,7 +6,8 @@ import { closeListingWithBuyer } from "@/lib/actions/reviews";
 export type BuyerOption = {
   /** users.id of the buyer (string for safe template-literal use). */
   id: string;
-  /** Their email address — masked in the dropdown for privacy. */
+  /** Their email address, shown in the dropdown so the seller
+   *  recognises which buyer they're picking. */
   email: string;
   /** Number of messages exchanged on this listing's conversation, so
    *  the seller has signal beyond just the email when picking. */
@@ -209,7 +210,7 @@ export function MarkSoldDialog({
                       </option>
                       {buyers.map((b) => (
                         <option key={b.id} value={b.id}>
-                          {maskEmail(b.email)} — {b.messageCount}{" "}
+                          {b.email} — {b.messageCount}{" "}
                           message{b.messageCount === 1 ? "" : "s"}
                         </option>
                       ))}
@@ -300,13 +301,4 @@ export function MarkSoldDialog({
       </dialog>
     </>
   );
-}
-
-function maskEmail(email: string): string {
-  const at = email.indexOf("@");
-  if (at < 1) return email;
-  const local = email.slice(0, at);
-  const domain = email.slice(at);
-  const head = local.slice(0, Math.min(2, local.length));
-  return `${head}${"●".repeat(Math.max(2, local.length - 2))}${domain}`;
 }
