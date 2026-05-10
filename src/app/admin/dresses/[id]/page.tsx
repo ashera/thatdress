@@ -25,6 +25,7 @@ type DressRow = {
   color: string | null;
   original_retail_cents: number | null;
   disposition: string;
+  display_disposition: string;
   created_at: string;
   next_relist_nudge_at: string | null;
   last_relist_nudge_sent_at: string | null;
@@ -77,6 +78,17 @@ async function fetchDress(id: string): Promise<DressRow | null> {
               d.color,
               d.original_retail_cents,
               d.disposition,
+              CASE
+                WHEN d.disposition = 'available' AND EXISTS (
+                  SELECT 1 FROM listings l
+                   WHERE l.dress_id     = d.id
+                     AND l.is_draft     = FALSE
+                     AND l.is_published = TRUE
+                     AND l.sold_at IS NULL
+                ) THEN 'listed'
+                WHEN d.disposition = 'available' THEN 'drafted'
+                ELSE d.disposition
+              END                                      AS display_disposition,
               d.created_at::text                       AS created_at,
               d.next_relist_nudge_at::text             AS next_relist_nudge_at,
               d.last_relist_nudge_sent_at::text        AS last_relist_nudge_sent_at,
@@ -186,8 +198,10 @@ function dispositionPill(d: string): { bg: string; fg: string; label: string } {
   switch (d) {
     case "in-use":
       return { bg: "#dcfce7", fg: "#166534", label: "In use" };
-    case "available":
-      return { bg: "#fef3c7", fg: "#92400e", label: "Available" };
+    case "listed":
+      return { bg: "#cffafe", fg: "#155e75", label: "Listed" };
+    case "drafted":
+      return { bg: "#e5e7eb", fg: "#374151", label: "Drafted" };
     case "kept":
       return { bg: "#e0e7ff", fg: "#3730a3", label: "Kept" };
     case "lost":
@@ -246,7 +260,7 @@ export default async function AdminDressDetailPage({
   ]);
   if (!dress) notFound();
 
-  const pill = dispositionPill(dress.disposition);
+  const pill = dispositionPill(dress.display_disposition);
   const eligibleForNudge = dress.disposition === "in-use";
   const measurementsLine = measurements(dress);
 
@@ -426,7 +440,7 @@ export default async function AdminDressDetailPage({
               title={
                 eligibleForNudge
                   ? "Force-send a relist nudge to the current owner"
-                  : `Not eligible — disposition is '${dress.disposition}'`
+                  : `Not eligible — disposition is '${dress.display_disposition}'`
               }
             >
               Send relist nudge
