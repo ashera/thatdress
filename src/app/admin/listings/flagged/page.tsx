@@ -144,12 +144,18 @@ export default async function FlaggedListingsPage({
         <p className="eyebrow">Admin · Listings · Reports</p>
         <h1>Listings under review</h1>
         <p className="sub">
-          Listings admins have flagged plus open buyer reports.
-          Click into one to read the report, see the listing, and
-          decide. <strong>Dismiss reports</strong> closes open
-          reports without changing trust state;{" "}
-          <strong>Restore</strong> (visible only on currently-flagged
-          listings) un-flags and closes reports together.
+          Admin-flagged listings plus open buyer reports. Every
+          open report is shown inline so you can read the full
+          context, then act on the row.{" "}
+          <strong>Reinstate</strong> clears an admin flag and
+          closes every open report on the listing — use it when
+          you&rsquo;ve reviewed the reports and decided the
+          listing should stay public.{" "}
+          <strong>Dismiss reports</strong> is for listings that
+          weren&rsquo;t admin-flagged but have open buyer
+          complaints; closes the reports without changing the
+          trust state. Open the listing itself for full
+          context (photos, seller, history).
         </p>
       </header>
 
@@ -354,9 +360,18 @@ export default async function FlaggedListingsPage({
                   <input type="hidden" name="listingId" value={row.id} />
                   <input type="hidden" name="status" value="self-declared" />
                   <input type="hidden" name="next" value="queue" />
-                  <Button type="submit" variant="primary" size="sm">
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    size="sm"
+                    title={
+                      row.trust_status === "flagged"
+                        ? "Clear the admin flag and close every open report on this listing"
+                        : "Close every open report without changing the trust state"
+                    }
+                  >
                     {row.trust_status === "flagged"
-                      ? "Restore"
+                      ? "Reinstate"
                       : "Dismiss reports"}
                   </Button>
                 </form>
