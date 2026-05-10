@@ -20,6 +20,11 @@ const ADMIN_LINKS: Array<{ href: string; title: string; desc: string }> = [
     desc: "Moderate buyer reviews. Hide harmful ones from public profiles, resolve seller-flagged disputes.",
   },
   {
+    href: "/admin/dresses",
+    title: "Dresses",
+    desc: "Track dresses with current owners, monitor relist-nudge schedules, and force-send a nudge to a buyer on demand.",
+  },
+  {
     href: "/admin/users",
     title: "Manage Users",
     desc: "View accounts, edit profiles, suspend, and DM users directly.",
