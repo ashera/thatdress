@@ -660,11 +660,17 @@ export default async function ListingDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ reported?: string }>;
+  searchParams: Promise<{
+    reported?: string;
+    unmark?: string;
+    other?: string;
+  }>;
 }) {
   const { id } = await params;
   const sp = await searchParams;
   const reportedFlag = sp.reported ?? null;
+  const unmarkError = sp.unmark ?? null;
+  const unmarkOtherListingId = sp.other ?? null;
   const [result, currentUser, regionId] = await Promise.all([
     fetchListing(id),
     getCurrentUser(),
@@ -932,6 +938,60 @@ export default async function ListingDetailPage({
         >
           You&rsquo;ve already reported this listing — your earlier
           report is still open.
+        </div>
+      )}
+      {unmarkError === "not-owner" && (
+        <div
+          style={{
+            margin: "var(--s-3) 0",
+            padding: "10px 14px",
+            background: "#fef3c7",
+            border: "1px solid #fcd34d",
+            borderRadius: 10,
+            color: "#78350f",
+            fontSize: 14,
+            lineHeight: 1.5,
+          }}
+        >
+          <strong>Can&rsquo;t reactivate.</strong> This dress has
+          been sold to someone else and now belongs to them — you
+          can&rsquo;t un-mark this listing as sold. If the sale
+          fell through, contact the buyer or message support.
+        </div>
+      )}
+      {unmarkError === "other-active" && (
+        <div
+          style={{
+            margin: "var(--s-3) 0",
+            padding: "10px 14px",
+            background: "#fef3c7",
+            border: "1px solid #fcd34d",
+            borderRadius: 10,
+            color: "#78350f",
+            fontSize: 14,
+            lineHeight: 1.5,
+          }}
+        >
+          <strong>Can&rsquo;t reactivate.</strong> There&rsquo;s
+          already another live listing for this dress
+          {unmarkOtherListingId ? (
+            <>
+              {" "}
+              (
+              <Link
+                href={`/listings/${unmarkOtherListingId}`}
+                style={{
+                  color: "#78350f",
+                  textDecoration: "underline",
+                }}
+              >
+                listing #{unmarkOtherListingId}
+              </Link>
+              )
+            </>
+          ) : null}
+          . Two active listings for the same dress would confuse
+          buyers, so we keep this one closed.
         </div>
       )}
       {!l.is_published && (isOwner || isAdmin) && (

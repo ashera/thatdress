@@ -285,6 +285,64 @@ export async function toggleListingSold(formData: FormData): Promise<void> {
     redirect("/listings");
   }
 
+  // We need to know the current state before deciding whether the
+  // un-mark direction is even legal. Mark-sold (NULL → NOW) is
+  // always fine; un-mark (NOW → NULL) requires the seller to still
+  // own the dress and for no other active listing to exist —
+  // otherwise we'd revive a duplicate listing for a dress that's
+  // moved on or is currently being relisted by the new owner.
+  const stateRes = await query<{
+    sold_at: string | null;
+    dress_id: string;
+    current_owner_user_id: string | null;
+  }>(
+    `SELECT l.sold_at::text,
+            l.dress_id::text                       AS dress_id,
+            d.current_owner_user_id::text          AS current_owner_user_id
+       FROM listings l
+       JOIN dresses d ON d.id = l.dress_id
+      WHERE l.id = $1::bigint
+      LIMIT 1`,
+    [listingId],
+  );
+  const state = stateRes.rows[0];
+  if (!state) redirect("/listings");
+
+  const isUnmarking = state.sold_at != null;
+  const next = String(formData.get("next") ?? `/listings/${listingId}`);
+
+  if (isUnmarking) {
+    // Guard 1: seller has to still be the dress's current owner.
+    // After a sale closes with an attributed buyer the dress hands
+    // off to the buyer; the original seller can't reactivate.
+    if (
+      state.current_owner_user_id != null &&
+      state.current_owner_user_id !== user.id &&
+      !user.isAdmin
+    ) {
+      redirect(`/listings/${listingId}?unmark=not-owner`);
+    }
+    // Guard 2: no other live listing for the same dress. If the
+    // current owner has already started a relist, two active
+    // listings would point at one dress — buyers could message
+    // both, one ends in a phantom sale.
+    const otherActive = await query<{ id: string }>(
+      `SELECT id::text FROM listings
+        WHERE dress_id = $1::bigint
+          AND id      <> $2::bigint
+          AND is_draft     = FALSE
+          AND is_published = TRUE
+          AND sold_at IS NULL
+        LIMIT 1`,
+      [state.dress_id, listingId],
+    );
+    if (otherActive.rows[0]) {
+      redirect(
+        `/listings/${listingId}?unmark=other-active&other=${otherActive.rows[0].id}`,
+      );
+    }
+  }
+
   await query(
     `UPDATE listings
         SET sold_at = CASE
@@ -302,7 +360,6 @@ export async function toggleListingSold(formData: FormData): Promise<void> {
   revalidatePath(`/`);
   revalidatePath(`/listings/mine`);
 
-  const next = String(formData.get("next") ?? `/listings/${listingId}`);
   redirect(next);
 }
 
