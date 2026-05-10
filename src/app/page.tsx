@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { getBaseUrl } from "@/lib/email";
 import { getShortlistIds } from "@/lib/shortlist";
 import { regionShortName, resolveCurrentRegion } from "@/lib/regions";
+import { loadSiteSettings } from "@/lib/site-settings";
 import { ButtonLink, Spec } from "./_components/ui";
 import {
   ListingCard,
@@ -195,13 +196,16 @@ export default async function Home({
     r.kind === "selected" || r.kind === "auto" ? r.region : null;
   const regionShort = region ? regionShortName(region) : null;
   const regionId = region ? region.id : null;
-  const [stats, featured, shortlistedIds, latestPost, baseUrl] = await Promise.all([
-    getMarketplaceStats(regionId),
-    getFeaturedListings(regionId),
-    user ? getShortlistIds(user.id) : Promise.resolve(new Set<string>()),
-    getLatestPublishedPost(),
-    getBaseUrl(),
-  ]);
+  const [stats, featured, shortlistedIds, latestPost, baseUrl, settings] =
+    await Promise.all([
+      getMarketplaceStats(regionId),
+      getFeaturedListings(regionId),
+      user ? getShortlistIds(user.id) : Promise.resolve(new Set<string>()),
+      getLatestPublishedPost(),
+      getBaseUrl(),
+      loadSiteSettings(),
+    ]);
+  const reviewsThreshold = settings.reviewsDisplayThreshold;
 
   // Organisation + WebSite JSON-LD. Organisation gives Google enough
   // signal to build a brand entity (logo + name + URL); WebSite with a
@@ -474,7 +478,7 @@ export default async function Home({
             {featured.map((row) => (
               <ListingCard
                 key={row.id}
-                data={listingFromRow(row, user?.id, shortlistedIds)}
+                data={listingFromRow(row, user?.id, shortlistedIds, reviewsThreshold)}
               />
             ))}
           </div>

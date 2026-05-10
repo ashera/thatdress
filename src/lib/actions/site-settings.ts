@@ -58,10 +58,18 @@ export async function saveSiteSettings(formData: FormData): Promise<void> {
     current.referralCommissionCents ??
       DEFAULT_SITE_SETTINGS.referralCommissionCents,
   );
+  const reviewsDisplayThreshold = parseInt0(
+    formData.get("reviews_display_threshold"),
+    1,
+    50,
+    current.reviewsDisplayThreshold ??
+      DEFAULT_SITE_SETTINGS.reviewsDisplayThreshold,
+  );
   await updateSiteSettings({
     allowIndexing,
     healthThresholdVerified,
     referralCommissionCents,
+    reviewsDisplayThreshold,
     // maintenance_at is owned by updateMaintenanceMode — leave it
     // untouched here so saving the indexing/threshold/commission
     // form doesn't accidentally cancel a scheduled window.

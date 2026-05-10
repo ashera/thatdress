@@ -957,6 +957,14 @@ ALTER TABLE site_settings
 ALTER TABLE site_settings
   ADD COLUMN IF NOT EXISTS maintenance_at TIMESTAMPTZ;
 
+-- Minimum review count before a seller's rating chip appears on
+-- public surfaces (browse cards, listing detail, seller profile
+-- header). Below this number nothing renders, so a new seller's
+-- blank slate doesn't read as negative. Default 3 — handful of
+-- early reviews to lock in before broadcasting the average.
+ALTER TABLE site_settings
+  ADD COLUMN IF NOT EXISTS reviews_display_threshold INTEGER NOT NULL DEFAULT 3;
+
 INSERT INTO site_settings (id) VALUES (1)
 ON CONFLICT (id) DO NOTHING;
 

@@ -12,6 +12,7 @@ import {
   maskBuyerEmail,
   type ReviewRow,
 } from "@/lib/reviews";
+import { loadSiteSettings } from "@/lib/site-settings";
 import {
   ListingCard,
   listingFromRow,
@@ -196,14 +197,22 @@ export default async function SellerProfilePage({
   const seller = await fetchSeller(id);
   if (!seller || seller.suspended_at) notFound();
 
-  const [listings, currentUser, regionId, reviewSummary, reviews] =
-    await Promise.all([
-      fetchSellerListings(seller.id),
-      getCurrentUser(),
-      getCurrentRegionId(),
-      getSellerReviewSummary(seller.id),
-      listSellerReviews(seller.id, 20),
-    ]);
+  const [
+    listings,
+    currentUser,
+    regionId,
+    reviewSummary,
+    reviews,
+    settings,
+  ] = await Promise.all([
+    fetchSellerListings(seller.id),
+    getCurrentUser(),
+    getCurrentRegionId(),
+    getSellerReviewSummary(seller.id),
+    listSellerReviews(seller.id, 20),
+    loadSiteSettings(),
+  ]);
+  const reviewsThreshold = settings.reviewsDisplayThreshold;
   const shortlistedIds = await getShortlistIds(currentUser?.id);
 
   // Region gate the *listings*, not the profile — non-admins still
@@ -372,7 +381,7 @@ export default async function SellerProfilePage({
                   </span>
                 </>
               )}
-              {reviewSummary.count >= 3 && (
+              {reviewSummary.count >= reviewsThreshold && (
                 <>
                   <span aria-hidden style={{ color: "var(--ink-4)" }}>
                     ·
@@ -434,7 +443,12 @@ export default async function SellerProfilePage({
             {visibleListings.map((row) => (
               <li key={row.id}>
                 <ListingCard
-                  data={listingFromRow(row, currentUser?.id, shortlistedIds)}
+                  data={listingFromRow(
+                    row,
+                    currentUser?.id,
+                    shortlistedIds,
+                    reviewsThreshold,
+                  )}
                 />
               </li>
             ))}

@@ -211,6 +211,40 @@ export default async function SiteSettingsPage({
         </section>
 
         <section className="form-card" style={{ marginTop: "var(--s-5)" }}>
+          <h2 className="card-heading">Reviews display threshold</h2>
+          <p className="card-sub">
+            Minimum number of public reviews a seller needs before
+            their <strong>★ rating chip</strong> appears on browse
+            cards, the listing detail seller block, and the seller-
+            profile header. Below this count nothing renders, so a
+            new seller&rsquo;s blank slate doesn&rsquo;t read as a
+            negative signal.
+          </p>
+          <p className="card-sub">
+            Lower the number to surface ratings sooner (gives the
+            chip more reach but with less data behind it). Raise it
+            to wait for more samples before broadcasting.
+          </p>
+
+          <Field
+            label="Reviews required to show the rating chip"
+            htmlFor="reviews_display_threshold"
+            help="1–50. Default 3."
+          >
+            <Input
+              id="reviews_display_threshold"
+              name="reviews_display_threshold"
+              type="number"
+              min={1}
+              max={50}
+              step={1}
+              defaultValue={String(settings.reviewsDisplayThreshold)}
+              required
+            />
+          </Field>
+        </section>
+
+        <section className="form-card" style={{ marginTop: "var(--s-5)" }}>
           <h2 className="card-heading">Referral commission</h2>
           <p className="card-sub">
             Per-listing payout to the referrer for{" "}

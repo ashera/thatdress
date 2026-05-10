@@ -23,6 +23,11 @@ export type SiteSettings = {
    *  active — non-admin users see the maintenance page; admins keep
    *  working. */
   maintenanceAt: string | null;
+  /** Minimum number of public reviews a seller needs before their
+   *  rating chip appears on browse cards, the listing detail seller
+   *  block, and the seller-profile header. Below this number nothing
+   *  renders. Default 3. */
+  reviewsDisplayThreshold: number;
 };
 
 export const DEFAULT_SITE_SETTINGS: SiteSettings = {
@@ -30,6 +35,7 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   healthThresholdVerified: 75,
   referralCommissionCents: 0,
   maintenanceAt: null,
+  reviewsDisplayThreshold: 3,
 };
 
 type Row = {
@@ -37,6 +43,7 @@ type Row = {
   health_threshold_verified: number;
   referral_commission_cents: number;
   maintenance_at: string | null;
+  reviews_display_threshold: number;
 };
 
 export async function loadSiteSettings(): Promise<SiteSettings> {
@@ -45,7 +52,8 @@ export async function loadSiteSettings(): Promise<SiteSettings> {
       `SELECT allow_indexing,
               health_threshold_verified,
               referral_commission_cents,
-              maintenance_at::text AS maintenance_at
+              maintenance_at::text AS maintenance_at,
+              reviews_display_threshold
          FROM site_settings WHERE id = 1 LIMIT 1`,
     );
     const row = r.rows[0];
@@ -55,6 +63,7 @@ export async function loadSiteSettings(): Promise<SiteSettings> {
       healthThresholdVerified: row.health_threshold_verified,
       referralCommissionCents: row.referral_commission_cents,
       maintenanceAt: row.maintenance_at,
+      reviewsDisplayThreshold: row.reviews_display_threshold,
     };
   } catch {
     // If the DB is unreachable, fall safe (block indexing) so we don't
@@ -70,17 +79,20 @@ export async function updateSiteSettings(next: SiteSettings): Promise<void> {
         allow_indexing,
         health_threshold_verified,
         referral_commission_cents,
+        reviews_display_threshold,
         updated_at
-     ) VALUES (1, $1, $2, $3, NOW())
+     ) VALUES (1, $1, $2, $3, $4, NOW())
      ON CONFLICT (id) DO UPDATE SET
-       allow_indexing            = EXCLUDED.allow_indexing,
-       health_threshold_verified = EXCLUDED.health_threshold_verified,
-       referral_commission_cents = EXCLUDED.referral_commission_cents,
-       updated_at                = NOW()`,
+       allow_indexing             = EXCLUDED.allow_indexing,
+       health_threshold_verified  = EXCLUDED.health_threshold_verified,
+       referral_commission_cents  = EXCLUDED.referral_commission_cents,
+       reviews_display_threshold  = EXCLUDED.reviews_display_threshold,
+       updated_at                 = NOW()`,
     [
       next.allowIndexing,
       next.healthThresholdVerified,
       next.referralCommissionCents,
+      next.reviewsDisplayThreshold,
     ],
   );
 }

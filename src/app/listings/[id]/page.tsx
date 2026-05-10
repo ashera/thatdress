@@ -682,10 +682,14 @@ export default async function ListingDetailPage({
 
   const specGroups = buildSpecs(l);
   // Seller's review summary — surfaced inline in the seller block
-  // when count >= 3.
-  const sellerReviewSummary = l.seller_id
-    ? await getSellerReviewSummary(l.seller_id)
-    : { count: 0, average: 0 };
+  // once the count crosses the admin-configured threshold.
+  const [sellerReviewSummary, pageSettings] = await Promise.all([
+    l.seller_id
+      ? getSellerReviewSummary(l.seller_id)
+      : Promise.resolve({ count: 0, average: 0 }),
+    loadSiteSettings(),
+  ]);
+  const reviewsThreshold = pageSettings.reviewsDisplayThreshold;
 
   // Owners + admins both need this — owners use it for the
   // mark-sold buyer-picker, admins for their inline conversation list.
@@ -968,7 +972,7 @@ export default async function ListingDetailPage({
               <div className="when">
                 Posted {formatPostedDate(l.created_at)}
                 {l.location_postal ? ` · ${l.location_postal}` : ""}
-                {sellerReviewSummary.count >= 3 && (
+                {sellerReviewSummary.count >= reviewsThreshold && (
                   <>
                     {" · "}
                     <Link

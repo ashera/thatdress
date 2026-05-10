@@ -24,6 +24,7 @@ import {
 } from "../_components/listings-filters";
 import { ViewToggle, type ListingsView } from "../_components/view-toggle";
 import { saveSearch } from "@/lib/actions/saved-searches";
+import { loadSiteSettings } from "@/lib/site-settings";
 
 // 60s ISR — see /page.tsx note. Filtered URLs (?designer_id=...) get
 // their own cache entries so popular filter combos hit DB once a minute.
@@ -434,11 +435,13 @@ export default async function ListingsPage({
   const sort = parseSort(sp.sort);
   const orderBy = SORT_SQL[sort];
 
-  const [result, options, shortlistedIds] = await Promise.all([
+  const [result, options, shortlistedIds, settings] = await Promise.all([
     fetchListings(whereSql, params, orderBy),
     loadFilterOptions(),
     getShortlistIds(user?.id),
+    loadSiteSettings(),
   ]);
+  const reviewsThreshold = settings.reviewsDisplayThreshold;
 
   const count = result.ok ? result.listings.length : 0;
   const filterCount = activeFilterCount(active);
@@ -617,13 +620,13 @@ export default async function ListingsPage({
       ) : view === "grid" ? (
         <div className="results-rows">
           {result.listings.map((row) => (
-            <ListingRow key={row.id} data={listingFromRow(row, user?.id, shortlistedIds)} />
+            <ListingRow key={row.id} data={listingFromRow(row, user?.id, shortlistedIds, reviewsThreshold)} />
           ))}
         </div>
       ) : (
         <div className="results-grid">
           {result.listings.map((row) => (
-            <ListingCard key={row.id} data={listingFromRow(row, user?.id, shortlistedIds)} />
+            <ListingCard key={row.id} data={listingFromRow(row, user?.id, shortlistedIds, reviewsThreshold)} />
           ))}
         </div>
       )}

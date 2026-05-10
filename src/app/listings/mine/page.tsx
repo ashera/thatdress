@@ -530,7 +530,14 @@ export default async function MyListingsPage({
                   buyers={buyersByListing.get(row.id) ?? []}
                 />
               )}
-              <ListingRow data={listingFromRow(row)} />
+              <ListingRow
+                data={listingFromRow(
+                  row,
+                  user.id,
+                  null,
+                  settings.reviewsDisplayThreshold,
+                )}
+              />
               <div className="my-listing-stats">
                 <span>
                   <strong>{row.view_count}</strong> view

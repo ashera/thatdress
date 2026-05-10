@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { query } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { getShortlistIds } from "@/lib/shortlist";
+import { loadSiteSettings } from "@/lib/site-settings";
 import {
   ignoreFromShortlist,
   reinstateShortlist,
@@ -127,10 +128,12 @@ export default async function ShortlistPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login?next=/shortlist");
 
-  const [result, ids] = await Promise.all([
+  const [result, ids, settings] = await Promise.all([
     fetchShortlistedListings(user.id),
     getShortlistIds(user.id),
+    loadSiteSettings(),
   ]);
+  const reviewsThreshold = settings.reviewsDisplayThreshold;
 
   const total = result.ok ? result.rows.length : 0;
   const activeCount = result.ok
@@ -170,7 +173,12 @@ export default async function ShortlistPage() {
       ) : (
         <div className="results-grid">
           {result.rows.map((row) => {
-            const data = listingFromRow(row, user.id, ids);
+            const data = listingFromRow(
+              row,
+              user.id,
+              ids,
+              reviewsThreshold,
+            );
             // Hide the photo heart toggle on /shortlist — explicit
             // controls below the card handle ignore / reinstate / remove.
             data.showShortlist = false;

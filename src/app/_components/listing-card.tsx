@@ -31,10 +31,14 @@ export type ListingCardData = {
    *  to /sellers/{id} when the viewer isn't the seller themselves. */
   sellerId?: string | null;
   /** Seller rating + count for the ★ 4.8 (12) chip. Card hides it
-   *  when count < 3 so a brand-new seller's missing rating doesn't
-   *  read as a negative signal. */
+   *  when count < reviewsDisplayThreshold so a brand-new seller's
+   *  missing rating doesn't read as a negative signal. */
   sellerRatingAvg?: number | null;
   sellerRatingCount?: number;
+  /** Min reviews required to show the rating chip — sourced from
+   *  site_settings.reviews_display_threshold by the consumer page.
+   *  Defaults to 3 if unset. */
+  reviewsDisplayThreshold?: number;
 };
 
 export type ListingCardRow = {
@@ -132,6 +136,7 @@ export function listingFromRow(
   row: ListingCardRow,
   currentUserId?: string | null,
   shortlistedIds?: Set<string> | null,
+  reviewsDisplayThreshold = 3,
 ): ListingCardData {
   const isOwn =
     currentUserId != null &&
@@ -174,20 +179,23 @@ export function listingFromRow(
       row.seller_rating_count != null
         ? Number(row.seller_rating_count)
         : 0,
+    reviewsDisplayThreshold,
   };
 }
 
 /** Inline ★ 4.8 (12) chip used by both card layouts. Renders nothing
- *  under the 3-review threshold so a new seller's blank slate
- *  doesn't read as a negative signal. */
+ *  under the threshold (settable from /admin/site-settings) so a new
+ *  seller's blank slate doesn't read as a negative signal. */
 function SellerRatingPill({
   avg,
   count,
+  threshold,
 }: {
   avg: number | null | undefined;
   count: number | undefined;
+  threshold: number;
 }) {
-  if (!avg || !count || count < 3) return null;
+  if (!avg || !count || count < threshold) return null;
   return (
     <span
       style={{
@@ -347,6 +355,7 @@ export function ListingRow({ data }: { data: ListingCardData }) {
           <SellerRatingPill
             avg={data.sellerRatingAvg}
             count={data.sellerRatingCount}
+            threshold={data.reviewsDisplayThreshold ?? 3}
           />
         )}
       </div>
@@ -500,6 +509,7 @@ export function ListingCard({ data }: { data: ListingCardData }) {
           <SellerRatingPill
             avg={data.sellerRatingAvg}
             count={data.sellerRatingCount}
+            threshold={data.reviewsDisplayThreshold ?? 3}
           />
         </div>
       )}
