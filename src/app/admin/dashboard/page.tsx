@@ -34,11 +34,20 @@ async function safeSum(
 }
 
 function priceFormat(cents: number): string {
-  if (cents >= 100_000_00) {
-    return `$${Math.round(cents / 100_000) / 10}M`;
+  // Compact format: $1.5k once we cross $1,000, $1.2M once we
+  // cross $1,000,000. Divisors are in cents — $1 = 100 cents, so
+  // 'thousands of dollars' = cents / 100,000 and 'millions' =
+  // cents / 100,000,000. Round to one decimal then strip a
+  // trailing .0 so '$1.0k' renders as '$1k'.
+  if (cents >= 100_000_000) {
+    return `$${(Math.round(cents / 10_000_000) / 10)
+      .toString()
+      .replace(/\.0$/, "")}M`;
   }
-  if (cents >= 1_000_00) {
-    return `$${Math.round(cents / 1_000) / 10}k`.replace(".0k", "k");
+  if (cents >= 100_000) {
+    return `$${(Math.round(cents / 10_000) / 10)
+      .toString()
+      .replace(/\.0$/, "")}k`;
   }
   return new Intl.NumberFormat("en-AU", {
     style: "currency",

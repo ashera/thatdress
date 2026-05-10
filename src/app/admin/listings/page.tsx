@@ -235,12 +235,12 @@ export default async function AdminListingsPage({
   const sort: SortValue =
     (SORT_OPTIONS.find((o) => o.value === sp.sort)?.value as SortValue) ??
     (sellerId ? "newest" : "active");
-  // When scoped to a single seller, default to 'all' so the admin sees
-  // every listing the seller has — active, sold, and hidden together —
-  // unless they explicitly pick a narrower filter.
+  // Default to 'all' so admins land on the full picture — active,
+  // sold, and hidden together — and narrow down only when they pick
+  // a more specific filter from the dropdown.
   const status: StatusValue =
     (STATUS_OPTIONS.find((o) => o.value === sp.status)?.value as StatusValue) ??
-    (sellerId ? "all" : "convs");
+    "all";
 
   // Resolve the seller's email so we can show context in the header.
   let sellerEmail: string | null = null;
@@ -426,7 +426,7 @@ export default async function AdminListingsPage({
         {(search ||
           (sellerId
             ? sort !== "newest" || status !== "all"
-            : sort !== "active" || status !== "convs")) && (
+            : sort !== "active" || status !== "all")) && (
           <Link
             href={
               sellerId
