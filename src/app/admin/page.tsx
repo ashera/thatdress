@@ -100,6 +100,11 @@ const ADMIN_LINKS: Array<{ href: string; title: string; desc: string }> = [
     title: "Project Documentation",
     desc: "Rendered view of README.md — stack, architecture, feature systems, deploy notes.",
   },
+  {
+    href: "/admin/docs/flows",
+    title: "Workflow Diagrams",
+    desc: "Rendered Mermaid diagrams covering the major user journeys and system flows.",
+  },
 ];
 
 export default async function AdminHomePage() {
