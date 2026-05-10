@@ -616,6 +616,11 @@ export default async function AdminListingsPage({
                         {isHidden && (
                           <StatusPill color="#f3e8ff">Hidden</StatusPill>
                         )}
+                        {!isSold && !isHidden && (
+                          <StatusPill color="#dcfce7" textColor="#166534">
+                            Active
+                          </StatusPill>
+                        )}
                         {isFlagged && (
                           <StatusPill color="#fee2e2">Flagged</StatusPill>
                         )}
@@ -627,20 +632,6 @@ export default async function AdminListingsPage({
                             Authenticated
                           </StatusPill>
                         )}
-                        {!isSold &&
-                          !isHidden &&
-                          !isFlagged &&
-                          !isVerified &&
-                          !isAuthenticated && (
-                            <span
-                              style={{
-                                fontSize: 11,
-                                color: "var(--ink-4)",
-                              }}
-                            >
-                              —
-                            </span>
-                          )}
                       </div>
                     </td>
                     <td
