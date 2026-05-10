@@ -7,16 +7,17 @@ import { startDraftListing } from "@/lib/actions/listing-wizard";
 import { computeHealth } from "@/lib/listing-health";
 import { getSellerStats, type SellerStats } from "@/lib/listing-views";
 import { loadSiteSettings } from "@/lib/site-settings";
-import {
-  confirmListingStillAvailable,
-  toggleListingSold,
-} from "@/lib/actions/listings";
+import { confirmListingStillAvailable } from "@/lib/actions/listings";
 import { Button } from "../../_components/ui";
 import {
   ListingRow,
   listingFromRow,
   type ListingCardRow,
 } from "../../_components/listing-card";
+import {
+  MarkSoldDialog,
+  type BuyerOption,
+} from "../../_components/mark-sold-dialog";
 
 export const dynamic = "force-dynamic";
 
@@ -140,6 +141,49 @@ async function fetchDrafts(userId: string): Promise<DraftItem[]> {
   }
 }
 
+/** Buyers (one row per listing+buyer pair) the seller's listings
+ *  have ever conversed with. Used to populate the MarkSoldDialog
+ *  picker in one round-trip — bucketed in memory by listing id. */
+async function fetchBuyersByListing(
+  sellerId: string,
+): Promise<Map<string, BuyerOption[]>> {
+  try {
+    const r = await query<{
+      listing_id: string;
+      buyer_id: string | null;
+      buyer_email: string | null;
+      msg_count: string;
+    }>(
+      `SELECT c.listing_id::text  AS listing_id,
+              c.buyer_id::text    AS buyer_id,
+              u.email             AS buyer_email,
+              (
+                SELECT COUNT(*)::text FROM messages
+                  WHERE conversation_id = c.id
+              )                   AS msg_count
+         FROM conversations c
+         LEFT JOIN users u ON u.id = c.buyer_id
+         JOIN listings l ON l.id = c.listing_id
+        WHERE l.seller_id = $1::bigint`,
+      [sellerId],
+    );
+    const map = new Map<string, BuyerOption[]>();
+    for (const row of r.rows) {
+      if (!row.buyer_id || !row.buyer_email) continue;
+      const arr = map.get(row.listing_id) ?? [];
+      arr.push({
+        id: row.buyer_id,
+        email: row.buyer_email,
+        messageCount: Number(row.msg_count ?? 0),
+      });
+      map.set(row.listing_id, arr);
+    }
+    return map;
+  } catch {
+    return new Map();
+  }
+}
+
 async function fetchOwnListings(
   userId: string,
 ): Promise<{ ok: true; rows: Row[] } | { ok: false; error: string }> {
@@ -247,12 +291,14 @@ export default async function MyListingsPage({
   const sp = searchParams ? await searchParams : {};
   const nudgeFlash = sp.nudge ?? null;
 
-  const [result, drafts, settings, stats] = await Promise.all([
-    fetchOwnListings(user.id),
-    fetchDrafts(user.id),
-    loadSiteSettings(),
-    getSellerStats(user.id),
-  ]);
+  const [result, drafts, settings, stats, buyersByListing] =
+    await Promise.all([
+      fetchOwnListings(user.id),
+      fetchDrafts(user.id),
+      loadSiteSettings(),
+      getSellerStats(user.id),
+      fetchBuyersByListing(user.id),
+    ]);
   const verifiedThreshold = settings.healthThresholdVerified;
   const total = result.ok ? result.rows.length : 0;
   const hidden = result.ok
@@ -481,6 +527,7 @@ export default async function MyListingsPage({
                 <SaleNudgeBanner
                   listingId={row.id}
                   daysOld={Number(row.days_old ?? 0)}
+                  buyers={buyersByListing.get(row.id) ?? []}
                 />
               )}
               <ListingRow data={listingFromRow(row)} />
@@ -681,9 +728,11 @@ function SellerStatsPanel({ stats }: { stats: SellerStats }) {
 function SaleNudgeBanner({
   listingId,
   daysOld,
+  buyers,
 }: {
   listingId: string;
   daysOld: number;
+  buyers: BuyerOption[];
 }) {
   return (
     <div
@@ -737,25 +786,13 @@ function SaleNudgeBanner({
             Still for sale
           </button>
         </form>
-        <form action={toggleListingSold}>
-          <input type="hidden" name="listingId" value={listingId} />
-          <input type="hidden" name="next" value="/listings/mine" />
-          <button
-            type="submit"
-            style={{
-              padding: "6px 14px",
-              borderRadius: 999,
-              background: "transparent",
-              color: "#92400e",
-              border: "1px solid #fcd34d",
-              fontWeight: 600,
-              fontSize: 13,
-              cursor: "pointer",
-            }}
-          >
-            Mark as sold
-          </button>
-        </form>
+        <MarkSoldDialog
+          listingId={listingId}
+          buyers={buyers}
+          next="/listings/mine"
+          buttonLabel="Mark as sold"
+          buttonVariant="ghost"
+        />
       </div>
     </div>
   );

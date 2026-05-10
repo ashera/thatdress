@@ -25,6 +25,7 @@ import { TrustBadge } from "../../_components/trust-badge";
 import { FlagListingDialog } from "../../_components/flag-listing-dialog";
 import { ReportListingDialog } from "../../_components/report-listing-dialog";
 import { ShareListingButton } from "../../_components/share-listing-button";
+import { MarkSoldDialog } from "../../_components/mark-sold-dialog";
 import { Button, ButtonLink, Icon } from "../../_components/ui";
 import {
   ListingGallery,
@@ -513,6 +514,7 @@ async function OwnerHealthCard({
 
 type ConversationSummary = {
   id: string;
+  buyer_id: string | null;
   buyer_email: string | null;
   msg_count: string;
   last_at: string | null;
@@ -565,6 +567,7 @@ async function fetchConversationsForListing(
   try {
     const r = await query<ConversationSummary>(
       `SELECT c.id::text,
+              c.buyer_id::text AS buyer_id,
               bu.email AS buyer_email,
               (
                 SELECT COUNT(*)::text FROM messages
@@ -676,8 +679,19 @@ export default async function ListingDetailPage({
     : "Unknown seller";
 
   const specGroups = buildSpecs(l);
-  const adminConversations = isAdmin
-    ? await fetchConversationsForListing(l.id)
+  // Owners + admins both need this — owners use it for the
+  // mark-sold buyer-picker, admins for their inline conversation list.
+  const conversationsForListing =
+    isOwner || isAdmin ? await fetchConversationsForListing(l.id) : [];
+  const adminConversations = isAdmin ? conversationsForListing : [];
+  const buyerOptions = (isOwner || isAdmin)
+    ? conversationsForListing
+        .filter((c) => c.buyer_id && c.buyer_email)
+        .map((c) => ({
+          id: c.buyer_id!,
+          email: c.buyer_email!,
+          messageCount: Number(c.msg_count ?? 0),
+        }))
     : [];
   const offers = (isOwner || isAdmin) && l.offers_enabled
     ? await fetchOffersForListing(l.id)
@@ -1028,12 +1042,11 @@ export default async function ListingDetailPage({
               shareText={`Found this on frockd: ${l.title}`}
             />
             {!l.sold_at && (isOwner || isAdmin) && (
-              <form action={toggleListingSold}>
-                <input type="hidden" name="listingId" value={l.id} />
-                <Button type="submit" variant="ghost" size="sm">
-                  Mark as sold
-                </Button>
-              </form>
+              <MarkSoldDialog
+                listingId={l.id}
+                buyers={buyerOptions}
+                next={`/listings/${l.id}`}
+              />
             )}
             {(isOwner || isAdmin) && (
               <form action={toggleListingVisibility}>

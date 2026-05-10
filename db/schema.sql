@@ -147,6 +147,16 @@ ALTER TABLE listings
   ADD COLUMN IF NOT EXISTS last_active_confirmed_at TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS last_sale_nudge_sent_at  TIMESTAMPTZ;
 
+-- Buyer attribution for sold listings. Set when the seller picks the
+-- buyer from their conversation list at mark-sold time. NULL when
+-- the listing is unsold or was 'sold elsewhere' (off-platform). Drives
+-- the seller-rating loop — only the recorded buyer can leave a review.
+ALTER TABLE listings
+  ADD COLUMN IF NOT EXISTS sold_to_user_id BIGINT REFERENCES users(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS listings_sold_to_idx
+  ON listings (sold_to_user_id) WHERE sold_to_user_id IS NOT NULL;
+
 CREATE INDEX IF NOT EXISTS listings_draft_idx
   ON listings (seller_id, is_draft) WHERE is_draft = TRUE;
 
@@ -513,6 +523,55 @@ CREATE TABLE IF NOT EXISTS listing_flags (
 CREATE INDEX IF NOT EXISTS listing_flags_listing_idx ON listing_flags (listing_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS listing_flags_open_idx
   ON listing_flags (listing_id) WHERE resolved_at IS NULL;
+
+-- Seller ratings — left by the recorded buyer of a sold listing.
+-- Stars (1-5) plus an optional free-text comment and three yes/no
+-- chips that match the categories most pre-loved-clothes buyers care
+-- about. flagged_at + flag_reason let sellers contest a review;
+-- hidden_by_admin_at takes a review off the public profile while
+-- keeping the row for audit.
+CREATE TABLE IF NOT EXISTS listing_reviews (
+  id                  BIGSERIAL    PRIMARY KEY,
+  listing_id          BIGINT       NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
+  seller_id           BIGINT       NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  buyer_id            BIGINT       NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  stars               SMALLINT     NOT NULL CHECK (stars BETWEEN 1 AND 5),
+  body                TEXT,
+  as_described        BOOLEAN,
+  easy_communication  BOOLEAN,
+  smooth_handover     BOOLEAN,
+  created_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  edited_at           TIMESTAMPTZ,
+  hidden_by_admin_at  TIMESTAMPTZ,
+  flagged_at          TIMESTAMPTZ,
+  flag_reason         TEXT
+);
+
+-- One rating per buyer-listing transaction; if a buyer wants to
+-- update they edit their existing row.
+CREATE UNIQUE INDEX IF NOT EXISTS listing_reviews_one_per_transaction
+  ON listing_reviews (listing_id, buyer_id);
+
+CREATE INDEX IF NOT EXISTS listing_reviews_seller_idx
+  ON listing_reviews (seller_id, created_at DESC);
+
+-- Tokenised review-prompt links. Generated when the seller picks the
+-- buyer at mark-sold time and emailed to that buyer. Buyer follows
+-- the link, signs in if needed, and submits the review form. Tokens
+-- are single-use — used_at stamps when consumed — and expire after
+-- 60 days so an unanswered link can't be replayed forever.
+CREATE TABLE IF NOT EXISTS listing_review_tokens (
+  id           BIGSERIAL    PRIMARY KEY,
+  listing_id   BIGINT       NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
+  buyer_id     BIGINT       NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token_hash   TEXT         NOT NULL UNIQUE,
+  created_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  expires_at   TIMESTAMPTZ  NOT NULL,
+  used_at      TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS listing_review_tokens_open_idx
+  ON listing_review_tokens (buyer_id) WHERE used_at IS NULL;
 
 CREATE INDEX IF NOT EXISTS listings_region_idx ON listings (region_id);
 

@@ -7,6 +7,12 @@ import { getCurrentRegionId } from "@/lib/regions";
 import { getBaseUrl } from "@/lib/email";
 import { getShortlistIds } from "@/lib/shortlist";
 import {
+  getSellerReviewSummary,
+  listSellerReviews,
+  maskBuyerEmail,
+  type ReviewRow,
+} from "@/lib/reviews";
+import {
   ListingCard,
   listingFromRow,
   type ListingCardRow,
@@ -177,18 +183,25 @@ export async function generateMetadata({
 
 export default async function SellerProfilePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams?: Promise<{ review?: string }>;
 }) {
   const { id } = await params;
+  const sp = searchParams ? await searchParams : {};
+  const reviewFlash = sp.review === "submitted";
   const seller = await fetchSeller(id);
   if (!seller || seller.suspended_at) notFound();
 
-  const [listings, currentUser, regionId] = await Promise.all([
-    fetchSellerListings(seller.id),
-    getCurrentUser(),
-    getCurrentRegionId(),
-  ]);
+  const [listings, currentUser, regionId, reviewSummary, reviews] =
+    await Promise.all([
+      fetchSellerListings(seller.id),
+      getCurrentUser(),
+      getCurrentRegionId(),
+      getSellerReviewSummary(seller.id),
+      listSellerReviews(seller.id, 20),
+    ]);
   const shortlistedIds = await getShortlistIds(currentUser?.id);
 
   // Region gate the *listings*, not the profile — non-admins still
@@ -237,6 +250,16 @@ export default async function SellerProfilePage({
             </Link>
           )}
         </div>
+
+        {reviewFlash && (
+          <p
+            className="form-success"
+            style={{ marginTop: "var(--s-4)", marginBottom: 0 }}
+          >
+            Thanks for the review — it&rsquo;s now visible on this
+            seller&rsquo;s profile.
+          </p>
+        )}
 
         <header
           style={{
@@ -330,6 +353,28 @@ export default async function SellerProfilePage({
                   </span>
                 </>
               )}
+              {reviewSummary.count >= 3 && (
+                <>
+                  <span aria-hidden style={{ color: "var(--ink-4)" }}>
+                    ·
+                  </span>
+                  <a
+                    href="#reviews"
+                    style={{
+                      color: "var(--ink-1)",
+                      fontWeight: 700,
+                      textDecoration: "none",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    <span style={{ color: "#fcd34d" }}>★</span>{" "}
+                    {reviewSummary.average.toFixed(1)}{" "}
+                    <span style={{ color: "var(--ink-3)", fontWeight: 400 }}>
+                      ({reviewSummary.count})
+                    </span>
+                  </a>
+                </>
+              )}
             </p>
           </div>
         </header>
@@ -376,8 +421,165 @@ export default async function SellerProfilePage({
             ))}
           </ul>
         )}
+
+        {reviews.length > 0 && (
+          <section id="reviews" style={{ marginTop: "var(--s-7)" }}>
+            <h2
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: 28,
+                color: "var(--ink-1)",
+                margin: "0 0 var(--s-3)",
+                letterSpacing: "-0.01em",
+              }}
+            >
+              Reviews
+            </h2>
+            <p
+              style={{
+                color: "var(--ink-3)",
+                margin: "0 0 var(--s-5)",
+                fontSize: 14,
+              }}
+            >
+              <span style={{ color: "#fcd34d", fontSize: 16 }}>★</span>{" "}
+              <strong>{reviewSummary.average.toFixed(1)}</strong> across{" "}
+              {reviewSummary.count} review
+              {reviewSummary.count === 1 ? "" : "s"}
+            </p>
+            <ul
+              style={{
+                listStyle: "none",
+                padding: 0,
+                margin: 0,
+                display: "flex",
+                flexDirection: "column",
+                gap: "var(--s-4)",
+              }}
+            >
+              {reviews.map((r) => (
+                <li
+                  key={r.id}
+                  style={{
+                    padding: "var(--s-4) var(--s-5)",
+                    background: "var(--surface)",
+                    border: "1px solid var(--hairline)",
+                    borderRadius: 12,
+                  }}
+                >
+                  <ReviewItem r={r} />
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
       </main>
     </div>
+  );
+}
+
+function ReviewItem({ r }: { r: ReviewRow }) {
+  const date = (() => {
+    try {
+      return new Date(r.created_at).toLocaleDateString("en-AU", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
+    } catch {
+      return r.created_at;
+    }
+  })();
+  const chips: string[] = [];
+  if (r.as_described === true) chips.push("As described");
+  if (r.as_described === false) chips.push("Not as described");
+  if (r.easy_communication === true) chips.push("Easy to communicate with");
+  if (r.easy_communication === false) chips.push("Hard to reach");
+  if (r.smooth_handover === true) chips.push("Smooth handover");
+  if (r.smooth_handover === false) chips.push("Bumpy handover");
+
+  return (
+    <>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          flexWrap: "wrap",
+          marginBottom: 6,
+        }}
+      >
+        <span style={{ color: "#fcd34d", fontSize: 18, lineHeight: 1 }}>
+          {"★".repeat(r.stars)}
+          <span style={{ color: "var(--hairline)" }}>
+            {"★".repeat(5 - r.stars)}
+          </span>
+        </span>
+        <span
+          style={{
+            fontFamily: "var(--font-mono)",
+            fontSize: 11,
+            letterSpacing: "0.08em",
+            color: "var(--ink-3)",
+          }}
+        >
+          {maskBuyerEmail(r.buyer_email)} · {date}
+        </span>
+      </div>
+      <Link
+        href={`/listings/${r.listing_id}`}
+        style={{
+          fontSize: 12,
+          color: "var(--ink-3)",
+          textDecoration: "underline",
+          textDecorationColor: "var(--hairline-strong)",
+          textUnderlineOffset: 3,
+        }}
+      >
+        Bought: {r.listing_title}
+      </Link>
+      {r.body && (
+        <p
+          style={{
+            margin: "var(--s-3) 0 0",
+            color: "var(--ink-1)",
+            lineHeight: 1.55,
+            fontSize: 15,
+            whiteSpace: "pre-wrap",
+          }}
+        >
+          {r.body}
+        </p>
+      )}
+      {chips.length > 0 && (
+        <div
+          style={{
+            display: "flex",
+            gap: 6,
+            flexWrap: "wrap",
+            marginTop: "var(--s-3)",
+          }}
+        >
+          {chips.map((c) => (
+            <span
+              key={c}
+              style={{
+                padding: "3px 10px",
+                borderRadius: 999,
+                background: "var(--surface-sunken)",
+                border: "1px solid var(--hairline)",
+                fontSize: 11,
+                fontFamily: "var(--font-mono)",
+                letterSpacing: "0.08em",
+                color: "var(--ink-2)",
+              }}
+            >
+              {c}
+            </span>
+          ))}
+        </div>
+      )}
+    </>
   );
 }
 
