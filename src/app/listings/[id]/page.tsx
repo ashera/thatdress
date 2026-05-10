@@ -634,16 +634,17 @@ export default async function ListingDetailPage({
     notFound();
   }
   if (!l.is_published && !isOwner && !isAdmin) notFound();
-  // Hide listings outside the viewer's region (unless they own it or are admin).
-  if (
-    l.region_id &&
-    regionId &&
-    l.region_id !== regionId &&
+  // Out-of-region listings used to 404, but that broke the new
+  // seller-profile drill-through (a seller selling in multiple
+  // regions has listings the buyer's region filter would otherwise
+  // hide). Now we let the page render — the region info is shown
+  // via location_postal in the seller block, and the buyer can
+  // decide whether pickup / shipping works for them. Browse + the
+  // homepage still filter by region; direct links don't.
+  const isOutOfRegion =
+    !!(l.region_id && regionId && l.region_id !== regionId) &&
     !isOwner &&
-    !isAdmin
-  ) {
-    notFound();
-  }
+    !isAdmin;
 
   // Self-heal trust_status: re-derive from the live row data and write
   // back if it doesn't match the stored value. Catches listings that
@@ -875,6 +876,25 @@ export default async function ListingDetailPage({
               <>Use the &ldquo;Show to buyers&rdquo; button below to publish it again.</>
             )}
           </span>
+        </div>
+      )}
+
+      {isOutOfRegion && (
+        <div
+          style={{
+            margin: "var(--s-3) 0",
+            padding: "10px 14px",
+            background: "var(--surface-sunken)",
+            border: "1px solid var(--hairline)",
+            borderRadius: 10,
+            color: "var(--ink-2)",
+            fontSize: 14,
+          }}
+          role="note"
+        >
+          <strong>Different region.</strong> This dress isn&rsquo;t in
+          your selected region — local pickup might need extra
+          arranging, or ask the seller about shipping.
         </div>
       )}
 
