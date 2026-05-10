@@ -5,6 +5,7 @@ import { query } from "@/lib/db";
 import { lookupReviewToken } from "@/lib/reviews";
 import { submitListingReview } from "@/lib/actions/reviews";
 import { Button } from "../../../../_components/ui";
+import { StarRatingInput } from "./_star-rating-input";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Leave a review — frockd" };
@@ -215,64 +216,20 @@ export default async function ReviewListingPage({
           <input type="hidden" name="listingId" value={id} />
           <input type="hidden" name="token" value={token} />
 
-          <fieldset
-            style={{
-              border: 0,
-              padding: 0,
-              margin: 0,
-            }}
-          >
-            <legend
+          <div>
+            <p
               style={{
                 fontFamily: "var(--font-mono)",
                 fontSize: 11,
                 letterSpacing: "0.12em",
                 textTransform: "uppercase",
                 color: "var(--ink-3)",
-                marginBottom: 8,
+                margin: "0 0 8px",
               }}
             >
               Star rating
-            </legend>
-            <div
-              style={{
-                display: "flex",
-                gap: 6,
-                flexDirection: "row-reverse",
-                justifyContent: "flex-end",
-              }}
-            >
-              {/* row-reverse trick lets the :checked ~ * sibling
-                  selector style the chosen-and-prior stars with a
-                  single CSS rule, but we use inline styles so this is
-                  just visual ordering. Render 5..1 and let the user
-                  pick. */}
-              {[5, 4, 3, 2, 1].map((s) => (
-                <label
-                  key={s}
-                  style={{
-                    cursor: "pointer",
-                    fontSize: 32,
-                    lineHeight: 1,
-                    color: "#fcd34d",
-                  }}
-                >
-                  <input
-                    type="radio"
-                    name="stars"
-                    value={s}
-                    required
-                    style={{
-                      position: "absolute",
-                      opacity: 0,
-                      width: 0,
-                      height: 0,
-                    }}
-                  />
-                  <span title={`${s} star${s === 1 ? "" : "s"}`}>★</span>
-                </label>
-              ))}
-            </div>
+            </p>
+            <StarRatingInput />
             <p
               style={{
                 fontSize: 13,
@@ -282,7 +239,7 @@ export default async function ReviewListingPage({
             >
               5 = perfect · 1 = avoid
             </p>
-          </fieldset>
+          </div>
 
           <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
             <legend
