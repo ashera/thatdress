@@ -694,7 +694,7 @@ export default async function ListingDetailPage({
   const isOwner = currentUser != null && currentUser.id === l.seller_id;
   const isAdmin = currentUser?.isAdmin ?? false;
   if (l.is_draft) {
-    if (isOwner) redirect(`/listings/new/${l.id}/basics`);
+    if (isOwner || isAdmin) redirect(`/listings/new/${l.id}/basics`);
     notFound();
   }
   if (!l.is_published && !isOwner && !isAdmin) notFound();
