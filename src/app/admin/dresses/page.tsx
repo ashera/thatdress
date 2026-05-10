@@ -212,7 +212,14 @@ export default async function AdminDressesPage({
                   padding: "var(--s-4)",
                 }}
               >
-                <div style={{ minWidth: 0 }}>
+                <Link
+                  href={`/admin/dresses/${row.dress_id}`}
+                  style={{
+                    minWidth: 0,
+                    color: "inherit",
+                    textDecoration: "none",
+                  }}
+                >
                   <div
                     style={{
                       display: "flex",
@@ -290,7 +297,7 @@ export default async function AdminDressesPage({
                     {" · "}
                     Last sent: {formatDate(row.last_relist_nudge_sent_at)}
                   </div>
-                </div>
+                </Link>
                 <form action={forceRelistNudge}>
                   <input type="hidden" name="dressId" value={row.dress_id} />
                   <Button
