@@ -154,6 +154,72 @@ function formatDate(s: string | null): string {
   }
 }
 
+const DISPOSITION_LEGEND: Array<{ key: string; description: string }> = [
+  { key: "in-use", description: "Owned by a buyer · eligible for relist nudge" },
+  { key: "listed", description: "Live listing in the marketplace" },
+  { key: "drafted", description: "Relist draft started, not yet published" },
+  { key: "kept", description: "Owner opted out of nudges" },
+  { key: "lost", description: "Buyer unknown · sold elsewhere" },
+];
+
+function DispositionLegend() {
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexWrap: "wrap",
+        gap: "var(--s-3)",
+        padding: "var(--s-3) var(--s-4)",
+        background: "var(--surface-sunken)",
+        border: "1px solid var(--hairline)",
+        borderRadius: 10,
+        marginBottom: "var(--s-5)",
+      }}
+    >
+      {DISPOSITION_LEGEND.map((item) => {
+        const pill = dispositionPill(item.key);
+        return (
+          <div
+            key={item.key}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              minWidth: 0,
+            }}
+          >
+            <span
+              style={{
+                fontFamily: "var(--font-mono)",
+                fontSize: 10,
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                fontWeight: 700,
+                padding: "2px 8px",
+                borderRadius: 999,
+                background: pill.bg,
+                color: pill.fg,
+                flex: "0 0 auto",
+              }}
+            >
+              {pill.label}
+            </span>
+            <span
+              style={{
+                fontSize: 12,
+                color: "var(--ink-3)",
+                lineHeight: 1.4,
+              }}
+            >
+              {item.description}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function dispositionPill(d: string): { bg: string; fg: string; label: string } {
   switch (d) {
     case "in-use":
@@ -207,15 +273,14 @@ export default async function AdminDressesPage({
         <p className="eyebrow">Admin · Dresses</p>
         <h1>Dresses with current owners</h1>
         <p className="sub">
-          Every dress that&rsquo;s been sold to an attributed buyer
-          shows up here. Use <strong>Send relist nudge</strong> to
-          force-fire the email immediately, bypassing the 60-day
-          cron schedule. Only dresses currently in <em>in use</em>
-          are eligible — <em>kept</em> means the owner opted out,{" "}
-          <em>listed</em> means there&rsquo;s already a live
-          listing, <em>drafted</em> means a relist is in progress.
+          Use <strong>Send relist nudge</strong> to force-fire the
+          email now, bypassing the 60-day cron schedule. Only
+          <em> in use</em> dresses are eligible.
         </p>
       </header>
+
+      <DispositionLegend />
+
 
       {flash && (
         <p
