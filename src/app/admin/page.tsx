@@ -123,7 +123,9 @@ export default async function AdminHomePage() {
         className="form-card"
         style={{
           marginBottom: "var(--s-6)",
-          padding: "var(--s-4) var(--s-5)",
+          padding: "var(--s-5)",
+          background: "#eff6ff",
+          borderColor: "#bfdbfe",
         }}
       >
         <h2 className="card-heading" style={{ marginTop: 0 }}>
@@ -131,36 +133,82 @@ export default async function AdminHomePage() {
         </h2>
         <p
           className="card-sub"
-          style={{ marginTop: 0, marginBottom: "var(--s-3)" }}
+          style={{ marginTop: 0, marginBottom: "var(--s-4)" }}
         >
-          These ran when you loaded this page. The per-row gates
-          inside each job mean refreshing won&rsquo;t re-send anything.
+          These ran when you loaded this page. Each job is also wired
+          to{" "}
+          <code
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: 12,
+              padding: "1px 6px",
+              background: "var(--surface-sunken)",
+              borderRadius: 4,
+            }}
+          >
+            /api/cron/...
+          </code>{" "}
+          for external schedulers (Bearer-authed via{" "}
+          <code style={{ fontFamily: "var(--font-mono)", fontSize: 12 }}>
+            CRON_SECRET
+          </code>
+          ). Refreshing this page is safe — per-row gates inside each
+          job stop re-sends.
         </p>
-        <ul
+        <div
           style={{
-            listStyle: "none",
-            padding: 0,
-            margin: 0,
             display: "flex",
             flexDirection: "column",
-            gap: "var(--s-2)",
+            gap: "var(--s-4)",
           }}
         >
-          <JobRow
+          <JobCard
             name="Relist nudge"
+            description="Emails the current owner of any dress they bought 90+ days ago, asking if they want to re-list it. Drives the 'circular' part of the marketplace by surfacing dresses sitting unworn after their event."
             outcome={relist}
-            describe={(s) =>
-              `${s.candidates} due · ${s.sent} sent${s.errors ? ` · ${s.errors} errors` : ""}`
-            }
+            metrics={(s) => [
+              {
+                label: "Due now",
+                value: s.candidates,
+                hint: "Dresses with disposition='in-use' whose next_relist_nudge_at has passed and weren't nudged in the last 60 days. Already-nudged dresses fall off this list automatically.",
+              },
+              {
+                label: "Sent",
+                value: s.sent,
+                hint: "Emails Resend accepted. Each successful send rolls last_relist_nudge_sent_at and pushes next_relist_nudge_at +60 days.",
+              },
+              {
+                label: "Errors",
+                value: s.errors,
+                hint: "Sends that failed (Resend down, owner missing email, account suspended). Check server logs.",
+                emphasise: s.errors > 0,
+              },
+            ]}
           />
-          <JobRow
+          <JobCard
             name="Saved-search digest"
+            description="Emails users who've saved a search a digest of new listings matching their criteria since the last digest (or the past 24h on first run). Helps buyers come back when something they want appears."
             outcome={digest}
-            describe={(s) =>
-              `${s.searches} active · ${s.sent} digests sent${s.errors ? ` · ${s.errors} errors` : ""}`
-            }
+            metrics={(s) => [
+              {
+                label: "Active searches",
+                value: s.searches,
+                hint: "Saved searches owned by verified, non-suspended users. Every active search is checked on each run.",
+              },
+              {
+                label: "Digests sent",
+                value: s.sent,
+                hint: "Searches that had ≥1 new match since their last_emailed_at. Searches with no new matches are skipped, no email goes out.",
+              },
+              {
+                label: "Errors",
+                value: s.errors,
+                hint: "Failures during match query or email send. Check server logs.",
+                emphasise: s.errors > 0,
+              },
+            ]}
           />
-        </ul>
+        </div>
       </section>
 
       <ul className="admin-list">
@@ -182,53 +230,158 @@ export default async function AdminHomePage() {
   );
 }
 
-function JobRow<T>({
+type Metric = {
+  label: string;
+  value: number;
+  hint: string;
+  emphasise?: boolean;
+};
+
+function JobCard<T>({
   name,
+  description,
   outcome,
-  describe,
+  metrics,
 }: {
   name: string;
+  description: string;
   outcome: JobOutcome<T>;
-  describe: (stats: T) => string;
+  metrics: (stats: T) => Metric[];
 }) {
-  const summary = outcome.ok
-    ? describe(outcome.stats)
-    : `failed — ${outcome.error}`;
   const dotColor = outcome.ok ? "#16a34a" : "#dc2626";
+  const stats = outcome.ok ? metrics(outcome.stats) : null;
   return (
-    <li
+    <div
       style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "var(--s-3)",
-        padding: "8px 0",
-        borderBottom: "1px solid var(--hairline)",
-        fontSize: 14,
+        border: "1px solid var(--hairline)",
+        borderRadius: 10,
+        padding: "var(--s-4)",
+        background: "var(--surface)",
       }}
     >
-      <span
-        aria-hidden
+      <div
         style={{
-          width: 8,
-          height: 8,
-          borderRadius: 999,
-          background: dotColor,
-          flex: "0 0 auto",
-        }}
-      />
-      <span style={{ fontWeight: 600, color: "var(--ink-1)", minWidth: 180 }}>
-        {name}
-      </span>
-      <span style={{ color: "var(--ink-2)", flex: 1 }}>{summary}</span>
-      <span
-        style={{
-          fontFamily: "var(--font-mono)",
-          fontSize: 12,
-          color: "var(--ink-4)",
+          display: "flex",
+          alignItems: "center",
+          gap: "var(--s-3)",
+          marginBottom: 6,
         }}
       >
-        {outcome.ms}ms
-      </span>
-    </li>
+        <span
+          aria-hidden
+          style={{
+            width: 8,
+            height: 8,
+            borderRadius: 999,
+            background: dotColor,
+            flex: "0 0 auto",
+          }}
+        />
+        <span
+          style={{
+            fontWeight: 700,
+            color: "var(--ink-1)",
+            fontSize: 15,
+            flex: 1,
+          }}
+        >
+          {name}
+        </span>
+        <span
+          style={{
+            fontFamily: "var(--font-mono)",
+            fontSize: 11,
+            color: "var(--ink-4)",
+            padding: "2px 8px",
+            borderRadius: 999,
+            background: "var(--surface-sunken)",
+          }}
+          title="Time spent running this job on the current page load"
+        >
+          {outcome.ms}ms
+        </span>
+      </div>
+      <p
+        style={{
+          margin: "0 0 var(--s-3)",
+          color: "var(--ink-3)",
+          fontSize: 13,
+          lineHeight: 1.5,
+        }}
+      >
+        {description}
+      </p>
+      {stats ? (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(3, 1fr)",
+            gap: "var(--s-3)",
+          }}
+        >
+          {stats.map((m) => (
+            <div
+              key={m.label}
+              style={{
+                padding: "8px 10px",
+                background: m.emphasise ? "#fef2f2" : "var(--surface-sunken)",
+                border: `1px solid ${m.emphasise ? "#fecaca" : "var(--hairline)"}`,
+                borderRadius: 8,
+              }}
+              title={m.hint}
+            >
+              <div
+                style={{
+                  fontFamily: "var(--font-mono)",
+                  fontSize: 10,
+                  letterSpacing: "0.12em",
+                  textTransform: "uppercase",
+                  color: m.emphasise ? "#991b1b" : "var(--ink-4)",
+                  marginBottom: 2,
+                }}
+              >
+                {m.label}
+              </div>
+              <div
+                style={{
+                  fontSize: 22,
+                  fontWeight: 700,
+                  color: m.emphasise ? "#991b1b" : "var(--ink-1)",
+                  letterSpacing: "-0.01em",
+                  lineHeight: 1,
+                  marginBottom: 4,
+                }}
+              >
+                {m.value}
+              </div>
+              <div
+                style={{
+                  fontSize: 11,
+                  color: "var(--ink-4)",
+                  lineHeight: 1.4,
+                }}
+              >
+                {m.hint}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div
+          style={{
+            padding: "8px 10px",
+            background: "#fef2f2",
+            border: "1px solid #fecaca",
+            borderRadius: 8,
+            color: "#991b1b",
+            fontSize: 13,
+            lineHeight: 1.4,
+          }}
+        >
+          <strong>Run failed.</strong>{" "}
+          {!outcome.ok ? outcome.error : "unknown error"}
+        </div>
+      )}
+    </div>
   );
 }
