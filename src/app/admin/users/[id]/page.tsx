@@ -13,6 +13,139 @@ import { listReferredUsers } from "@/lib/referral";
 import { loadSiteSettings } from "@/lib/site-settings";
 import { Button, Field, Input, Textarea } from "../../../_components/ui";
 
+type AdminReviewRow = {
+  id: string;
+  buyer_id: string;
+  buyer_email: string | null;
+  listing_id: string;
+  listing_title: string | null;
+  stars: number;
+  body: string | null;
+  as_described: boolean | null;
+  easy_communication: boolean | null;
+  smooth_handover: boolean | null;
+  created_at: string;
+  edited_at: string | null;
+  hidden_by_admin_at: string | null;
+  flagged_by_seller_at: string | null;
+};
+
+type ReviewSummaryAll = {
+  total: number;
+  visible: number;
+  hidden: number;
+  flagged: number;
+  average: number;
+};
+
+/**
+ * Admin-scoped review history for a seller. Unlike
+ * getSellerReviewSummary / listSellerReviews — which filter out
+ * admin-hidden rows for the public view — this one returns every
+ * review against the seller, including hidden + flagged ones, so
+ * an admin can audit moderation decisions and see what buyers
+ * actually said. The summary's average is computed over visible
+ * reviews only (the public-facing number).
+ */
+async function fetchAdminSellerReviews(
+  sellerId: string,
+): Promise<{ rows: AdminReviewRow[]; summary: ReviewSummaryAll }> {
+  if (!/^\d+$/.test(sellerId)) {
+    return {
+      rows: [],
+      summary: { total: 0, visible: 0, hidden: 0, flagged: 0, average: 0 },
+    };
+  }
+  try {
+    const r = await query<AdminReviewRow>(
+      `SELECT r.id::text,
+              r.buyer_id::text,
+              u.email                AS buyer_email,
+              r.listing_id::text,
+              l.title                AS listing_title,
+              r.stars,
+              r.body,
+              r.as_described,
+              r.easy_communication,
+              r.smooth_handover,
+              r.created_at::text,
+              r.edited_at::text,
+              r.hidden_by_admin_at::text,
+              r.flagged_by_seller_at::text
+         FROM listing_reviews r
+         LEFT JOIN users    u ON u.id = r.buyer_id
+         LEFT JOIN listings l ON l.id = r.listing_id
+        WHERE r.seller_id = $1::bigint
+        ORDER BY r.created_at DESC
+        LIMIT 200`,
+      [sellerId],
+    );
+    const rows = r.rows;
+    let total = 0;
+    let hidden = 0;
+    let flagged = 0;
+    let starsTotal = 0;
+    let visibleCount = 0;
+    for (const row of rows) {
+      total++;
+      if (row.hidden_by_admin_at) hidden++;
+      if (row.flagged_by_seller_at && !row.hidden_by_admin_at) flagged++;
+      if (!row.hidden_by_admin_at) {
+        visibleCount++;
+        starsTotal += row.stars;
+      }
+    }
+    const average =
+      visibleCount > 0
+        ? Math.round((starsTotal / visibleCount) * 10) / 10
+        : 0;
+    return {
+      rows,
+      summary: { total, visible: visibleCount, hidden, flagged, average },
+    };
+  } catch {
+    return {
+      rows: [],
+      summary: { total: 0, visible: 0, hidden: 0, flagged: 0, average: 0 },
+    };
+  }
+}
+
+function formatReviewDate(s: string): string {
+  try {
+    return new Date(s).toLocaleDateString("en-AU", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  } catch {
+    return s;
+  }
+}
+
+function chipState(v: boolean | null): {
+  bg: string;
+  fg: string;
+  label: string;
+} {
+  if (v === true) return { bg: "#dcfce7", fg: "#166534", label: "Yes" };
+  if (v === false) return { bg: "#fee2e2", fg: "#991b1b", label: "No" };
+  return { bg: "#e5e7eb", fg: "#6b7280", label: "—" };
+}
+
+function StarBar({ stars }: { stars: number }) {
+  const filled = Math.max(0, Math.min(5, Math.round(stars)));
+  return (
+    <span
+      aria-label={`${stars} out of 5 stars`}
+      style={{ letterSpacing: "0.06em", fontSize: 14 }}
+    >
+      <span style={{ color: "#f59e0b" }}>{"★".repeat(filled)}</span>
+      <span style={{ color: "#d1d5db" }}>{"★".repeat(5 - filled)}</span>
+    </span>
+  );
+}
+
 function priceLabel(cents: number): string {
   return new Intl.NumberFormat("en-AU", {
     style: "currency",
@@ -114,9 +247,10 @@ export default async function AdminUserDetailPage({
   // Referral programme info — both who they were referred by, and who
   // they've referred. Loaded in parallel with site settings so we can
   // multiply through to per-row earnings.
-  const [referred, settings] = await Promise.all([
+  const [referred, settings, reviewHistory] = await Promise.all([
     listReferredUsers(user.id),
     loadSiteSettings(),
+    fetchAdminSellerReviews(user.id),
   ]);
   const commissionCents = settings.referralCommissionCents;
   const verifiedListings = referred.reduce(
@@ -174,6 +308,241 @@ export default async function AdminUserDetailPage({
           <dt>Conversations</dt>
           <dd>{user.conversation_count}</dd>
         </div>
+      </section>
+
+      <section className="form-card" style={{ marginBottom: "var(--s-5)" }}>
+        <h2 className="card-heading">Seller ratings</h2>
+        {reviewHistory.summary.total === 0 ? (
+          <p style={{ margin: 0, color: "var(--ink-3)" }}>
+            No reviews left for this user as a seller yet.
+          </p>
+        ) : (
+          <>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "baseline",
+                gap: "var(--s-3)",
+                flexWrap: "wrap",
+                marginBottom: "var(--s-3)",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "baseline",
+                  gap: 8,
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontSize: 36,
+                    fontWeight: 700,
+                    letterSpacing: "-0.02em",
+                    color: "var(--ink-1)",
+                    lineHeight: 1,
+                  }}
+                >
+                  {reviewHistory.summary.average.toFixed(1)}
+                </span>
+                <span style={{ color: "var(--ink-3)" }}>/ 5</span>
+              </div>
+              <StarBar stars={reviewHistory.summary.average} />
+              <span
+                style={{
+                  fontFamily: "var(--font-mono)",
+                  fontSize: 12,
+                  color: "var(--ink-3)",
+                }}
+              >
+                {reviewHistory.summary.visible} public
+                {reviewHistory.summary.hidden > 0
+                  ? ` · ${reviewHistory.summary.hidden} hidden`
+                  : ""}
+                {reviewHistory.summary.flagged > 0
+                  ? ` · ${reviewHistory.summary.flagged} flagged`
+                  : ""}
+              </span>
+            </div>
+            <p
+              style={{
+                fontSize: 12,
+                color: "var(--ink-4)",
+                margin: "0 0 var(--s-3)",
+              }}
+            >
+              Public average is computed over visible reviews only;
+              hidden reviews are excluded from the seller&rsquo;s
+              public profile but kept here for audit. Use{" "}
+              <Link
+                href="/admin/reviews"
+                style={{
+                  color: "var(--ink-2)",
+                  textDecoration: "underline",
+                }}
+              >
+                /admin/reviews
+              </Link>{" "}
+              to moderate (hide / un-hide).
+            </p>
+
+            <ul
+              style={{
+                listStyle: "none",
+                padding: 0,
+                margin: 0,
+                display: "flex",
+                flexDirection: "column",
+                gap: "var(--s-3)",
+              }}
+            >
+              {reviewHistory.rows.map((rev) => {
+                const moderation: { bg: string; fg: string; label: string } | null =
+                  rev.hidden_by_admin_at
+                    ? { bg: "#fee2e2", fg: "#991b1b", label: "Hidden" }
+                    : rev.flagged_by_seller_at
+                      ? { bg: "#fef3c7", fg: "#92400e", label: "Flagged" }
+                      : null;
+                return (
+                  <li
+                    key={rev.id}
+                    style={{
+                      borderTop: "1px solid var(--hairline)",
+                      paddingTop: "var(--s-3)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        flexWrap: "wrap",
+                        marginBottom: 4,
+                      }}
+                    >
+                      <StarBar stars={rev.stars} />
+                      {moderation && (
+                        <span
+                          style={{
+                            fontFamily: "var(--font-mono)",
+                            fontSize: 10,
+                            letterSpacing: "0.12em",
+                            textTransform: "uppercase",
+                            fontWeight: 700,
+                            padding: "2px 8px",
+                            borderRadius: 999,
+                            background: moderation.bg,
+                            color: moderation.fg,
+                          }}
+                        >
+                          {moderation.label}
+                        </span>
+                      )}
+                      <span
+                        style={{
+                          fontFamily: "var(--font-mono)",
+                          fontSize: 11,
+                          color: "var(--ink-4)",
+                        }}
+                      >
+                        {formatReviewDate(rev.created_at)}
+                        {rev.edited_at ? " · edited" : ""}
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 13,
+                        color: "var(--ink-3)",
+                        marginBottom: 4,
+                      }}
+                    >
+                      {rev.listing_title ? (
+                        <Link
+                          href={`/listings/${rev.listing_id}`}
+                          style={{
+                            color: "var(--ink-2)",
+                            textDecoration: "underline",
+                            textDecorationColor: "var(--hairline-strong)",
+                          }}
+                        >
+                          {rev.listing_title}
+                        </Link>
+                      ) : (
+                        <span style={{ color: "var(--ink-4)" }}>
+                          (listing deleted)
+                        </span>
+                      )}{" "}
+                      <span style={{ color: "var(--ink-4)" }}>· by</span>{" "}
+                      <Link
+                        href={`/admin/users/${rev.buyer_id}`}
+                        style={{
+                          color: "var(--ink-2)",
+                          textDecoration: "underline",
+                          textDecorationColor: "var(--hairline-strong)",
+                        }}
+                      >
+                        {rev.buyer_email ?? "(deleted user)"}
+                      </Link>
+                    </div>
+                    {rev.body && (
+                      <p
+                        style={{
+                          margin: "0 0 6px",
+                          fontSize: 14,
+                          color: "var(--ink-1)",
+                          lineHeight: 1.45,
+                          whiteSpace: "pre-wrap",
+                        }}
+                      >
+                        {rev.body}
+                      </p>
+                    )}
+                    {(rev.as_described !== null ||
+                      rev.easy_communication !== null ||
+                      rev.smooth_handover !== null) && (
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: 6,
+                          flexWrap: "wrap",
+                          marginTop: 4,
+                        }}
+                      >
+                        {(
+                          [
+                            ["As described", rev.as_described],
+                            ["Easy comms", rev.easy_communication],
+                            ["Smooth handover", rev.smooth_handover],
+                          ] as const
+                        ).map(([label, v]) => {
+                          const c = chipState(v);
+                          return (
+                            <span
+                              key={label}
+                              style={{
+                                fontFamily: "var(--font-mono)",
+                                fontSize: 10,
+                                letterSpacing: "0.08em",
+                                textTransform: "uppercase",
+                                padding: "2px 8px",
+                                borderRadius: 999,
+                                background: c.bg,
+                                color: c.fg,
+                              }}
+                            >
+                              {label}: {c.label}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </>
+        )}
       </section>
 
       <section className="form-card" style={{ marginBottom: "var(--s-5)" }}>
