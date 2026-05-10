@@ -54,18 +54,9 @@ export function MermaidRenderer({ html }: { html: string }) {
             code.innerHTML = svg;
           }
         } catch (e) {
-          // Leave the source visible on parse error so the author
-          // can fix it; surface the message in a small footer.
+          // Log to console only — keep the page clean of error UI.
           // eslint-disable-next-line no-console
           console.error("[mermaid] render failed", id, e);
-          const pre = code.closest("pre");
-          const msg = document.createElement("div");
-          msg.style.color = "#991b1b";
-          msg.style.fontSize = "12px";
-          msg.style.fontFamily = "var(--font-mono)";
-          msg.style.marginTop = "4px";
-          msg.textContent = `Mermaid render error: ${e instanceof Error ? e.message : String(e)}`;
-          pre?.parentElement?.insertBefore(msg, pre.nextSibling);
         }
       }
     })();
