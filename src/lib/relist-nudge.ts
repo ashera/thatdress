@@ -14,6 +14,7 @@ export type RelistNudgeResult =
       reason:
         | "not-found"
         | "no-owner"
+        | "not-eligible"
         | "owner-suspended"
         | "owner-unverified"
         | "no-email"
@@ -23,6 +24,7 @@ export type RelistNudgeResult =
 
 type DressRow = {
   dress_id: string;
+  disposition: string;
   current_owner_user_id: string | null;
   owner_email: string | null;
   owner_first_name: string | null;
@@ -55,6 +57,7 @@ export async function sendRelistNudge(
   try {
     const r = await query<DressRow>(
       `SELECT d.id::text                              AS dress_id,
+              d.disposition,
               d.current_owner_user_id::text            AS current_owner_user_id,
               u.email                                  AS owner_email,
               u.first_name                             AS owner_first_name,
@@ -90,6 +93,19 @@ export async function sendRelistNudge(
 
   if (!row) return { ok: false, reason: "not-found" };
   if (!row.current_owner_user_id) return { ok: false, reason: "no-owner" };
+  // Disposition must be 'in-use' for a nudge to make sense.
+  // 'available' means the owner has already relisted (or is
+  // drafting one); 'kept' means they opted out; 'lost' means we
+  // don't know who has it. Cron's SQL filter already excludes
+  // these, but the admin force-fire path doesn't, so guard here
+  // as a final defense.
+  if (row.disposition !== "in-use") {
+    return {
+      ok: false,
+      reason: "not-eligible",
+      detail: `disposition is '${row.disposition}'`,
+    };
+  }
   if (row.owner_suspended) return { ok: false, reason: "owner-suspended" };
   if (!row.owner_email_verified) {
     return { ok: false, reason: "owner-unverified" };

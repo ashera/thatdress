@@ -20,6 +20,10 @@ const NUDGE_MESSAGES: Record<string, { ok: boolean; text: string }> = {
     ok: false,
     text: "Dress has no current owner — nothing to nudge.",
   },
+  "not-eligible": {
+    ok: false,
+    text: "Dress isn't in use right now — only 'in use' dresses get a nudge.",
+  },
   "owner-suspended": {
     ok: false,
     text: "Owner account is suspended.",
@@ -374,20 +378,34 @@ export default async function AdminDressesPage({
                     Owner: {ownerLabel(row)}
                     {row.owner_email ? ` · ${row.owner_email}` : ""}
                   </div>
-                  <div
-                    style={{
-                      fontSize: 12,
-                      color: "var(--ink-4)",
-                      marginTop: 4,
-                      fontFamily: "var(--font-mono)",
-                    }}
-                  >
-                    Sold: {formatDate(row.last_sold_at)}
-                    {" · "}
-                    Next nudge: {formatDate(row.next_relist_nudge_at)}
-                    {" · "}
-                    Last sent: {formatDate(row.last_relist_nudge_sent_at)}
-                  </div>
+                  {row.disposition === "in-use" && (
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: "var(--ink-4)",
+                        marginTop: 4,
+                        fontFamily: "var(--font-mono)",
+                      }}
+                    >
+                      Sold: {formatDate(row.last_sold_at)}
+                      {" · "}
+                      Next nudge: {formatDate(row.next_relist_nudge_at)}
+                      {" · "}
+                      Last sent: {formatDate(row.last_relist_nudge_sent_at)}
+                    </div>
+                  )}
+                  {row.disposition === "lost" && row.last_sold_at && (
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: "var(--ink-4)",
+                        marginTop: 4,
+                        fontFamily: "var(--font-mono)",
+                      }}
+                    >
+                      Sold elsewhere: {formatDate(row.last_sold_at)}
+                    </div>
+                  )}
                 </Link>
                 <form action={forceRelistNudge}>
                   <input type="hidden" name="dressId" value={row.dress_id} />
