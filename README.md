@@ -69,8 +69,9 @@ src/
     _components/        Shared UI: Button, Icon, TrustBadge, FlagListingDialog, ListingCard…
     api/                Route handlers (health, image streaming, cron)
     listings/           Browse + detail + edit + new (wizard)
-    listings/new/[id]/  5-step listing wizard (photos → style → size → condition → publish)
-    admin/              Admin console: users, listings, flagged queue, regions, ref data, blog, site settings
+    listings/new/[id]/  6-step listing wizard (basics → style → measurements → condition → photos → publish)
+    dresses/[id]/relist Owner-facing relist landing reached from the nudge email
+    admin/              Admin console: dashboard, dresses, users, listings, flagged queue, reviews, regions, ref data, blog, site settings, docs
     blog/               Public blog
     tools/              Value estimator, alterations cost, buyer's checklist
     messages/           Buyer ↔ seller DMs
@@ -83,6 +84,8 @@ src/
     db.ts               pg Pool + query() helper
     auth.ts             Session cookies, getCurrentUser, requireAdmin
     actions/            Server actions (listings, wizard, messages, offers, admin…)
+    cron/               Job bodies — runRelistNudgeBatch, runSavedSearchDigest
+    relist-nudge.ts     Per-dress sendRelistNudge helper, shared by cron + admin force-fire
     listing-health.ts   Pure 0–100 listing-completeness calculator
     listing-trust.ts    Pure trust-ladder derivation
     listing-trust-server.ts  recomputeListingTrustStatus — wired into every save path
@@ -105,16 +108,20 @@ railway.toml            Railway deploy config
 ## Feature systems
 
 ### Listing wizard (`src/app/listings/new/[id]/`)
-Five-step server-rendered wizard, used for both new listings and edits:
+Six-step server-rendered wizard, used for both new listings and edits:
 
-1. **Photos & basics** — image upload + designer / model / year
+1. **Basics** — designer / model / year
 2. **Style** — silhouette, fabric, neckline, sleeve, length, colour, occasion
-3. **Size & fit** — labelled size, bust / waist / hips, original retail
+3. **Measurements** — labelled size, bust / waist / hips, original retail
 4. **Condition** — grade + alterations notes + receipt
-5. **Publish** — title, description, price, region, authenticity declaration
+5. **Photos** — image upload + primary
+6. **Publish** — title, description, price, region, authenticity declaration
 
-Each step persists immediately on save (no monolithic submit). Edit and new-
-listing modes share the same components and copy adapts via `isEditMode(draft)`.
+Each step persists immediately on save (no monolithic submit) and writes to
+both `dresses` (designer / silhouette / measurements / colour / retail —
+attrs that travel with the garment) and `listings` (occasion / condition /
+price / photos — attrs of one offering). Edit and new-listing modes share
+the same components and copy adapts via `isEditMode(draft)`.
 
 A per-step **seamstress mascot** (`public/frockd-seamstress.png` driven as a
 CSS sprite) gives each step a face and a one-line caption.
@@ -167,17 +174,56 @@ image. Anthropic prompts are cache-controlled (ephemeral) to stay under the
 10k ITPM tier-1 cap; Pexels supplies banner photos. Drafts and saved
 references live in their own tables.
 
+### Circular marketplace · dresses + relist nudge
+A dress is its own first-class entity (`dresses` table) — one physical
+garment, persistent across owners. A `listings` row is one offering of that
+dress. Each transfer is captured in `dress_ownership_events` so we have an
+audit trail of who has owned the dress and how.
+
+Lifecycle (`dresses.disposition`):
+- `available` — owner is selling it (split into **Listed** / **Drafted** in
+  the admin UI based on whether a live published listing exists)
+- `in-use` — sold to an attributed buyer; `next_relist_nudge_at = +90 days`
+- `kept` — owner opted out of nudges via the relist landing
+- `lost` — sold elsewhere; we don't know who has it
+
+The **relist nudge** turns one-shot sales into a re-circulating inventory.
+Once `disposition='in-use'`, the cron job (`runRelistNudgeBatch`) emails
+the owner asking if they'd like to relist — they land on
+`/dresses/[id]/relist` and either start a new listing pre-filled from the
+existing dress (`startRelistFromDress`) or mark the dress kept
+(`markDressKept`). The cron's SQL is the rate limiter: a dress just
+nudged falls out of the candidate set for 60 days.
+
+Listings on the dress detail timeline (`/admin/dresses/[id]`) also surface
+prior provenance via the listing detail page's "Frockd history" section,
+which counts prior on-platform sales and shows first-listed / last-sold
+month-year (anonymous; no prior owner names or prices).
+
 ### Admin (`src/app/admin/`)
-- `/admin` — console index
-- `/admin/users` — list, search, suspend
-- `/admin/listings` + `/admin/listings/flagged` — listing browse + flag queue
-  with reason / flagger / timestamp
-- `/admin/regions`, `/admin/reference-data` — taxonomy editing
-- `/admin/blog` — blog post composer
-- `/admin/site-settings` — `allow_indexing` (controls `/robots.txt`) and
-  `health_threshold_verified` (drives the verified badge)
-- `/admin/database` — quick DB introspection
-- `/admin/tickets` — support inbox
+- `/admin` — console index, with a Background jobs panel that runs both
+  cron jobs (`runRelistNudgeBatch`, `runSavedSearchDigest`) on every load.
+  Per-row gates inside each job stop refreshes from re-sending.
+- `/admin/dashboard` — vital-signs KPI grid (users, listings, GMV, dresses,
+  open queues), single-viewport, every tile drills into its detail page.
+- `/admin/dresses` + `/admin/dresses/[id]` — dresses with current owners,
+  per-row force-send relist nudge, detail page with full ownership-event
+  timeline of every listing the dress has been on.
+- `/admin/users` + `/admin/users/[id]` — list, suspend, plus per-user
+  detail with seller ratings (incl. admin-hidden), conversation history
+  with View-details into `/messages/[id]`.
+- `/admin/listings` + `/admin/listings/flagged` — listing browse + flag
+  queue with reason / flagger / timestamp.
+- `/admin/reviews` — moderate buyer reviews.
+- `/admin/regions`, `/admin/reference-data` — taxonomy editing.
+- `/admin/blog` — blog post composer.
+- `/admin/site-settings` — `allow_indexing` (controls `/robots.txt`),
+  `health_threshold_verified` (drives the verified badge),
+  `reviews_display_threshold`.
+- `/admin/database` — quick DB introspection.
+- `/admin/tickets` — support inbox.
+- `/admin/docs`, `/admin/docs/flows` — rendered README + Mermaid workflow
+  diagrams (see `docs/flows.md`).
 
 ### SEO
 - Per-listing `generateMetadata` (title, description, canonical, OG, Twitter)
@@ -226,7 +272,7 @@ before the server accepts traffic.
 | `ANTHROPIC_API_KEY` | optional | Blog builder + value-estimator. Disables those features if unset. |
 | `PEXELS_API_KEY` | optional | Blog hero images. |
 | `VIEW_IP_SALT` | optional | Salt for hashed IPs in `listing_views`. |
-| `CRON_SECRET` | optional | Auth header for `/api/cron/*` routes. |
+| `CRON_SECRET` | optional | Bearer-token for `/api/cron/saved-searches` and `/api/cron/relist-nudge`. Both jobs also run on every `/admin` page load, so an external scheduler is optional pre-launch. |
 
 ---
 
