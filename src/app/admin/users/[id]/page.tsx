@@ -27,7 +27,7 @@ type AdminReviewRow = {
   created_at: string;
   edited_at: string | null;
   hidden_by_admin_at: string | null;
-  flagged_by_seller_at: string | null;
+  flagged_at: string | null;
 };
 
 type ReviewSummaryAll = {
@@ -71,7 +71,7 @@ async function fetchAdminSellerReviews(
               r.created_at::text,
               r.edited_at::text,
               r.hidden_by_admin_at::text,
-              r.flagged_by_seller_at::text
+              r.flagged_at::text
          FROM listing_reviews r
          LEFT JOIN users    u ON u.id = r.buyer_id
          LEFT JOIN listings l ON l.id = r.listing_id
@@ -89,7 +89,7 @@ async function fetchAdminSellerReviews(
     for (const row of rows) {
       total++;
       if (row.hidden_by_admin_at) hidden++;
-      if (row.flagged_by_seller_at && !row.hidden_by_admin_at) flagged++;
+      if (row.flagged_at && !row.hidden_by_admin_at) flagged++;
       if (!row.hidden_by_admin_at) {
         visibleCount++;
         starsTotal += row.stars;
@@ -103,7 +103,9 @@ async function fetchAdminSellerReviews(
       rows,
       summary: { total, visible: visibleCount, hidden, flagged, average },
     };
-  } catch {
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.error("[admin/users] fetchAdminSellerReviews failed", e);
     return {
       rows: [],
       summary: { total: 0, visible: 0, hidden: 0, flagged: 0, average: 0 },
@@ -401,7 +403,7 @@ export default async function AdminUserDetailPage({
                 const moderation: { bg: string; fg: string; label: string } | null =
                   rev.hidden_by_admin_at
                     ? { bg: "#fee2e2", fg: "#991b1b", label: "Hidden" }
-                    : rev.flagged_by_seller_at
+                    : rev.flagged_at
                       ? { bg: "#fef3c7", fg: "#92400e", label: "Flagged" }
                       : null;
                 return (
