@@ -48,6 +48,7 @@ type ListingRow = {
   offers_enabled: boolean;
   sold_at: string | null;
   region_id: string | null;
+  dress_id: string;
   conversation_count: string;
   // detail fields
   designer_name: string | null;
@@ -92,6 +93,7 @@ const LISTING_SELECT = `
   l.offers_enabled,
   l.sold_at::text,
   l.region_id::text,
+  l.dress_id::text,
   (
     SELECT COUNT(DISTINCT buyer_id)::text FROM conversations
       WHERE listing_id = l.id
@@ -177,6 +179,67 @@ const fetchListing = cache(async (
     };
   }
 });
+
+type Provenance = {
+  prior_sales: number;
+  first_listed_at: string | null;
+  last_sold_at: string | null;
+};
+
+/**
+ * Phase 5 provenance — count + dates of prior sales for the dress.
+ * Excludes 'sold-elsewhere' events since those don't represent a
+ * verified prior on-platform owner. Excludes the current listing's
+ * own sale (which doesn't exist yet at view time anyway). Returns
+ * null when the dress has never been sold on the platform — caller
+ * hides the section so first-time-listed dresses don't show empty
+ * "no history" copy.
+ */
+async function fetchProvenance(
+  dressId: string,
+): Promise<Provenance | null> {
+  if (!/^\d+$/.test(dressId)) return null;
+  try {
+    const r = await query<{
+      prior_sales: string;
+      first_listed_at: string | null;
+      last_sold_at: string | null;
+    }>(
+      `SELECT
+         COUNT(*) FILTER (WHERE event_type = 'sold')::text AS prior_sales,
+         MIN(occurred_at) FILTER (WHERE event_type = 'created')::text
+           AS first_listed_at,
+         MAX(occurred_at) FILTER (WHERE event_type = 'sold')::text
+           AS last_sold_at
+       FROM dress_ownership_events
+       WHERE dress_id = $1::bigint`,
+      [dressId],
+    );
+    const row = r.rows[0];
+    if (!row) return null;
+    const priorSales = Number(row.prior_sales ?? 0);
+    if (priorSales < 1) return null;
+    return {
+      prior_sales: priorSales,
+      first_listed_at: row.first_listed_at,
+      last_sold_at: row.last_sold_at,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function formatMonthYear(s: string | null): string {
+  if (!s) return "";
+  try {
+    return new Date(s).toLocaleDateString("en-AU", {
+      month: "long",
+      year: "numeric",
+    });
+  } catch {
+    return "";
+  }
+}
 
 function priceFormat(cents: number): string {
   return new Intl.NumberFormat("en-AU", {
@@ -684,11 +747,12 @@ export default async function ListingDetailPage({
   const specGroups = buildSpecs(l);
   // Seller's review summary — surfaced inline in the seller block
   // once the count crosses the admin-configured threshold.
-  const [sellerReviewSummary, pageSettings] = await Promise.all([
+  const [sellerReviewSummary, pageSettings, provenance] = await Promise.all([
     l.seller_id
       ? getSellerReviewSummary(l.seller_id)
       : Promise.resolve({ count: 0, average: 0 }),
     loadSiteSettings(),
+    fetchProvenance(l.dress_id),
   ]);
   const reviewsThreshold = pageSettings.reviewsDisplayThreshold;
 
@@ -1175,6 +1239,39 @@ export default async function ListingDetailPage({
               </div>
             </div>
           )}
+        </section>
+      )}
+
+      {provenance && (
+        <section className="detail-specs">
+          <p
+            className="eyebrow"
+            style={{ margin: "0 0 var(--s-2)", color: "var(--volt-700)" }}
+          >
+            Frockd history
+          </p>
+          <h2 className="detail-specs-heading" style={{ marginTop: 0 }}>
+            {provenance.prior_sales === 1
+              ? "Worn and re-listed"
+              : `Worn ${provenance.prior_sales} times`}
+          </h2>
+          <p style={{ color: "var(--ink-3)", margin: "0 0 var(--s-3)" }}>
+            {[
+              provenance.first_listed_at
+                ? `First listed ${formatMonthYear(provenance.first_listed_at)}`
+                : null,
+              provenance.last_sold_at
+                ? `last sold ${formatMonthYear(provenance.last_sold_at)}`
+                : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+          <p style={{ color: "var(--ink-4)", fontSize: 13, margin: 0 }}>
+            This dress has lived on frockd before — circular by design.
+            Prior owners stay anonymous; the dates are pulled from the
+            previous sale records.
+          </p>
         </section>
       )}
 
