@@ -6,6 +6,13 @@ import { Button } from "../../../_components/ui";
 
 export const dynamic = "force-dynamic";
 
+type Report = {
+  reason: string;
+  created_at: string;
+  by_email: string | null;
+  by_is_admin: boolean | null;
+};
+
 type FlaggedRow = {
   id: string;
   title: string;
@@ -18,11 +25,10 @@ type FlaggedRow = {
   designer_name: string | null;
   primary_image_id: string | null;
   trust_status: string | null;
-  flag_reason: string | null;
-  flag_created_at: string | null;
-  flag_by_email: string | null;
-  flag_by_is_admin: boolean | null;
-  flag_count: string | null;
+  // All currently-open reports against this listing, newest first.
+  // Empty array when the listing is admin-flagged but has no open
+  // buyer reports.
+  reports: Report[] | null;
 };
 
 async function fetchFlagged(): Promise<FlaggedRow[]> {
@@ -44,27 +50,25 @@ async function fetchFlagged(): Promise<FlaggedRow[]> {
                   ORDER BY li.is_primary DESC, li.position, li.id
                   LIMIT 1
               ) AS primary_image_id,
-              fl.reason         AS flag_reason,
-              fl.created_at::text AS flag_created_at,
-              fbu.email         AS flag_by_email,
-              fbu.is_admin      AS flag_by_is_admin,
               (
-                SELECT COUNT(*)::text FROM listing_flags
-                  WHERE listing_id = l.id
-              )                 AS flag_count
+                SELECT json_agg(
+                  json_build_object(
+                    'reason',      lf.reason,
+                    'created_at',  lf.created_at::text,
+                    'by_email',    fbu.email,
+                    'by_is_admin', fbu.is_admin
+                  )
+                  ORDER BY lf.created_at DESC
+                )
+                FROM listing_flags lf
+                LEFT JOIN users fbu ON fbu.id = lf.flagged_by_user_id
+                WHERE lf.listing_id  = l.id
+                  AND lf.resolved_at IS NULL
+              ) AS reports
          FROM listings l
          LEFT JOIN users     u ON u.id = l.seller_id
          JOIN dresses dr     ON dr.id = l.dress_id
          LEFT JOIN designers d ON d.id = dr.designer_id
-         LEFT JOIN LATERAL (
-           SELECT lf.reason, lf.created_at, lf.flagged_by_user_id
-             FROM listing_flags lf
-            WHERE lf.listing_id = l.id
-              AND lf.resolved_at IS NULL
-            ORDER BY lf.created_at DESC
-            LIMIT 1
-         ) fl ON TRUE
-         LEFT JOIN users     fbu ON fbu.id = fl.flagged_by_user_id
         WHERE (
           l.trust_status = 'flagged'
           OR EXISTS (
@@ -74,7 +78,11 @@ async function fetchFlagged(): Promise<FlaggedRow[]> {
           )
         )
           AND l.is_draft = FALSE
-        ORDER BY COALESCE(fl.created_at, l.created_at) DESC
+        ORDER BY COALESCE(
+          (SELECT MAX(created_at) FROM listing_flags
+             WHERE listing_id = l.id AND resolved_at IS NULL),
+          l.created_at
+        ) DESC
         LIMIT 200`,
     );
     return r.rows;
@@ -278,45 +286,66 @@ export default async function FlaggedListingsPage({
                   {row.is_published ? "" : " · Hidden"}
                   {row.sold_at ? " · Sold" : ""}
                 </div>
-                {row.flag_reason && (
+                {row.reports && row.reports.length > 0 && (
                   <div
                     style={{
                       marginTop: 8,
-                      padding: "8px 10px",
-                      borderRadius: 8,
-                      background: "var(--surface-sunken)",
-                      borderLeft: "3px solid var(--ink-2)",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 6,
                     }}
                   >
-                    <div
-                      style={{
-                        fontFamily: "var(--font-mono)",
-                        fontSize: 10,
-                        letterSpacing: "0.12em",
-                        textTransform: "uppercase",
-                        color: "var(--ink-3)",
-                        marginBottom: 4,
-                      }}
-                    >
-                      Reported by {row.flag_by_email ?? "(unknown)"}
-                      {row.flag_by_is_admin ? " (admin)" : " (buyer)"}
-                      {row.flag_created_at
-                        ? ` · ${formatFlagDateTime(row.flag_created_at)}`
-                        : ""}
-                      {row.flag_count && Number(row.flag_count) > 1
-                        ? ` · ${row.flag_count} total reports`
-                        : ""}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 13,
-                        color: "var(--ink-1)",
-                        lineHeight: 1.45,
-                        whiteSpace: "pre-wrap",
-                      }}
-                    >
-                      {row.flag_reason}
-                    </div>
+                    {row.reports.length > 1 && (
+                      <div
+                        style={{
+                          fontFamily: "var(--font-mono)",
+                          fontSize: 10,
+                          letterSpacing: "0.12em",
+                          textTransform: "uppercase",
+                          color: "var(--ink-3)",
+                        }}
+                      >
+                        {row.reports.length} open reports
+                      </div>
+                    )}
+                    {row.reports.map((rep, ri) => (
+                      <div
+                        key={ri}
+                        style={{
+                          padding: "8px 10px",
+                          borderRadius: 8,
+                          background: "var(--surface-sunken)",
+                          borderLeft: `3px solid ${rep.by_is_admin ? "#92400e" : "var(--ink-2)"}`,
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontFamily: "var(--font-mono)",
+                            fontSize: 10,
+                            letterSpacing: "0.12em",
+                            textTransform: "uppercase",
+                            color: "var(--ink-3)",
+                            marginBottom: 4,
+                          }}
+                        >
+                          Reported by {rep.by_email ?? "(unknown)"}
+                          {rep.by_is_admin ? " (admin)" : " (buyer)"}
+                          {rep.created_at
+                            ? ` · ${formatFlagDateTime(rep.created_at)}`
+                            : ""}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 13,
+                            color: "var(--ink-1)",
+                            lineHeight: 1.45,
+                            whiteSpace: "pre-wrap",
+                          }}
+                        >
+                          {rep.reason}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
