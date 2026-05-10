@@ -150,11 +150,11 @@ export async function startDraftListing(): Promise<void> {
 
   const regionId = await getCurrentRegionId();
 
-  // Phase 1 of the dress-as-first-class refactor: every listing now
-  // points at a `dresses` row carrying the physical attrs. The new
-  // dress is created by the original lister and starts in their
-  // ownership with disposition='available'. When the listing sells
-  // the buyer becomes the current_owner_user_id (Phase 2 wires that).
+  // Every listing points at a `dresses` row carrying the physical
+  // attrs. The new dress is created by the original lister and starts
+  // in their ownership with disposition='available'. When the listing
+  // sells, closeListingWithBuyer transfers current_owner_user_id and
+  // appends a 'sold' event below.
   const dRes = await query<{ id: string }>(
     `INSERT INTO dresses (created_by_user_id, current_owner_user_id, disposition)
      VALUES ($1::bigint, $1::bigint, 'available')
@@ -162,6 +162,12 @@ export async function startDraftListing(): Promise<void> {
     [user.id],
   );
   const dressId = dRes.rows[0]!.id;
+
+  await query(
+    `INSERT INTO dress_ownership_events (dress_id, to_user_id, event_type)
+     VALUES ($1::bigint, $2::bigint, 'created')`,
+    [dressId, user.id],
+  );
 
   const lRes = await query<{ id: string }>(
     `INSERT INTO listings

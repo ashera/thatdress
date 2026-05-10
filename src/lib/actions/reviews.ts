@@ -78,6 +78,54 @@ export async function closeListingWithBuyer(
     [listingId, buyerId],
   );
 
+  // Phase 2 ownership transfer. Resolve the dress + seller from the
+  // listing, then either hand the dress to the attributed buyer
+  // ('in-use') or mark it as gone to an unknown buyer ('lost').
+  // Both branches append an event to dress_ownership_events so the
+  // provenance trail (Phase 5) and the relist nudge job (Phase 3)
+  // can reconstruct who has the dress.
+  const dressLookup = await query<{
+    dress_id: string;
+    seller_id: string;
+  }>(
+    `SELECT dress_id::text, seller_id::text
+       FROM listings
+      WHERE id = $1::bigint
+      LIMIT 1`,
+    [listingId],
+  );
+  const dressRow = dressLookup.rows[0];
+  if (dressRow) {
+    if (buyerId) {
+      await query(
+        `UPDATE dresses
+            SET current_owner_user_id = $2::bigint,
+                disposition           = 'in-use'
+          WHERE id = $1::bigint`,
+        [dressRow.dress_id, buyerId],
+      );
+      await query(
+        `INSERT INTO dress_ownership_events
+           (dress_id, from_user_id, to_user_id, via_listing_id, event_type)
+         VALUES ($1::bigint, $2::bigint, $3::bigint, $4::bigint, 'sold')`,
+        [dressRow.dress_id, dressRow.seller_id, buyerId, listingId],
+      );
+    } else {
+      await query(
+        `UPDATE dresses
+            SET disposition = 'lost'
+          WHERE id = $1::bigint`,
+        [dressRow.dress_id],
+      );
+      await query(
+        `INSERT INTO dress_ownership_events
+           (dress_id, from_user_id, via_listing_id, event_type)
+         VALUES ($1::bigint, $2::bigint, $3::bigint, 'sold-elsewhere')`,
+        [dressRow.dress_id, dressRow.seller_id, listingId],
+      );
+    }
+  }
+
   if (buyerId) {
     // Issue token, email the buyer with the review link. Both side
     // effects are wrapped in a try/catch — a Resend outage shouldn't

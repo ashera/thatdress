@@ -345,6 +345,44 @@ CREATE INDEX IF NOT EXISTS dresses_owner_idx
   ON dresses (current_owner_user_id) WHERE current_owner_user_id IS NOT NULL;
 
 -- =========================================================
+-- Dress ownership events — append-only audit trail of who has
+-- owned each dress and how it moved between owners. Drives the
+-- Phase 5 provenance display and gives the Phase 3 nudge job a
+-- reliable history to query.
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS dress_ownership_events (
+  id              BIGSERIAL    PRIMARY KEY,
+  dress_id        BIGINT       NOT NULL REFERENCES dresses(id)  ON DELETE CASCADE,
+  -- from = previous owner; NULL for 'created' (no prior owner).
+  from_user_id    BIGINT                REFERENCES users(id)    ON DELETE SET NULL,
+  -- to   = new owner; NULL for 'sold-elsewhere' (buyer unknown).
+  to_user_id      BIGINT                REFERENCES users(id)    ON DELETE SET NULL,
+  via_listing_id  BIGINT                REFERENCES listings(id) ON DELETE SET NULL,
+  event_type      TEXT         NOT NULL,
+  occurred_at     TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE dress_ownership_events
+  DROP CONSTRAINT IF EXISTS dress_ownership_events_type_check;
+ALTER TABLE dress_ownership_events
+  ADD CONSTRAINT dress_ownership_events_type_check
+    CHECK (event_type IN ('created', 'sold', 'sold-elsewhere'));
+
+CREATE INDEX IF NOT EXISTS dress_ownership_events_dress_idx
+  ON dress_ownership_events (dress_id, occurred_at DESC);
+
+-- Backfill a 'created' event for any existing dress that doesn't
+-- yet have one. Idempotent: only inserts where no event row exists
+-- for that dress. Test data is small; this is cheap.
+INSERT INTO dress_ownership_events (dress_id, to_user_id, event_type, occurred_at)
+SELECT d.id, d.created_by_user_id, 'created', d.created_at
+  FROM dresses d
+ WHERE NOT EXISTS (
+   SELECT 1 FROM dress_ownership_events e WHERE e.dress_id = d.id
+ );
+
+-- =========================================================
 -- One-time migration: detect the pre-dress schema, wipe test
 -- data, then drop the columns that have moved to `dresses`.
 -- The DO block self-guards on the existence of listings.designer_id
