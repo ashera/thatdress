@@ -57,6 +57,10 @@ async function fetchShortlistedListings(userId: string) {
               l.trust_status,
               l.is_published,
               l.sold_at::text,
+              (
+                SELECT COUNT(DISTINCT buyer_id)::text FROM conversations
+                  WHERE listing_id = l.id
+              ) AS conversation_count,
               s.created_at::text AS shortlisted_at,
               s.ignored_at::text AS ignored_at
          FROM shortlists s

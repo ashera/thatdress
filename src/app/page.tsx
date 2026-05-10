@@ -158,7 +158,11 @@ async function getFeaturedListings(
                 SELECT COUNT(*)::text FROM listing_reviews
                   WHERE seller_id = l.seller_id
                     AND hidden_by_admin_at IS NULL
-              ) AS seller_rating_count
+              ) AS seller_rating_count,
+              (
+                SELECT COUNT(DISTINCT buyer_id)::text FROM conversations
+                  WHERE listing_id = l.id
+              ) AS conversation_count
          FROM listings l
          JOIN dresses dr  ON dr.id = l.dress_id
          LEFT JOIN users            u   ON u.id   = l.seller_id
