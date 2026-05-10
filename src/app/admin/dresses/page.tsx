@@ -51,6 +51,11 @@ type Row = {
   next_relist_nudge_at: string | null;
   last_relist_nudge_sent_at: string | null;
   last_sold_at: string | null;
+  // Front photo of the most recent listing of this dress, used as
+  // the row thumbnail. Falls back to null when no listing has any
+  // images yet (drafts pre-photo-step).
+  thumb_listing_id: string | null;
+  thumb_image_id: string | null;
 };
 
 async function fetchDresses(): Promise<Row[]> {
@@ -71,11 +76,22 @@ async function fetchDresses(): Promise<Row[]> {
                 SELECT MAX(occurred_at)::text
                   FROM dress_ownership_events
                  WHERE dress_id = d.id AND event_type = 'sold'
-              )                                        AS last_sold_at
+              )                                        AS last_sold_at,
+              thumb.listing_id::text                   AS thumb_listing_id,
+              thumb.image_id::text                     AS thumb_image_id
          FROM dresses d
          JOIN users u ON u.id = d.current_owner_user_id
          LEFT JOIN designers   des ON des.id = d.designer_id
          LEFT JOIN dress_sizes ds  ON ds.id  = d.size_id
+         LEFT JOIN LATERAL (
+           SELECT li.id AS image_id, li.listing_id
+             FROM listings l
+             JOIN listing_images li ON li.listing_id = l.id
+            WHERE l.dress_id = d.id
+            ORDER BY l.created_at DESC,
+                     li.is_primary DESC, li.position, li.id
+            LIMIT 1
+         ) thumb ON TRUE
         ORDER BY
           CASE d.disposition
             WHEN 'in-use'     THEN 1
@@ -206,12 +222,58 @@ export default async function AdminDressesPage({
                 className="form-card"
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "1fr auto",
+                  gridTemplateColumns: "72px 1fr auto",
                   gap: "var(--s-4)",
                   alignItems: "center",
                   padding: "var(--s-4)",
                 }}
               >
+                <Link
+                  href={`/admin/dresses/${row.dress_id}`}
+                  style={{
+                    width: 72,
+                    aspectRatio: "3 / 4",
+                    borderRadius: 8,
+                    overflow: "hidden",
+                    background: "var(--surface-sunken)",
+                    position: "relative",
+                    display: "block",
+                  }}
+                  aria-hidden
+                  tabIndex={-1}
+                >
+                  {row.thumb_image_id && row.thumb_listing_id ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src={`/api/listings/${row.thumb_listing_id}/images/${row.thumb_image_id}?w=200`}
+                      alt=""
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "var(--ink-4)",
+                        fontFamily: "var(--font-mono)",
+                        fontSize: 9,
+                        letterSpacing: "0.12em",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      No photo
+                    </div>
+                  )}
+                </Link>
                 <Link
                   href={`/admin/dresses/${row.dress_id}`}
                   style={{
