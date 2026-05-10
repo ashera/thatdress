@@ -11,7 +11,13 @@ import {
 import { startImpersonation } from "@/lib/actions/impersonation";
 import { listReferredUsers } from "@/lib/referral";
 import { loadSiteSettings } from "@/lib/site-settings";
-import { Button, Field, Input, Textarea } from "../../../_components/ui";
+import {
+  Button,
+  ButtonLink,
+  Field,
+  Input,
+  Textarea,
+} from "../../../_components/ui";
 
 type AdminReviewRow = {
   id: string;
@@ -579,6 +585,22 @@ export default async function AdminUserDetailPage({
                       {truncate(c.last_message_body)}
                     </p>
                   )}
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "flex-end",
+                      marginTop: "var(--s-2)",
+                    }}
+                  >
+                    <ButtonLink
+                      href={`/messages/${c.id}`}
+                      variant="ghost"
+                      size="sm"
+                      iconRight="arrow"
+                    >
+                      View details
+                    </ButtonLink>
+                  </div>
                 </li>
               );
             })}
