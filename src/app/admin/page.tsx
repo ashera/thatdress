@@ -31,6 +31,11 @@ async function timed<T>(fn: () => Promise<T>): Promise<JobOutcome<T>> {
 
 const ADMIN_LINKS: Array<{ href: string; title: string; desc: string }> = [
   {
+    href: "/admin/dashboard",
+    title: "Dashboard",
+    desc: "Vital signs at a glance — users, listings, GMV, dresses, and operational queues. Each tile drills into the underlying data.",
+  },
+  {
     href: "/admin/dresses",
     title: "Dresses",
     desc: "Track dresses with current owners, monitor relist-nudge schedules, and force-send a nudge to a buyer on demand.",
