@@ -84,7 +84,7 @@ export async function GET(req: Request) {
       const greeting = row.owner_first_name
         ? `Hi ${escapeHtml(row.owner_first_name)},`
         : "Hi,";
-      const relistUrl = `${baseUrl}/listings/mine`;
+      const relistUrl = `${baseUrl}/dresses/${row.dress_id}/relist`;
 
       const result = await sendEmail({
         to: row.owner_email,

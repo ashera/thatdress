@@ -180,6 +180,57 @@ export async function startDraftListing(): Promise<void> {
   redirect(`/listings/new/${listingId}/basics`);
 }
 
+/**
+ * Relist an existing dress — the current owner kicks off a fresh
+ * draft listing pointing at the existing `dresses` row instead of
+ * inserting a new one. Physical attrs (designer/size/measurements/
+ * etc.) carry through automatically via the wizard's JOIN. The
+ * owner re-enters listing-level fields (condition, price, photos,
+ * description) since condition has typically changed since the
+ * previous sale and photos belong to the previous lister.
+ *
+ * Disposition flips back to 'available' so future relist nudges
+ * stop firing while this dress is actively listed; the cron route
+ * filters on disposition='in-use'. If the relist draft is later
+ * abandoned without publishing the disposition stays 'available'
+ * and no nudges fire — that's fine, owner is now in seller mode.
+ */
+export async function startRelistFromDress(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const dressId = String(formData.get("dressId") ?? "");
+  if (!/^\d+$/.test(dressId)) redirect("/listings/mine");
+
+  const ownership = await query<{ id: string }>(
+    `SELECT id::text FROM dresses
+      WHERE id = $1::bigint
+        AND current_owner_user_id = $2::bigint
+      LIMIT 1`,
+    [dressId, user.id],
+  );
+  if (!ownership.rows[0]) redirect("/listings/mine");
+
+  const regionId = await getCurrentRegionId();
+
+  await query(
+    `UPDATE dresses
+        SET disposition = 'available'
+      WHERE id = $1::bigint`,
+    [dressId],
+  );
+
+  const lRes = await query<{ id: string }>(
+    `INSERT INTO listings
+       (dress_id, title, price_cents, seller_id, is_draft, is_published, region_id)
+     VALUES ($1::bigint, '', 0, $2::bigint, TRUE, FALSE, $3)
+     RETURNING id::text`,
+    [dressId, user.id, regionId],
+  );
+  const listingId = lRes.rows[0]!.id;
+  redirect(`/listings/new/${listingId}/basics`);
+}
+
 export async function deleteDraftImage(formData: FormData): Promise<void> {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
