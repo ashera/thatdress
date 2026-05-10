@@ -113,6 +113,92 @@ async function fetchAdminSellerReviews(
   }
 }
 
+type ConversationRow = {
+  id: string;
+  buyer_id: string;
+  buyer_email: string | null;
+  buyer_first_name: string | null;
+  buyer_surname: string | null;
+  seller_id: string;
+  seller_email: string | null;
+  seller_first_name: string | null;
+  seller_surname: string | null;
+  listing_id: string | null;
+  listing_title: string | null;
+  message_count: string;
+  last_message_at: string | null;
+  last_message_body: string | null;
+  last_message_sender_id: string | null;
+  unread_for_user: string;
+};
+
+async function fetchUserConversations(
+  userId: string,
+): Promise<ConversationRow[]> {
+  if (!/^\d+$/.test(userId)) return [];
+  try {
+    const r = await query<ConversationRow>(
+      `SELECT c.id::text,
+              c.buyer_id::text,
+              bu.email                         AS buyer_email,
+              bu.first_name                    AS buyer_first_name,
+              bu.surname                       AS buyer_surname,
+              c.seller_id::text,
+              su.email                         AS seller_email,
+              su.first_name                    AS seller_first_name,
+              su.surname                       AS seller_surname,
+              c.listing_id::text               AS listing_id,
+              l.title                          AS listing_title,
+              (
+                SELECT COUNT(*)::text FROM messages m WHERE m.conversation_id = c.id
+              )                                AS message_count,
+              last.created_at::text            AS last_message_at,
+              last.body                        AS last_message_body,
+              last.sender_id::text             AS last_message_sender_id,
+              (
+                SELECT COUNT(*)::text FROM messages m
+                  WHERE m.conversation_id = c.id
+                    AND m.sender_id <> $1::bigint
+                    AND m.read_at IS NULL
+              )                                AS unread_for_user
+         FROM conversations c
+         LEFT JOIN users     bu ON bu.id = c.buyer_id
+         LEFT JOIN users     su ON su.id = c.seller_id
+         LEFT JOIN listings  l  ON l.id  = c.listing_id
+         LEFT JOIN LATERAL (
+           SELECT m.body, m.created_at, m.sender_id
+             FROM messages m
+            WHERE m.conversation_id = c.id
+            ORDER BY m.created_at DESC
+            LIMIT 1
+         ) last ON TRUE
+        WHERE c.buyer_id = $1::bigint OR c.seller_id = $1::bigint
+        ORDER BY COALESCE(last.created_at, c.updated_at) DESC
+        LIMIT 100`,
+      [userId],
+    );
+    return r.rows;
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.error("[admin/users] fetchUserConversations failed", e);
+    return [];
+  }
+}
+
+function userDisplay(
+  email: string | null,
+  first: string | null,
+  surname: string | null,
+): string {
+  const name = [first, surname].filter(Boolean).join(" ").trim();
+  return name || email || "(unknown)";
+}
+
+function truncate(s: string, max = 120): string {
+  if (s.length <= max) return s;
+  return `${s.slice(0, max - 1).trimEnd()}…`;
+}
+
 function formatReviewDate(s: string): string {
   try {
     return new Date(s).toLocaleDateString("en-AU", {
@@ -249,10 +335,11 @@ export default async function AdminUserDetailPage({
   // Referral programme info — both who they were referred by, and who
   // they've referred. Loaded in parallel with site settings so we can
   // multiply through to per-row earnings.
-  const [referred, settings, reviewHistory] = await Promise.all([
+  const [referred, settings, reviewHistory, conversations] = await Promise.all([
     listReferredUsers(user.id),
     loadSiteSettings(),
     fetchAdminSellerReviews(user.id),
+    fetchUserConversations(user.id),
   ]);
   const commissionCents = settings.referralCommissionCents;
   const verifiedListings = referred.reduce(
@@ -310,6 +397,193 @@ export default async function AdminUserDetailPage({
           <dt>Conversations</dt>
           <dd>{user.conversation_count}</dd>
         </div>
+      </section>
+
+      <section className="form-card" style={{ marginBottom: "var(--s-5)" }}>
+        <h2 className="card-heading">Conversations</h2>
+        {conversations.length === 0 ? (
+          <p style={{ margin: 0, color: "var(--ink-3)" }}>
+            No conversations yet.
+          </p>
+        ) : (
+          <ul
+            style={{
+              listStyle: "none",
+              padding: 0,
+              margin: 0,
+              display: "flex",
+              flexDirection: "column",
+              gap: "var(--s-3)",
+            }}
+          >
+            {conversations.map((c) => {
+              const isBuyer = c.buyer_id === user.id;
+              const counterpartId = isBuyer ? c.seller_id : c.buyer_id;
+              const counterpart = userDisplay(
+                isBuyer ? c.seller_email : c.buyer_email,
+                isBuyer ? c.seller_first_name : c.buyer_first_name,
+                isBuyer ? c.seller_surname : c.buyer_surname,
+              );
+              const role = isBuyer
+                ? { bg: "#e0e7ff", fg: "#3730a3", label: "Buyer" }
+                : { bg: "#dcfce7", fg: "#166534", label: "Seller" };
+              const unread = Number(c.unread_for_user ?? 0);
+              const messageCount = Number(c.message_count ?? 0);
+              const sentByUser =
+                c.last_message_sender_id === user.id;
+              return (
+                <li
+                  key={c.id}
+                  style={{
+                    borderTop: "1px solid var(--hairline)",
+                    paddingTop: "var(--s-3)",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      flexWrap: "wrap",
+                      marginBottom: 4,
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontFamily: "var(--font-mono)",
+                        fontSize: 10,
+                        letterSpacing: "0.12em",
+                        textTransform: "uppercase",
+                        fontWeight: 700,
+                        padding: "2px 8px",
+                        borderRadius: 999,
+                        background: role.bg,
+                        color: role.fg,
+                      }}
+                    >
+                      {role.label}
+                    </span>
+                    {!c.listing_id && (
+                      <span
+                        style={{
+                          fontFamily: "var(--font-mono)",
+                          fontSize: 10,
+                          letterSpacing: "0.12em",
+                          textTransform: "uppercase",
+                          fontWeight: 700,
+                          padding: "2px 8px",
+                          borderRadius: 999,
+                          background: "#fef3c7",
+                          color: "#92400e",
+                        }}
+                      >
+                        Admin DM
+                      </span>
+                    )}
+                    {unread > 0 && (
+                      <span
+                        style={{
+                          fontFamily: "var(--font-mono)",
+                          fontSize: 10,
+                          letterSpacing: "0.12em",
+                          textTransform: "uppercase",
+                          fontWeight: 700,
+                          padding: "2px 8px",
+                          borderRadius: 999,
+                          background: "#fee2e2",
+                          color: "#991b1b",
+                        }}
+                      >
+                        {unread} unread
+                      </span>
+                    )}
+                    <span
+                      style={{
+                        fontFamily: "var(--font-mono)",
+                        fontSize: 11,
+                        color: "var(--ink-4)",
+                      }}
+                    >
+                      {messageCount} message{messageCount === 1 ? "" : "s"}
+                      {c.last_message_at
+                        ? ` · ${formatReviewDate(c.last_message_at)}`
+                        : ""}
+                    </span>
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 13,
+                      color: "var(--ink-3)",
+                      marginBottom: 4,
+                    }}
+                  >
+                    <span style={{ color: "var(--ink-4)" }}>With</span>{" "}
+                    <Link
+                      href={`/admin/users/${counterpartId}`}
+                      style={{
+                        color: "var(--ink-2)",
+                        textDecoration: "underline",
+                        textDecorationColor: "var(--hairline-strong)",
+                      }}
+                    >
+                      {counterpart}
+                    </Link>
+                    {c.listing_id && (
+                      <>
+                        {" "}
+                        <span style={{ color: "var(--ink-4)" }}>about</span>{" "}
+                        {c.listing_title ? (
+                          <Link
+                            href={`/listings/${c.listing_id}`}
+                            style={{
+                              color: "var(--ink-2)",
+                              textDecoration: "underline",
+                              textDecorationColor: "var(--hairline-strong)",
+                            }}
+                          >
+                            {c.listing_title}
+                          </Link>
+                        ) : (
+                          <span style={{ color: "var(--ink-4)" }}>
+                            (listing deleted)
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </div>
+                  {c.last_message_body && (
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: 13,
+                        color: "var(--ink-2)",
+                        lineHeight: 1.45,
+                        background: "var(--surface-sunken)",
+                        border: "1px solid var(--hairline)",
+                        borderRadius: 8,
+                        padding: "8px 10px",
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontFamily: "var(--font-mono)",
+                          fontSize: 10,
+                          letterSpacing: "0.12em",
+                          textTransform: "uppercase",
+                          color: "var(--ink-4)",
+                          marginRight: 6,
+                        }}
+                      >
+                        {sentByUser ? "Sent →" : "← Received"}
+                      </span>
+                      {truncate(c.last_message_body)}
+                    </p>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </section>
 
       <section className="form-card" style={{ marginBottom: "var(--s-5)" }}>
