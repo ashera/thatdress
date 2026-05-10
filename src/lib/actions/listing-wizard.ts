@@ -150,14 +150,27 @@ export async function startDraftListing(): Promise<void> {
 
   const regionId = await getCurrentRegionId();
 
-  const r = await query<{ id: string }>(
-    `INSERT INTO listings
-       (title, price_cents, seller_id, is_draft, is_published, region_id)
-     VALUES ('', 0, $1::bigint, TRUE, FALSE, $2)
+  // Phase 1 of the dress-as-first-class refactor: every listing now
+  // points at a `dresses` row carrying the physical attrs. The new
+  // dress is created by the original lister and starts in their
+  // ownership with disposition='available'. When the listing sells
+  // the buyer becomes the current_owner_user_id (Phase 2 wires that).
+  const dRes = await query<{ id: string }>(
+    `INSERT INTO dresses (created_by_user_id, current_owner_user_id, disposition)
+     VALUES ($1::bigint, $1::bigint, 'available')
      RETURNING id::text`,
-    [user.id, regionId],
+    [user.id],
   );
-  const listingId = r.rows[0]!.id;
+  const dressId = dRes.rows[0]!.id;
+
+  const lRes = await query<{ id: string }>(
+    `INSERT INTO listings
+       (dress_id, title, price_cents, seller_id, is_draft, is_published, region_id)
+     VALUES ($1::bigint, '', 0, $2::bigint, TRUE, FALSE, $3)
+     RETURNING id::text`,
+    [dressId, user.id, regionId],
+  );
+  const listingId = lRes.rows[0]!.id;
   redirect(`/listings/new/${listingId}/basics`);
 }
 
@@ -316,21 +329,25 @@ export async function saveDraftBasics(formData: FormData): Promise<void> {
     year = y;
   }
 
+  // Designer / model / year are physical attrs — they live on the
+  // dress, not the listing. Update via the dress_id link.
   await query(
-    `UPDATE listings
+    `UPDATE dresses
         SET designer_id = $2::bigint,
             model = $3,
             year = $4::int
-      WHERE id = $1::bigint`,
+      WHERE id = (SELECT dress_id FROM listings WHERE id = $1::bigint)`,
     [listingId, designer_id, model, year],
   );
-  // Re-derive title from the row's own columns so the designer-name
-  // join doesn't have to share a parameter slot in two type contexts.
+  // Title still lives on the listing (per-sale string), but its
+  // value is derived from the dress's designer + model.
   await query(
     `UPDATE listings
         SET title = TRIM(BOTH FROM CONCAT_WS(' ',
-              (SELECT name FROM designers WHERE id = listings.designer_id),
-              model
+              (SELECT de.name FROM dresses dr
+                  JOIN designers de ON de.id = dr.designer_id
+                  WHERE dr.id = listings.dress_id),
+              (SELECT model FROM dresses WHERE id = listings.dress_id)
             ))
       WHERE id = $1::bigint`,
     [listingId],
@@ -517,19 +534,27 @@ export async function saveDraftStyle(formData: FormData): Promise<void> {
   const occasion_id = getRequiredId(formData, "occasion_id");
   if (!occasion_id) redirect(`${stepUrl}?error=invalid-occasion`);
 
+  // occasion_id is a per-sale marketing choice — stays on listings.
   await query(
     `UPDATE listings
-        SET occasion_id     = $2::bigint,
-            silhouette_id   = NULLIF($3, '')::bigint,
-            fabric_id       = NULLIF($4, '')::bigint,
-            neckline_id     = NULLIF($5, '')::bigint,
-            sleeve_style_id = NULLIF($6, '')::bigint,
-            length_id       = NULLIF($7, '')::bigint,
-            color           = $8
+        SET occasion_id = $2::bigint
       WHERE id = $1::bigint`,
+    [listingId, occasion_id],
+  );
+
+  // Silhouette / fabric / neckline / sleeve / length / color are
+  // physical attrs — write to dresses via the dress_id link.
+  await query(
+    `UPDATE dresses
+        SET silhouette_id   = NULLIF($2, '')::bigint,
+            fabric_id       = NULLIF($3, '')::bigint,
+            neckline_id     = NULLIF($4, '')::bigint,
+            sleeve_style_id = NULLIF($5, '')::bigint,
+            length_id       = NULLIF($6, '')::bigint,
+            color           = $7
+      WHERE id = (SELECT dress_id FROM listings WHERE id = $1::bigint)`,
     [
       listingId,
-      occasion_id,
       getOptionalId(formData, "silhouette_id") ?? "",
       getOptionalId(formData, "fabric_id") ?? "",
       getOptionalId(formData, "neckline_id") ?? "",
@@ -577,14 +602,16 @@ export async function saveDraftMeasurements(
     original_retail_cents = cents;
   }
 
+  // Size + body measurements + original retail price are physical
+  // attrs — write to dresses via dress_id.
   await query(
-    `UPDATE listings
+    `UPDATE dresses
         SET size_id              = NULLIF($2, '')::bigint,
             bust_inches          = $3,
             waist_inches         = $4,
             hips_inches          = $5,
             original_retail_cents = $6
-      WHERE id = $1::bigint`,
+      WHERE id = (SELECT dress_id FROM listings WHERE id = $1::bigint)`,
     [
       listingId,
       getOptionalId(formData, "size_id") ?? "",
@@ -688,30 +715,32 @@ export async function publishDraftListing(formData: FormData): Promise<void> {
     is_published: boolean;
     image_count: string;
   }>(
-    `SELECT title,
-            designer_id::text,
-            model,
-            year,
-            occasion_id::text,
-            condition_id::text,
-            size_id::text,
-            silhouette_id::text,
-            fabric_id::text,
-            neckline_id::text,
-            sleeve_style_id::text,
-            length_id::text,
-            color,
-            bust_inches::text,
-            waist_inches::text,
-            hips_inches::text,
-            original_retail_cents,
-            has_original_receipt,
-            includes_label_lining_photos,
-            trust_status,
-            is_draft,
-            is_published,
-            (SELECT COUNT(*)::text FROM listing_images WHERE listing_id = listings.id) AS image_count
-       FROM listings WHERE id = $1::bigint LIMIT 1`,
+    `SELECT l.title,
+            dr.designer_id::text       AS designer_id,
+            dr.model                   AS model,
+            dr.year                    AS year,
+            l.occasion_id::text       AS occasion_id,
+            l.condition_id::text      AS condition_id,
+            dr.size_id::text           AS size_id,
+            dr.silhouette_id::text     AS silhouette_id,
+            dr.fabric_id::text         AS fabric_id,
+            dr.neckline_id::text       AS neckline_id,
+            dr.sleeve_style_id::text   AS sleeve_style_id,
+            dr.length_id::text         AS length_id,
+            dr.color                   AS color,
+            dr.bust_inches::text       AS bust_inches,
+            dr.waist_inches::text      AS waist_inches,
+            dr.hips_inches::text       AS hips_inches,
+            dr.original_retail_cents   AS original_retail_cents,
+            l.has_original_receipt    AS has_original_receipt,
+            l.includes_label_lining_photos AS includes_label_lining_photos,
+            l.trust_status            AS trust_status,
+            l.is_draft                AS is_draft,
+            l.is_published            AS is_published,
+            (SELECT COUNT(*)::text FROM listing_images WHERE listing_id = l.id) AS image_count
+       FROM listings l
+       JOIN dresses dr ON dr.id = l.dress_id
+       WHERE l.id = $1::bigint LIMIT 1`,
     [listingId],
   );
   const row = r.rows[0];

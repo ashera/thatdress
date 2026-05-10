@@ -97,15 +97,16 @@ export default async function OgImage({
               o.label  AS occasion_label,
               s.label  AS silhouette_label,
               ds.label AS size_label,
-              l.color,
+              dr.color AS color,
               cg.label AS condition_label,
               img.bytes     AS primary_image_bytes,
               img.mime_type AS primary_image_mime
          FROM listings l
-         LEFT JOIN designers        d  ON d.id  = l.designer_id
+         JOIN dresses dr               ON dr.id = l.dress_id
+         LEFT JOIN designers        d  ON d.id  = dr.designer_id
          LEFT JOIN occasions        o  ON o.id  = l.occasion_id
-         LEFT JOIN silhouettes      s  ON s.id  = l.silhouette_id
-         LEFT JOIN dress_sizes      ds ON ds.id = l.size_id
+         LEFT JOIN silhouettes      s  ON s.id  = dr.silhouette_id
+         LEFT JOIN dress_sizes      ds ON ds.id = dr.size_id
          LEFT JOIN condition_grades cg ON cg.id = l.condition_id
          LEFT JOIN LATERAL (
            SELECT bytes, mime_type

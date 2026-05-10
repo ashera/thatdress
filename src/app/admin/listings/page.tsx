@@ -146,7 +146,8 @@ async function fetchListings(opts: {
                   WHERE c.listing_id = l.id
               ) AS last_message_at
          FROM listings l
-         LEFT JOIN designers d ON d.id = l.designer_id
+         JOIN dresses dr     ON dr.id = l.dress_id
+         LEFT JOIN designers d ON d.id = dr.designer_id
          LEFT JOIN users     u ON u.id = l.seller_id
         WHERE ${where.join(" AND ")}
         ORDER BY ${sortSql}

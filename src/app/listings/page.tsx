@@ -240,7 +240,7 @@ function buildFilters(
     params.push(`%${escapeLike(q)}%`);
     const n = params.length;
     where.push(
-      `(l.title ILIKE $${n} ESCAPE '\\' OR l.description ILIKE $${n} ESCAPE '\\' OR l.model ILIKE $${n} ESCAPE '\\' OR d.name ILIKE $${n} ESCAPE '\\')`,
+      `(l.title ILIKE $${n} ESCAPE '\\' OR l.description ILIKE $${n} ESCAPE '\\' OR dr.model ILIKE $${n} ESCAPE '\\' OR d.name ILIKE $${n} ESCAPE '\\')`,
     );
   }
 
@@ -262,10 +262,10 @@ function buildFilters(
     where.push(`${column} = ANY($${params.length}::bigint[])`);
   };
 
-  addArrayFilter("l.designer_id", asArray(raw.designer_id), "designer_id");
+  addArrayFilter("dr.designer_id", asArray(raw.designer_id), "designer_id");
   addArrayFilter("l.occasion_id", asArray(raw.occasion_id), "occasion_id");
-  addArrayFilter("l.silhouette_id", asArray(raw.silhouette_id), "silhouette_id");
-  addArrayFilter("l.size_id", asArray(raw.size_id), "size_id");
+  addArrayFilter("dr.silhouette_id", asArray(raw.silhouette_id), "silhouette_id");
+  addArrayFilter("dr.size_id", asArray(raw.size_id), "size_id");
   addArrayFilter("l.condition_id", asArray(raw.condition_id), "condition_id");
 
   // Numeric ranges
@@ -305,8 +305,8 @@ async function fetchListings(
                   LIMIT 1
               ) AS primary_image_id,
               d.name    AS designer_name,
-              l.model,
-              l.year,
+              dr.model  AS model,
+              dr.year   AS year,
               cg.label  AS condition_label,
               o.label   AS occasion_label,
               s.label   AS silhouette_label,
@@ -316,11 +316,11 @@ async function fetchListings(
               ss.label  AS sleeve_style_label,
               dl.label  AS length_label,
               l.location_postal,
-              l.color,
-              l.bust_inches::text,
-              l.waist_inches::text,
-              l.hips_inches::text,
-              l.original_retail_cents,
+              dr.color  AS color,
+              dr.bust_inches::text  AS bust_inches,
+              dr.waist_inches::text AS waist_inches,
+              dr.hips_inches::text  AS hips_inches,
+              dr.original_retail_cents AS original_retail_cents,
               l.has_original_receipt,
               l.trust_status,
               l.is_published,
@@ -341,16 +341,17 @@ async function fetchListings(
                     AND hidden_by_admin_at IS NULL
               ) AS seller_rating_count
          FROM listings l
+         JOIN dresses dr  ON dr.id = l.dress_id
          LEFT JOIN users            u   ON u.id   = l.seller_id
-         LEFT JOIN designers        d   ON d.id   = l.designer_id
+         LEFT JOIN designers        d   ON d.id   = dr.designer_id
          LEFT JOIN condition_grades cg  ON cg.id  = l.condition_id
          LEFT JOIN occasions        o   ON o.id   = l.occasion_id
-         LEFT JOIN silhouettes      s   ON s.id   = l.silhouette_id
-         LEFT JOIN fabrics          f   ON f.id   = l.fabric_id
-         LEFT JOIN dress_sizes      ds  ON ds.id  = l.size_id
-         LEFT JOIN necklines        n   ON n.id   = l.neckline_id
-         LEFT JOIN sleeve_styles    ss  ON ss.id  = l.sleeve_style_id
-         LEFT JOIN dress_lengths    dl  ON dl.id  = l.length_id
+         LEFT JOIN silhouettes      s   ON s.id   = dr.silhouette_id
+         LEFT JOIN fabrics          f   ON f.id   = dr.fabric_id
+         LEFT JOIN dress_sizes      ds  ON ds.id  = dr.size_id
+         LEFT JOIN necklines        n   ON n.id   = dr.neckline_id
+         LEFT JOIN sleeve_styles    ss  ON ss.id  = dr.sleeve_style_id
+         LEFT JOIN dress_lengths    dl  ON dl.id  = dr.length_id
          ${whereSql}
          ORDER BY ${orderBy}
          LIMIT 50`,

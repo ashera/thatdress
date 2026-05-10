@@ -74,7 +74,8 @@ async function buildSuggestion(draft: {
     const r = await query<EstimatorInputsRow>(
       `SELECT d.tier, cg.slug AS condition_slug
          FROM listings l
-         LEFT JOIN designers        d  ON d.id  = l.designer_id
+         JOIN dresses dr ON dr.id = l.dress_id
+         LEFT JOIN designers        d  ON d.id  = dr.designer_id
          LEFT JOIN condition_grades cg ON cg.id = l.condition_id
         WHERE l.id = $1::bigint
         LIMIT 1`,

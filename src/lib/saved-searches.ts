@@ -57,10 +57,12 @@ export function buildSavedSearchWhere(params: Params): {
     vals.push(ids.map(Number));
     where.push(`${col} = ANY($${vals.length}::bigint[])`);
   };
-  addArrIn("l.designer_id", validIds(asArray(params.designer_id)));
+  // Note: designer/silhouette/size now live on dresses (alias `dr`).
+  // Callers JOIN dresses dr ON dr.id = l.dress_id before applying these.
+  addArrIn("dr.designer_id", validIds(asArray(params.designer_id)));
   addArrIn("l.occasion_id", validIds(asArray(params.occasion_id)));
-  addArrIn("l.silhouette_id", validIds(asArray(params.silhouette_id)));
-  addArrIn("l.size_id", validIds(asArray(params.size_id)));
+  addArrIn("dr.silhouette_id", validIds(asArray(params.silhouette_id)));
+  addArrIn("dr.size_id", validIds(asArray(params.size_id)));
   addArrIn("l.condition_id", validIds(asArray(params.condition_id)));
 
   const minPrice = validInt(asStr(params.min_price), 0, 10_000_000);
@@ -117,10 +119,11 @@ export async function findNewMatches(
     `SELECT l.id::text,
             l.title,
             l.price_cents,
-            d.name AS designer_name,
-            l.model
+            d.name  AS designer_name,
+            dr.model AS model
        FROM listings l
-       LEFT JOIN designers d ON d.id = l.designer_id
+       JOIN dresses dr     ON dr.id = l.dress_id
+       LEFT JOIN designers d ON d.id = dr.designer_id
       WHERE ${where.join(" AND ")}
       ORDER BY l.created_at DESC
       LIMIT $${limitParam}`,

@@ -299,33 +299,109 @@ CREATE TABLE IF NOT EXISTS condition_grades (
 );
 
 -- =========================================================
--- Listing detail columns (all nullable; legacy rows survive)
+-- Dresses — first-class entity. A dress is a physical garment that
+-- can be listed multiple times by different owners over its life.
+-- A listing is one sale event; dress + sequential listings together
+-- give us a circular marketplace where buyers can relist months
+-- after the purchase.
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS dresses (
+  id                       BIGSERIAL    PRIMARY KEY,
+  -- Physical attributes (immutable across owners — the dress IS what it is).
+  designer_id              BIGINT       REFERENCES designers(id)     ON DELETE SET NULL,
+  model                    TEXT,
+  year                     INTEGER,
+  silhouette_id            BIGINT       REFERENCES silhouettes(id)   ON DELETE SET NULL,
+  fabric_id                BIGINT       REFERENCES fabrics(id)       ON DELETE SET NULL,
+  neckline_id              BIGINT       REFERENCES necklines(id)     ON DELETE SET NULL,
+  sleeve_style_id          BIGINT       REFERENCES sleeve_styles(id) ON DELETE SET NULL,
+  length_id                BIGINT       REFERENCES dress_lengths(id) ON DELETE SET NULL,
+  size_id                  BIGINT       REFERENCES dress_sizes(id)   ON DELETE SET NULL,
+  bust_inches              NUMERIC(4,1),
+  waist_inches             NUMERIC(4,1),
+  hips_inches              NUMERIC(4,1),
+  color                    TEXT,
+  original_retail_cents    INTEGER,
+  -- Lifecycle.
+  created_by_user_id       BIGINT       REFERENCES users(id) ON DELETE SET NULL,
+  current_owner_user_id    BIGINT       REFERENCES users(id) ON DELETE SET NULL,
+  disposition              TEXT         NOT NULL DEFAULT 'available',
+  -- Relist nudge timers — wired in Phase 3.
+  next_relist_nudge_at     TIMESTAMPTZ,
+  last_relist_nudge_sent_at TIMESTAMPTZ,
+  created_at               TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE dresses
+  DROP CONSTRAINT IF EXISTS dresses_disposition_check;
+ALTER TABLE dresses
+  ADD CONSTRAINT dresses_disposition_check
+    CHECK (disposition IN ('available', 'in-use', 'kept', 'lost'));
+
+CREATE INDEX IF NOT EXISTS dresses_designer_id_idx ON dresses (designer_id);
+CREATE INDEX IF NOT EXISTS dresses_size_id_idx     ON dresses (size_id);
+CREATE INDEX IF NOT EXISTS dresses_owner_idx
+  ON dresses (current_owner_user_id) WHERE current_owner_user_id IS NOT NULL;
+
+-- =========================================================
+-- One-time migration: detect the pre-dress schema, wipe test
+-- data, then drop the columns that have moved to `dresses`.
+-- The DO block self-guards on the existence of listings.designer_id
+-- so it runs at most once. Subsequent deploys skip the body.
+-- =========================================================
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+     WHERE table_name = 'listings' AND column_name = 'designer_id'
+  ) THEN
+    -- Cascade-wipe everything keyed off listings (listing_images,
+    -- listing_reviews, listing_flags, listing_review_tokens,
+    -- listing_views, conversations, messages, offers, shortlists).
+    DELETE FROM listings;
+    DELETE FROM dresses;
+  END IF;
+END $$;
+
+ALTER TABLE listings DROP COLUMN IF EXISTS designer_id;
+ALTER TABLE listings DROP COLUMN IF EXISTS model;
+ALTER TABLE listings DROP COLUMN IF EXISTS year;
+ALTER TABLE listings DROP COLUMN IF EXISTS silhouette_id;
+ALTER TABLE listings DROP COLUMN IF EXISTS fabric_id;
+ALTER TABLE listings DROP COLUMN IF EXISTS neckline_id;
+ALTER TABLE listings DROP COLUMN IF EXISTS sleeve_style_id;
+ALTER TABLE listings DROP COLUMN IF EXISTS length_id;
+ALTER TABLE listings DROP COLUMN IF EXISTS size_id;
+ALTER TABLE listings DROP COLUMN IF EXISTS color;
+ALTER TABLE listings DROP COLUMN IF EXISTS bust_inches;
+ALTER TABLE listings DROP COLUMN IF EXISTS waist_inches;
+ALTER TABLE listings DROP COLUMN IF EXISTS hips_inches;
+ALTER TABLE listings DROP COLUMN IF EXISTS original_retail_cents;
+
+ALTER TABLE listings
+  ADD COLUMN IF NOT EXISTS dress_id BIGINT REFERENCES dresses(id) ON DELETE CASCADE;
+
+-- After the wipe, every remaining listing must have a dress; new
+-- inserts via startDraftListing always pair the two. Setting NOT NULL
+-- here is safe because the table is empty (or is empty post-wipe).
+ALTER TABLE listings ALTER COLUMN dress_id SET NOT NULL;
+
+CREATE INDEX IF NOT EXISTS listings_dress_id_idx ON listings (dress_id);
+
+-- =========================================================
+-- Listing detail columns that stay per-sale (not on dresses).
 -- =========================================================
 
 ALTER TABLE listings
-  ADD COLUMN IF NOT EXISTS designer_id          BIGINT  REFERENCES designers(id)        ON DELETE SET NULL,
-  ADD COLUMN IF NOT EXISTS model                TEXT,
-  ADD COLUMN IF NOT EXISTS year                 INTEGER,
   ADD COLUMN IF NOT EXISTS condition_id         BIGINT  REFERENCES condition_grades(id) ON DELETE SET NULL,
   ADD COLUMN IF NOT EXISTS occasion_id          BIGINT  REFERENCES occasions(id)        ON DELETE SET NULL,
-  ADD COLUMN IF NOT EXISTS silhouette_id        BIGINT  REFERENCES silhouettes(id)      ON DELETE SET NULL,
-  ADD COLUMN IF NOT EXISTS fabric_id            BIGINT  REFERENCES fabrics(id)          ON DELETE SET NULL,
-  ADD COLUMN IF NOT EXISTS size_id              BIGINT  REFERENCES dress_sizes(id)      ON DELETE SET NULL,
-  ADD COLUMN IF NOT EXISTS neckline_id          BIGINT  REFERENCES necklines(id)        ON DELETE SET NULL,
-  ADD COLUMN IF NOT EXISTS sleeve_style_id      BIGINT  REFERENCES sleeve_styles(id)    ON DELETE SET NULL,
-  ADD COLUMN IF NOT EXISTS length_id            BIGINT  REFERENCES dress_lengths(id)    ON DELETE SET NULL,
-  ADD COLUMN IF NOT EXISTS color                TEXT,
-  ADD COLUMN IF NOT EXISTS bust_inches          NUMERIC(4,1),
-  ADD COLUMN IF NOT EXISTS waist_inches         NUMERIC(4,1),
-  ADD COLUMN IF NOT EXISTS hips_inches          NUMERIC(4,1),
-  ADD COLUMN IF NOT EXISTS original_retail_cents INTEGER,
   ADD COLUMN IF NOT EXISTS alterations_text     TEXT,
   ADD COLUMN IF NOT EXISTS location_postal      TEXT,
   ADD COLUMN IF NOT EXISTS has_original_receipt BOOLEAN DEFAULT FALSE;
 
-CREATE INDEX IF NOT EXISTS listings_designer_id_idx  ON listings (designer_id);
-CREATE INDEX IF NOT EXISTS listings_occasion_id_idx  ON listings (occasion_id);
-CREATE INDEX IF NOT EXISTS listings_size_id_idx      ON listings (size_id);
+CREATE INDEX IF NOT EXISTS listings_occasion_id_idx ON listings (occasion_id);
 
 -- =========================================================
 -- Reference data seed (idempotent)
@@ -994,15 +1070,18 @@ ON CONFLICT (id) DO NOTHING;
 UPDATE users SET email_verified_at = COALESCE(email_verified_at, created_at);
 
 -- Auto-derive listing title from "Designer Model" when both are present.
+-- After Phase 1 the physical attrs live on `dresses`, so the lookup
+-- joins through dress_id rather than reading off listings directly.
 UPDATE listings
    SET title = derived.t
   FROM (
     SELECT l.id,
-           TRIM(BOTH FROM CONCAT_WS(' ', d.name, l.model)) AS t
+           TRIM(BOTH FROM CONCAT_WS(' ', de.name, dr.model)) AS t
       FROM listings l
-      LEFT JOIN designers d ON d.id = l.designer_id
-     WHERE l.designer_id IS NOT NULL
-       AND l.model IS NOT NULL
+      JOIN dresses    dr ON dr.id = l.dress_id
+      LEFT JOIN designers de ON de.id = dr.designer_id
+     WHERE dr.designer_id IS NOT NULL
+       AND dr.model IS NOT NULL
   ) derived
  WHERE listings.id = derived.id
    AND listings.title IS DISTINCT FROM derived.t;

@@ -53,16 +53,31 @@ export async function recomputeListingTrustStatus(
   let row: ListingSnapshot | undefined;
   try {
     const r = await query<ListingSnapshot>(
-      `SELECT designer_id::text, model, year,
-              occasion_id::text, condition_id::text, size_id::text,
-              silhouette_id::text, fabric_id::text, neckline_id::text,
-              sleeve_style_id::text, length_id::text, color,
-              bust_inches::text, waist_inches::text, hips_inches::text,
-              original_retail_cents, has_original_receipt,
-              is_authentic_declared, includes_label_lining_photos,
-              description, trust_status,
-              (SELECT COUNT(*)::text FROM listing_images WHERE listing_id = listings.id) AS image_count
-         FROM listings WHERE id = $1::bigint LIMIT 1`,
+      `SELECT dr.designer_id::text       AS designer_id,
+              dr.model                   AS model,
+              dr.year                    AS year,
+              l.occasion_id::text       AS occasion_id,
+              l.condition_id::text      AS condition_id,
+              dr.size_id::text           AS size_id,
+              dr.silhouette_id::text     AS silhouette_id,
+              dr.fabric_id::text         AS fabric_id,
+              dr.neckline_id::text       AS neckline_id,
+              dr.sleeve_style_id::text   AS sleeve_style_id,
+              dr.length_id::text         AS length_id,
+              dr.color                   AS color,
+              dr.bust_inches::text       AS bust_inches,
+              dr.waist_inches::text      AS waist_inches,
+              dr.hips_inches::text       AS hips_inches,
+              dr.original_retail_cents   AS original_retail_cents,
+              l.has_original_receipt    AS has_original_receipt,
+              l.is_authentic_declared   AS is_authentic_declared,
+              l.includes_label_lining_photos AS includes_label_lining_photos,
+              l.description             AS description,
+              l.trust_status            AS trust_status,
+              (SELECT COUNT(*)::text FROM listing_images WHERE listing_id = l.id) AS image_count
+         FROM listings l
+         JOIN dresses dr ON dr.id = l.dress_id
+         WHERE l.id = $1::bigint LIMIT 1`,
       [listingId],
     );
     row = r.rows[0];

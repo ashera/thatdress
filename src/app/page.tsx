@@ -63,11 +63,12 @@ async function getMarketplaceStats(
       occasion_count: string;
       listing_count: string;
     }>(
-      `SELECT COUNT(DISTINCT l.designer_id)::text  AS designer_count,
-              COUNT(DISTINCT l.size_id)::text      AS size_count,
+      `SELECT COUNT(DISTINCT dr.designer_id)::text AS designer_count,
+              COUNT(DISTINCT dr.size_id)::text     AS size_count,
               COUNT(DISTINCT l.occasion_id)::text  AS occasion_count,
               COUNT(*)::text                       AS listing_count
          FROM listings l
+         JOIN dresses dr ON dr.id = l.dress_id
         WHERE l.is_published = TRUE
           AND l.sold_at IS NULL
           ${regionId ? "AND l.region_id = $1::bigint" : ""}`,
@@ -128,7 +129,7 @@ async function getFeaturedListings(
                   ORDER BY li.is_primary DESC, li.position, li.id
                   LIMIT 1
               ) AS primary_image_id,
-              d.name    AS designer_name, l.model, l.year,
+              d.name    AS designer_name, dr.model AS model, dr.year AS year,
               cg.label  AS condition_label,
               o.label   AS occasion_label,
               s.label   AS silhouette_label,
@@ -138,11 +139,11 @@ async function getFeaturedListings(
               ss.label  AS sleeve_style_label,
               dl.label  AS length_label,
               l.location_postal,
-              l.color,
-              l.bust_inches::text,
-              l.waist_inches::text,
-              l.hips_inches::text,
-              l.original_retail_cents,
+              dr.color  AS color,
+              dr.bust_inches::text  AS bust_inches,
+              dr.waist_inches::text AS waist_inches,
+              dr.hips_inches::text  AS hips_inches,
+              dr.original_retail_cents AS original_retail_cents,
               l.has_original_receipt,
               l.trust_status,
               l.is_published,
@@ -159,16 +160,17 @@ async function getFeaturedListings(
                     AND hidden_by_admin_at IS NULL
               ) AS seller_rating_count
          FROM listings l
+         JOIN dresses dr  ON dr.id = l.dress_id
          LEFT JOIN users            u   ON u.id   = l.seller_id
-         LEFT JOIN designers        d   ON d.id   = l.designer_id
+         LEFT JOIN designers        d   ON d.id   = dr.designer_id
          LEFT JOIN condition_grades cg  ON cg.id  = l.condition_id
          LEFT JOIN occasions        o   ON o.id   = l.occasion_id
-         LEFT JOIN silhouettes      s   ON s.id   = l.silhouette_id
-         LEFT JOIN fabrics          f   ON f.id   = l.fabric_id
-         LEFT JOIN dress_sizes      ds  ON ds.id  = l.size_id
-         LEFT JOIN necklines        n   ON n.id   = l.neckline_id
-         LEFT JOIN sleeve_styles    ss  ON ss.id  = l.sleeve_style_id
-         LEFT JOIN dress_lengths    dl  ON dl.id  = l.length_id
+         LEFT JOIN silhouettes      s   ON s.id   = dr.silhouette_id
+         LEFT JOIN fabrics          f   ON f.id   = dr.fabric_id
+         LEFT JOIN dress_sizes      ds  ON ds.id  = dr.size_id
+         LEFT JOIN necklines        n   ON n.id   = dr.neckline_id
+         LEFT JOIN sleeve_styles    ss  ON ss.id  = dr.sleeve_style_id
+         LEFT JOIN dress_lengths    dl  ON dl.id  = dr.length_id
         WHERE l.is_published = TRUE
           AND l.sold_at IS NULL
           ${regionId ? "AND l.region_id = $1::bigint" : ""}

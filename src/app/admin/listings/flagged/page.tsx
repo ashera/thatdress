@@ -54,7 +54,8 @@ async function fetchFlagged(): Promise<FlaggedRow[]> {
               )                 AS flag_count
          FROM listings l
          LEFT JOIN users     u ON u.id = l.seller_id
-         LEFT JOIN designers d ON d.id = l.designer_id
+         JOIN dresses dr     ON dr.id = l.dress_id
+         LEFT JOIN designers d ON d.id = dr.designer_id
          LEFT JOIN LATERAL (
            SELECT lf.reason, lf.created_at, lf.flagged_by_user_id
              FROM listing_flags lf

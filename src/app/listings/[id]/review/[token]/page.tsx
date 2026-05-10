@@ -38,7 +38,8 @@ async function fetchListing(id: string): Promise<ListingRow | null> {
                   LIMIT 1) AS primary_image_id
          FROM listings l
          LEFT JOIN users     u ON u.id = l.seller_id
-         LEFT JOIN designers d ON d.id = l.designer_id
+         JOIN dresses dr     ON dr.id = l.dress_id
+         LEFT JOIN designers d ON d.id = dr.designer_id
         WHERE l.id = $1::bigint
         LIMIT 1`,
       [id],
