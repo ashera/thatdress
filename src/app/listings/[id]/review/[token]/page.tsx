@@ -12,6 +12,8 @@ export const metadata = { title: "Leave a review — frockd" };
 
 const ERRORS: Record<string, string> = {
   "invalid-stars": "Pick a star rating before submitting.",
+  locked:
+    "This review is locked — reviews can only be edited within 7 days of the original submission.",
 };
 
 type ListingRow = {

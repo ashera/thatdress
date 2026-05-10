@@ -30,6 +30,11 @@ export type ListingCardData = {
   /** Seller user id — used to render a 'More from this seller' link
    *  to /sellers/{id} when the viewer isn't the seller themselves. */
   sellerId?: string | null;
+  /** Seller rating + count for the ★ 4.8 (12) chip. Card hides it
+   *  when count < 3 so a brand-new seller's missing rating doesn't
+   *  read as a negative signal. */
+  sellerRatingAvg?: number | null;
+  sellerRatingCount?: number;
 };
 
 export type ListingCardRow = {
@@ -61,6 +66,11 @@ export type ListingCardRow = {
   is_published?: boolean | null;
   sold_at?: string | null;
   conversation_count?: string | number | null;
+  /** Seller's average rating (1-5) and count of public reviews —
+   *  used to render the ★ 4.8 (12) line on the card. NULL when the
+   *  seller has no reviews yet, or when the SELECT didn't fetch them. */
+  seller_rating_avg?: string | number | null;
+  seller_rating_count?: string | number | null;
 };
 
 const PLACEHOLDER = "-";
@@ -158,7 +168,40 @@ export function listingFromRow(
         ? row.trust_status
         : undefined,
     sellerId: row.seller_id ?? null,
+    sellerRatingAvg:
+      row.seller_rating_avg != null ? Number(row.seller_rating_avg) : null,
+    sellerRatingCount:
+      row.seller_rating_count != null
+        ? Number(row.seller_rating_count)
+        : 0,
   };
+}
+
+/** Inline ★ 4.8 (12) chip used by both card layouts. Renders nothing
+ *  under the 3-review threshold so a new seller's blank slate
+ *  doesn't read as a negative signal. */
+function SellerRatingPill({
+  avg,
+  count,
+}: {
+  avg: number | null | undefined;
+  count: number | undefined;
+}) {
+  if (!avg || !count || count < 3) return null;
+  return (
+    <span
+      style={{
+        fontSize: 12,
+        color: "var(--ink-2)",
+        whiteSpace: "nowrap",
+      }}
+      title={`${avg.toFixed(1)} from ${count} buyer${count === 1 ? "" : "s"}`}
+    >
+      <span style={{ color: "#fcd34d" }}>★</span>{" "}
+      <strong style={{ color: "var(--ink-1)" }}>{avg.toFixed(1)}</strong>{" "}
+      <span style={{ color: "var(--ink-3)" }}>({count})</span>
+    </span>
+  );
 }
 
 
@@ -300,6 +343,12 @@ export function ListingRow({ data }: { data: ListingCardData }) {
             More from seller →
           </Link>
         )}
+        {!data.isOwn && (
+          <SellerRatingPill
+            avg={data.sellerRatingAvg}
+            count={data.sellerRatingCount}
+          />
+        )}
       </div>
     </article>
   );
@@ -426,20 +475,33 @@ export function ListingCard({ data }: { data: ListingCardData }) {
         </ButtonLink>
       </div>
       {data.sellerId && !data.isOwn && (
-        <Link
-          href={`/sellers/${data.sellerId}`}
+        <div
           style={{
-            display: "block",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
             marginTop: 8,
-            fontSize: 12,
-            color: "var(--ink-3)",
-            textDecoration: "underline",
-            textDecorationColor: "var(--hairline-strong)",
-            textUnderlineOffset: 3,
+            gap: 8,
+            flexWrap: "wrap",
           }}
         >
-          More from this seller →
-        </Link>
+          <Link
+            href={`/sellers/${data.sellerId}`}
+            style={{
+              fontSize: 12,
+              color: "var(--ink-3)",
+              textDecoration: "underline",
+              textDecorationColor: "var(--hairline-strong)",
+              textUnderlineOffset: 3,
+            }}
+          >
+            More from this seller →
+          </Link>
+          <SellerRatingPill
+            avg={data.sellerRatingAvg}
+            count={data.sellerRatingCount}
+          />
+        </div>
       )}
     </article>
   );

@@ -17,6 +17,7 @@ import {
   listingFromRow,
   type ListingCardRow,
 } from "../../_components/listing-card";
+import { FlagReviewDialog } from "../../_components/flag-review-dialog";
 
 export const dynamic = "force-dynamic";
 
@@ -186,11 +187,12 @@ export default async function SellerProfilePage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<{ review?: string }>;
+  searchParams?: Promise<{ review?: string; flag?: string }>;
 }) {
   const { id } = await params;
   const sp = searchParams ? await searchParams : {};
   const reviewFlash = sp.review === "submitted";
+  const flagFlash = sp.flag ?? null;
   const seller = await fetchSeller(id);
   if (!seller || seller.suspended_at) notFound();
 
@@ -258,6 +260,23 @@ export default async function SellerProfilePage({
           >
             Thanks for the review — it&rsquo;s now visible on this
             seller&rsquo;s profile.
+          </p>
+        )}
+        {flagFlash === "submitted" && (
+          <p
+            className="form-success"
+            style={{ marginTop: "var(--s-4)", marginBottom: 0 }}
+          >
+            Flag submitted — the frockd team will review and decide
+            whether to keep the rating live or hide it.
+          </p>
+        )}
+        {flagFlash === "missing-reason" && (
+          <p
+            className="form-error"
+            style={{ marginTop: "var(--s-4)", marginBottom: 0 }}
+          >
+            We couldn&rsquo;t submit that flag — a reason is required.
           </p>
         )}
 
@@ -467,7 +486,7 @@ export default async function SellerProfilePage({
                     borderRadius: 12,
                   }}
                 >
-                  <ReviewItem r={r} />
+                  <ReviewItem r={r} canFlag={isOwn} />
                 </li>
               ))}
             </ul>
@@ -478,7 +497,13 @@ export default async function SellerProfilePage({
   );
 }
 
-function ReviewItem({ r }: { r: ReviewRow }) {
+function ReviewItem({
+  r,
+  canFlag,
+}: {
+  r: ReviewRow;
+  canFlag: boolean;
+}) {
   const date = (() => {
     try {
       return new Date(r.created_at).toLocaleDateString("en-AU", {
@@ -577,6 +602,17 @@ function ReviewItem({ r }: { r: ReviewRow }) {
               {c}
             </span>
           ))}
+        </div>
+      )}
+      {canFlag && (
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            marginTop: 10,
+          }}
+        >
+          <FlagReviewDialog reviewId={r.id} />
         </div>
       )}
     </>

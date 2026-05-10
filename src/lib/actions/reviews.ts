@@ -188,6 +188,25 @@ export async function submitListingReview(
     redirect(`/listings/${listingId}?review-error=self-review`);
   }
 
+  // Edit-window lock: if there's already a review for this
+  // (listing, buyer) pair and it's older than 7 days, refuse the
+  // upsert. Stops revenge-edits when a follow-up dispute goes south
+  // and prevents a future edit-my-review UI from violating the window.
+  const existing = await query<{ created_at: string }>(
+    `SELECT created_at::text FROM listing_reviews
+      WHERE listing_id = $1::bigint
+        AND buyer_id   = $2::bigint
+      LIMIT 1`,
+    [listingId, user.id],
+  );
+  if (existing.rows[0]) {
+    const ageMs =
+      Date.now() - new Date(existing.rows[0].created_at).getTime();
+    if (ageMs > 7 * 24 * 60 * 60 * 1000) {
+      redirect(`/listings/${listingId}/review/${token}?error=locked`);
+    }
+  }
+
   // Upsert — second submission against the same (listing, buyer) pair
   // edits the existing review.
   await query(
@@ -225,4 +244,45 @@ function readNullableBool(formData: FormData, name: string): boolean | null {
   if (raw === "yes") return true;
   if (raw === "no") return false;
   return null;
+}
+
+const FLAG_REASON_MAX = 500;
+
+/** Seller flags a review they think is unfair. Stamps flagged_at +
+ *  flag_reason on the listing_reviews row and surfaces it in the
+ *  admin moderation queue at /admin/reviews. The review stays
+ *  visible until an admin acts — flag is just a request for review,
+ *  not an automatic hide. */
+export async function flagSellerReview(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const reviewId = String(formData.get("reviewId") ?? "");
+  if (!/^\d+$/.test(reviewId)) redirect("/");
+
+  const reason = String(formData.get("reason") ?? "")
+    .trim()
+    .slice(0, FLAG_REASON_MAX);
+  if (!reason) redirect(`/sellers/${user.id}?flag=missing-reason`);
+
+  // Only the seller of the review can flag it.
+  const r = await query<{ seller_id: string }>(
+    `SELECT seller_id::text FROM listing_reviews WHERE id = $1::bigint LIMIT 1`,
+    [reviewId],
+  );
+  const sellerId = r.rows[0]?.seller_id;
+  if (!sellerId) redirect("/");
+  if (sellerId !== user.id) redirect(`/sellers/${sellerId}`);
+
+  await query(
+    `UPDATE listing_reviews
+        SET flagged_at  = NOW(),
+            flag_reason = $2
+      WHERE id = $1::bigint`,
+    [reviewId, reason],
+  );
+
+  revalidatePath(`/sellers/${sellerId}`);
+  revalidatePath("/admin/reviews");
+  redirect(`/sellers/${sellerId}?flag=submitted`);
 }

@@ -26,6 +26,7 @@ import { FlagListingDialog } from "../../_components/flag-listing-dialog";
 import { ReportListingDialog } from "../../_components/report-listing-dialog";
 import { ShareListingButton } from "../../_components/share-listing-button";
 import { MarkSoldDialog } from "../../_components/mark-sold-dialog";
+import { getSellerReviewSummary } from "@/lib/reviews";
 import { Button, ButtonLink, Icon } from "../../_components/ui";
 import {
   ListingGallery,
@@ -679,6 +680,12 @@ export default async function ListingDetailPage({
     : "Unknown seller";
 
   const specGroups = buildSpecs(l);
+  // Seller's review summary — surfaced inline in the seller block
+  // when count >= 3.
+  const sellerReviewSummary = l.seller_id
+    ? await getSellerReviewSummary(l.seller_id)
+    : { count: 0, average: 0 };
+
   // Owners + admins both need this — owners use it for the
   // mark-sold buyer-picker, admins for their inline conversation list.
   const conversationsForListing =
@@ -941,6 +948,28 @@ export default async function ListingDetailPage({
               <div className="when">
                 Posted {formatPostedDate(l.created_at)}
                 {l.location_postal ? ` · ${l.location_postal}` : ""}
+                {sellerReviewSummary.count >= 3 && (
+                  <>
+                    {" · "}
+                    <Link
+                      href={`/sellers/${l.seller_id}#reviews`}
+                      style={{
+                        color: "var(--ink-1)",
+                        fontWeight: 700,
+                        textDecoration: "none",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      <span style={{ color: "#fcd34d" }}>★</span>{" "}
+                      {sellerReviewSummary.average.toFixed(1)}{" "}
+                      <span
+                        style={{ color: "var(--ink-3)", fontWeight: 400 }}
+                      >
+                        ({sellerReviewSummary.count})
+                      </span>
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </div>

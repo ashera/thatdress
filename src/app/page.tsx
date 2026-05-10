@@ -145,7 +145,18 @@ async function getFeaturedListings(
               l.has_original_receipt,
               l.trust_status,
               l.is_published,
-              l.sold_at::text
+              l.sold_at::text,
+              (
+                SELECT ROUND(AVG(stars)::numeric, 1)::text
+                  FROM listing_reviews
+                  WHERE seller_id = l.seller_id
+                    AND hidden_by_admin_at IS NULL
+              ) AS seller_rating_avg,
+              (
+                SELECT COUNT(*)::text FROM listing_reviews
+                  WHERE seller_id = l.seller_id
+                    AND hidden_by_admin_at IS NULL
+              ) AS seller_rating_count
          FROM listings l
          LEFT JOIN users            u   ON u.id   = l.seller_id
          LEFT JOIN designers        d   ON d.id   = l.designer_id

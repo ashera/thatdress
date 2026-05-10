@@ -15,6 +15,11 @@ const ADMIN_LINKS: Array<{ href: string; title: string; desc: string }> = [
     desc: "Admin-flagged listings plus open buyer reports — read the reason, decide whether to flag, dismiss, or hide.",
   },
   {
+    href: "/admin/reviews",
+    title: "Seller Reviews",
+    desc: "Moderate buyer reviews. Hide harmful ones from public profiles, resolve seller-flagged disputes.",
+  },
+  {
     href: "/admin/users",
     title: "Manage Users",
     desc: "View accounts, edit profiles, suspend, and DM users directly.",
