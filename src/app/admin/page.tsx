@@ -31,6 +31,11 @@ async function timed<T>(fn: () => Promise<T>): Promise<JobOutcome<T>> {
 
 const ADMIN_LINKS: Array<{ href: string; title: string; desc: string }> = [
   {
+    href: "/admin/dresses",
+    title: "Dresses",
+    desc: "Track dresses with current owners, monitor relist-nudge schedules, and force-send a nudge to a buyer on demand.",
+  },
+  {
     href: "/admin/listings",
     title: "All Listings",
     desc: "Search, sort, and drill into any listing — see who's messaged the seller and how active each listing is.",
@@ -44,11 +49,6 @@ const ADMIN_LINKS: Array<{ href: string; title: string; desc: string }> = [
     href: "/admin/reviews",
     title: "Seller Reviews",
     desc: "Moderate buyer reviews. Hide harmful ones from public profiles, resolve seller-flagged disputes.",
-  },
-  {
-    href: "/admin/dresses",
-    title: "Dresses",
-    desc: "Track dresses with current owners, monitor relist-nudge schedules, and force-send a nudge to a buyer on demand.",
   },
   {
     href: "/admin/users",
