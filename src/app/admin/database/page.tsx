@@ -30,9 +30,17 @@ const TABLE_DESCRIPTIONS: Record<string, TableMeta> = {
   },
 
   // Marketplace
+  dresses: {
+    group: "Marketplace",
+    desc: "First-class entity — one physical garment, persistent across owners. Holds designer / silhouette / measurements / colour / retail and the lifecycle fields (current_owner_user_id, disposition, next_relist_nudge_at).",
+  },
+  dress_ownership_events: {
+    group: "Marketplace",
+    desc: "Append-only audit trail of dress hand-offs. Event types: 'created' on first wizard insert, 'sold' when a listing closes with an attributed buyer, 'sold-elsewhere' when no buyer attributed.",
+  },
   listings: {
     group: "Marketplace",
-    desc: "Dress listings posted by sellers — spec, price, status, region.",
+    desc: "One offering of a dress for sale — points at a dresses row via dress_id. Holds occasion, condition, price, location, sold_at, sold_to_user_id, trust_status, and the relist-nudge schedule's source-of-truth.",
   },
   listing_images: {
     group: "Marketplace",
@@ -41,6 +49,18 @@ const TABLE_DESCRIPTIONS: Record<string, TableMeta> = {
   listing_views: {
     group: "Marketplace",
     desc: "One row per listing pageview — drives view counts and analytics.",
+  },
+  listing_flags: {
+    group: "Marketplace",
+    desc: "Moderation audit — reasons / flagger / timestamp / resolution. Surfaces on /admin/listings/flagged.",
+  },
+  listing_reviews: {
+    group: "Marketplace",
+    desc: "Buyer-left reviews of sellers after a sale. Stars + body + as-described / easy-comms / smooth-handover chips. Hidden flag for admin moderation.",
+  },
+  listing_review_tokens: {
+    group: "Marketplace",
+    desc: "Tokenised review-prompt links emailed to the buyer when a sale is closed with attribution. 60-day expiry, one-use.",
   },
   conversations: {
     group: "Marketplace",
@@ -60,7 +80,7 @@ const TABLE_DESCRIPTIONS: Record<string, TableMeta> = {
   },
   saved_searches: {
     group: "Marketplace",
-    desc: "Named filter sets users save and optionally get alerts for.",
+    desc: "Named filter sets users save and optionally get alerts for. Drives the saved-search digest cron job.",
   },
 
   // Reference data — listing dropdowns + geography
