@@ -380,6 +380,24 @@ export function ListingCard({ data }: { data: ListingCardData }) {
   const detailHref = `/listings/${data.id}`;
   return (
     <article className="listing">
+      <div className="listing-head">
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            gap: 8,
+          }}
+        >
+          <h3 className="listing-title">{data.title}</h3>
+          {data.trustStatus && data.trustStatus !== "self-declared" && (
+            <div style={{ flex: "0 0 auto", marginTop: 2 }}>
+              <TrustBadge status={data.trustStatus} />
+            </div>
+          )}
+        </div>
+      </div>
+
       <div className="listing-photo">
         <Link
           href={detailHref}
@@ -436,24 +454,6 @@ export function ListingCard({ data }: { data: ListingCardData }) {
             variant="card"
           />
         )}
-      </div>
-
-      <div className="listing-head">
-        <div
-          style={{
-            display: "flex",
-            alignItems: "flex-start",
-            justifyContent: "space-between",
-            gap: 8,
-          }}
-        >
-          <h3 className="listing-title">{data.title}</h3>
-          {data.trustStatus && data.trustStatus !== "self-declared" && (
-            <div style={{ flex: "0 0 auto", marginTop: 2 }}>
-              <TrustBadge status={data.trustStatus} />
-            </div>
-          )}
-        </div>
       </div>
 
       <div className="listing-stats">
