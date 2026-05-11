@@ -37,16 +37,15 @@ function formatDate(s: string): string {
   }
 }
 
-function maskEmail(email: string): string {
-  // First two chars of local-part + ●●● + domain. Keeps reporting useful
-  // ('al●●●@gmail.com') without exposing the full email of someone the
-  // referrer probably already knows but who hasn't asked to be public.
-  const at = email.indexOf("@");
-  if (at < 1) return email;
-  const local = email.slice(0, at);
-  const domain = email.slice(at);
-  const head = local.slice(0, Math.min(2, local.length));
-  return `${head}${"●".repeat(Math.max(2, local.length - 2))}${domain}`;
+function fullName(
+  first: string | null,
+  surname: string | null,
+): string | null {
+  const name = [first, surname]
+    .map((s) => s?.trim() ?? "")
+    .filter(Boolean)
+    .join(" ");
+  return name.length > 0 ? name : null;
 }
 
 export default async function ReferPage() {
@@ -257,26 +256,44 @@ export default async function ReferPage() {
                   }}
                 >
                   <div style={{ minWidth: 0 }}>
-                    <div
-                      style={{
-                        fontWeight: 700,
-                        fontSize: 14,
-                        color: "var(--ink-1)",
-                      }}
-                    >
-                      {maskEmail(r.email)}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 12,
-                        color: "var(--ink-3)",
-                        marginTop: 2,
-                      }}
-                    >
-                      Joined {formatDate(r.signed_up_at)} ·{" "}
-                      {r.listing_count}{" "}
-                      {r.listing_count === 1 ? "listing" : "listings"}
-                    </div>
+                    {(() => {
+                      const name = fullName(r.first_name, r.surname);
+                      return (
+                        <>
+                          <div
+                            style={{
+                              fontWeight: 700,
+                              fontSize: 14,
+                              color: "var(--ink-1)",
+                            }}
+                          >
+                            {name ?? r.email}
+                          </div>
+                          {name && (
+                            <div
+                              style={{
+                                fontSize: 12,
+                                color: "var(--ink-3)",
+                                marginTop: 2,
+                              }}
+                            >
+                              {r.email}
+                            </div>
+                          )}
+                          <div
+                            style={{
+                              fontSize: 12,
+                              color: "var(--ink-3)",
+                              marginTop: 2,
+                            }}
+                          >
+                            Joined {formatDate(r.signed_up_at)} ·{" "}
+                            {r.listing_count}{" "}
+                            {r.listing_count === 1 ? "listing" : "listings"}
+                          </div>
+                        </>
+                      );
+                    })()}
                   </div>
                   {r.verified_listing_count > 0 ? (
                     <div

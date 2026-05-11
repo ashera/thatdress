@@ -161,6 +161,8 @@ export async function lookupReferrerDisplay(
 export type ReferredUser = {
   id: string;
   email: string;
+  first_name: string | null;
+  surname: string | null;
   signed_up_at: string;
   /** All non-draft listings the referred user has on file. */
   listing_count: number;
@@ -179,12 +181,16 @@ export async function listReferredUsers(
   const r = await query<{
     id: string;
     email: string;
+    first_name: string | null;
+    surname: string | null;
     signed_up_at: string;
     listing_count: string;
     verified_count: string;
   }>(
     `SELECT u.id::text,
             u.email,
+            u.first_name,
+            u.surname,
             COALESCE(u.referred_at, u.created_at)::text AS signed_up_at,
             (SELECT COUNT(*)::text FROM listings
                 WHERE seller_id = u.id
@@ -201,6 +207,8 @@ export async function listReferredUsers(
   return r.rows.map((row) => ({
     id: row.id,
     email: row.email,
+    first_name: row.first_name,
+    surname: row.surname,
     signed_up_at: row.signed_up_at,
     listing_count: Number(row.listing_count ?? 0),
     verified_listing_count: Number(row.verified_count ?? 0),
