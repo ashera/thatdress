@@ -6,10 +6,17 @@ import { Icon } from "./ui";
 export function AvatarMenu({
   email,
   name,
+  tierEmoji,
+  tierLabel,
   children,
 }: {
   email: string;
   name?: string | null;
+  /** Referral-tier emoji to render right of the name — null when
+   *  the user hasn't reached the first tier yet. */
+  tierEmoji?: string | null;
+  /** Human label for the tier, surfaced on hover. */
+  tierLabel?: string | null;
   children: ReactNode;
 }) {
   const displayName =
@@ -65,6 +72,26 @@ export function AvatarMenu({
       >
         <Icon name="user" />
         <span className="avatar-name">{displayName}</span>
+        {tierEmoji && (
+          <span
+            className="avatar-tier"
+            aria-label={
+              tierLabel
+                ? `Referral tier: ${tierLabel}`
+                : "Referral tier"
+            }
+            title={
+              tierLabel ? `Referral tier · ${tierLabel}` : "Referral tier"
+            }
+            style={{
+              marginLeft: 4,
+              fontSize: "1em",
+              lineHeight: 1,
+            }}
+          >
+            {tierEmoji}
+          </span>
+        )}
       </button>
       <div className="avatar-menu-panel">{children}</div>
     </div>

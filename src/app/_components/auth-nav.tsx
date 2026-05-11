@@ -6,6 +6,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { query } from "@/lib/db";
 import { resolveCurrentRegion, getCurrentRegionId } from "@/lib/regions";
 import { unreadMessageCount } from "@/lib/messages";
+import { countFriendsListed } from "@/lib/referral";
+import { currentReferralTier } from "@/lib/referral-tiers";
 import { ButtonLink } from "./ui";
 import { MobileMenu } from "./mobile-menu";
 import { AvatarMenu } from "./avatar-menu";
@@ -70,10 +72,12 @@ export async function AuthNav() {
   ]);
   const currentRegion =
     region.kind === "selected" || region.kind === "auto" ? region.region : null;
-  const [listingCount, unread] = await Promise.all([
+  const [listingCount, unread, friendsListed] = await Promise.all([
     getListingCount(user, regionId),
     user ? unreadMessageCount(user.id) : Promise.resolve(0),
+    user ? countFriendsListed(user.id) : Promise.resolve(0),
   ]);
+  const tier = currentReferralTier(friendsListed);
 
   return (
     <>
@@ -205,7 +209,12 @@ export async function AuthNav() {
                 <ButtonLink href="/support" variant="ghost" size="sm">
                   Help
                 </ButtonLink>
-                <AvatarMenu email={user.email} name={user.firstName}>
+                <AvatarMenu
+                  email={user.email}
+                  name={user.firstName}
+                  tierEmoji={tier?.emoji ?? null}
+                  tierLabel={tier?.label ?? null}
+                >
                   <Link href="/listings/mine">My listings</Link>
                   <Link href="/alerts">Saved searches</Link>
                   <Link href="/profile/refer">Refer &amp; earn</Link>

@@ -87,6 +87,34 @@ export async function findReferrerByCode(
   return r.rows[0]?.id ?? null;
 }
 
+/**
+ * Count of friends this user has referred who have at least one
+ * Verified, non-draft listing on file. Drives the tier badge on
+ * /profile/refer and the avatar pill in the nav. Returns 0 on
+ * any DB failure rather than throwing — callers fall back to no
+ * tier indicator.
+ */
+export async function countFriendsListed(userId: string): Promise<number> {
+  if (!/^\d+$/.test(userId)) return 0;
+  try {
+    const r = await query<{ count: string }>(
+      `SELECT COUNT(DISTINCT u.id)::text AS count
+         FROM users u
+        WHERE u.referred_by_user_id = $1::bigint
+          AND EXISTS (
+            SELECT 1 FROM listings l
+             WHERE l.seller_id    = u.id
+               AND l.trust_status = 'verified'
+               AND l.is_draft     = FALSE
+          )`,
+      [userId],
+    );
+    return Number(r.rows[0]?.count ?? 0);
+  } catch {
+    return 0;
+  }
+}
+
 export type ReferrerDisplay = {
   /** Normalised alphanumeric form, e.g. SARAHK. Surfaced in the
    *  footer in brackets so the visitor can verify the code matches

@@ -1,47 +1,7 @@
-type Tier = {
-  threshold: number;
-  emoji: string;
-  label: string;
-  blurb: string;
-};
-
-/**
- * Status-only ladder for the refer page. Tiers reward 'friends
- * who've posted at least one Verified listing' (not just
- * signups) because that's what actually grows the marketplace.
- * Each tier's blurb is intentionally aspirational rather than
- * promising a specific reward — concrete perks can be wired in
- * later (e.g. a custom-slug feature at the Tastemaker tier)
- * without changing the bar's shape.
- */
-const TIERS: Tier[] = [
-  {
-    threshold: 1,
-    emoji: "🌱",
-    label: "First connection",
-    blurb: "One friend on frockd is the hardest one to land. You're past it.",
-  },
-  {
-    threshold: 3,
-    emoji: "🌟",
-    label: "Connector",
-    blurb: "Three friends listing means it's not a fluke — your taste is good.",
-  },
-  {
-    threshold: 5,
-    emoji: "💎",
-    label: "Tastemaker",
-    blurb: "Five friends. You've moved the marketplace forward in a meaningful way.",
-  },
-  {
-    threshold: 10,
-    emoji: "👑",
-    label: "Insider",
-    blurb: "Ten friends listing because of you. Top of the leaderboard kind of impact.",
-  },
-];
-
-const TOP = TIERS[TIERS.length - 1]!.threshold;
+import {
+  REFERRAL_TIERS as TIERS,
+  REFERRAL_TIER_TOP as TOP,
+} from "@/lib/referral-tiers";
 
 export function ReferralMilestones({
   friendsListed,
