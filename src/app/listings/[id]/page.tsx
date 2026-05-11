@@ -704,6 +704,11 @@ export default async function ListingDetailPage({
     notFound();
   }
   if (!l.is_published && !isOwner && !isAdmin) notFound();
+  // Flagged listings are hidden from non-owner / non-admin visitors —
+  // they shouldn't be reachable from buyer browse or via direct URL.
+  // Owner still sees it (so they know it's under review) and admin
+  // sees it from the moderation queue.
+  if (l.trust_status === "flagged" && !isOwner && !isAdmin) notFound();
   // Out-of-region listings used to 404, but that broke the new
   // seller-profile drill-through (a seller selling in multiple
   // regions has listings the buyer's region filter would otherwise

@@ -145,6 +145,7 @@ async function fetchSellerListings(
           AND l.is_published = TRUE
           AND l.is_draft = FALSE
           AND l.sold_at IS NULL
+          AND l.trust_status <> 'flagged'
         ORDER BY l.created_at DESC
         LIMIT 60`,
       [sellerId],

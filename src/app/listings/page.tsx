@@ -226,6 +226,11 @@ function buildFilters(
     }
   } else {
     where.push("l.is_published = TRUE");
+    // Hide admin-flagged listings from public browse. Sellers keep
+    // visibility of their own flagged listing via /listings/mine;
+    // admins always see flagged ones (and have a dedicated queue at
+    // /admin/listings/flagged).
+    where.push("l.trust_status <> 'flagged'");
   }
 
   const pushClause = (clause: string, value: unknown) => {

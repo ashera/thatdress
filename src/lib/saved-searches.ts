@@ -36,7 +36,10 @@ export function buildSavedSearchWhere(params: Params): {
   where: string[];
   vals: unknown[];
 } {
-  const where: string[] = ["l.is_published = TRUE"];
+  const where: string[] = [
+    "l.is_published = TRUE",
+    "l.trust_status <> 'flagged'",
+  ];
   const vals: unknown[] = [];
 
   const mode = asStr(params.mode);

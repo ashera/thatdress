@@ -177,6 +177,7 @@ async function getFeaturedListings(
          LEFT JOIN dress_lengths    dl  ON dl.id  = dr.length_id
         WHERE l.is_published = TRUE
           AND l.sold_at IS NULL
+          AND l.trust_status <> 'flagged'
           ${regionId ? "AND l.region_id = $1::bigint" : ""}
         ORDER BY l.created_at DESC
         LIMIT 3`,
