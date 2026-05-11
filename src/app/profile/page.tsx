@@ -4,6 +4,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { updateProfile } from "@/lib/actions/auth";
 import { requestEmailChange } from "@/lib/actions/email-change";
 import { deleteAccount } from "@/lib/actions/account";
+import { countFriendsListed } from "@/lib/referral";
+import { currentReferralTier } from "@/lib/referral-tiers";
 import { Button, Field, Input } from "../_components/ui";
 
 export const dynamic = "force-dynamic";
@@ -45,68 +47,218 @@ export default async function ProfilePage({
   const emailErrorMessage = emailError ? EMAIL_ERRORS[emailError] : null;
   const deleteErrorMessage = deleteError ? DELETE_ERRORS[deleteError] : null;
 
+  const friendsListed = await countFriendsListed(user.id);
+  const tier = currentReferralTier(friendsListed);
+
+  const displayName =
+    [user.firstName, user.surname].filter(Boolean).join(" ").trim() ||
+    user.email.split("@")[0] ||
+    "Your profile";
+  const initials = (() => {
+    const f = user.firstName?.trim()?.[0];
+    const s = user.surname?.trim()?.[0];
+    if (f && s) return (f + s).toUpperCase();
+    if (f) return f.toUpperCase();
+    const local = user.email.split("@")[0] ?? "";
+    return (local.slice(0, 2) || "??").toUpperCase();
+  })();
+
   return (
     <div className="page page--pad">
-      <main style={{ maxWidth: 520, margin: "0 auto" }}>
-        <p className="eyebrow">Your profile</p>
-        <h1
+      <main style={{ maxWidth: 880, margin: "0 auto" }}>
+        {/* Hero — gradient card with avatar, name, verification, and
+            tier badge when the user's hit a referral milestone. */}
+        <section
           style={{
-            fontFamily: "var(--font-display)",
-            fontSize: "var(--t-h1)",
-            color: "var(--ink-1)",
-            margin: "var(--s-2) 0 var(--s-3)",
-            letterSpacing: "-0.02em",
-            lineHeight: 1.05,
+            position: "relative",
+            padding: "var(--s-6) var(--s-6)",
+            background:
+              "linear-gradient(135deg, #fef9c3 0%, #fed7aa 45%, #fbcfe8 100%)",
+            borderRadius: 16,
+            border: "1px solid #fde68a",
+            marginBottom: "var(--s-6)",
+            overflow: "hidden",
           }}
         >
-          Profile
-        </h1>
-        <p style={{ color: "var(--ink-3)", margin: "0 0 var(--s-3)" }}>
-          Signed in as <strong>{user.email}</strong>.{" "}
-          {user.emailVerified ? (
-            <span className="users-tag --ok" style={{ marginLeft: 4 }}>
-              Verified
-            </span>
-          ) : (
-            <span className="users-tag --susp" style={{ marginLeft: 4 }}>
-              Not verified
-            </span>
-          )}
-        </p>
-        <p
-          style={{
-            color: "var(--ink-2)",
-            margin: "0 0 var(--s-5)",
-            fontSize: 14,
-          }}
-        >
-          Got a friend with great dresses sitting in the back of a
-          wardrobe?{" "}
-          <Link
-            href="/profile/refer"
+          <p
+            className="eyebrow"
             style={{
-              color: "var(--ink-1)",
-              textDecoration: "underline",
-              textDecorationColor: "var(--hairline-strong)",
-              textUnderlineOffset: 3,
+              margin: "0 0 var(--s-2)",
+              color: "#78350f",
+              opacity: 0.85,
             }}
           >
-            Get your referral link →
-          </Link>
-        </p>
-        {!user.emailVerified && (
+            Your profile
+          </p>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "var(--s-4)",
+              flexWrap: "wrap",
+            }}
+          >
+            <div
+              aria-hidden
+              style={{
+                width: 72,
+                height: 72,
+                borderRadius: "50%",
+                background:
+                  "linear-gradient(135deg, #1c1816 0%, #3a342f 100%)",
+                color: "#fff",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontFamily: "var(--font-display)",
+                fontSize: 28,
+                fontWeight: 700,
+                letterSpacing: "-0.01em",
+                flex: "0 0 auto",
+                boxShadow:
+                  "0 0 0 4px rgba(255,255,255,0.6), 0 4px 12px rgba(0,0,0,0.08)",
+              }}
+            >
+              {initials}
+            </div>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <h1
+                style={{
+                  fontFamily: "var(--font-display)",
+                  fontSize: "var(--t-h1)",
+                  color: "var(--ink-1)",
+                  margin: "0 0 4px",
+                  letterSpacing: "-0.02em",
+                  lineHeight: 1.05,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  flexWrap: "wrap",
+                }}
+              >
+                <span style={{ minWidth: 0 }}>{displayName}</span>
+                {tier && (
+                  <span
+                    title={tier.label}
+                    aria-label={`Referral tier: ${tier.label}`}
+                    style={{ fontSize: 28 }}
+                  >
+                    {tier.emoji}
+                  </span>
+                )}
+              </h1>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  flexWrap: "wrap",
+                  color: "#3a342f",
+                  fontSize: 14,
+                }}
+              >
+                <span>{user.email}</span>
+                {user.emailVerified ? (
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 4,
+                      padding: "2px 10px",
+                      borderRadius: 999,
+                      background: "rgba(255,255,255,0.7)",
+                      border: "1px solid rgba(28,24,22,0.1)",
+                      color: "#166534",
+                      fontFamily: "var(--font-mono)",
+                      fontSize: 10,
+                      letterSpacing: "0.12em",
+                      textTransform: "uppercase",
+                      fontWeight: 700,
+                    }}
+                  >
+                    ✓ Verified
+                  </span>
+                ) : (
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 4,
+                      padding: "2px 10px",
+                      borderRadius: 999,
+                      background: "rgba(255,255,255,0.7)",
+                      border: "1px solid rgba(28,24,22,0.1)",
+                      color: "#991b1b",
+                      fontFamily: "var(--font-mono)",
+                      fontSize: 10,
+                      letterSpacing: "0.12em",
+                      textTransform: "uppercase",
+                      fontWeight: 700,
+                    }}
+                  >
+                    Not verified
+                  </span>
+                )}
+                {tier && (
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      padding: "2px 10px",
+                      borderRadius: 999,
+                      background: "rgba(255,255,255,0.7)",
+                      border: "1px solid rgba(28,24,22,0.1)",
+                      color: "#1c1816",
+                      fontFamily: "var(--font-mono)",
+                      fontSize: 10,
+                      letterSpacing: "0.12em",
+                      textTransform: "uppercase",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {tier.label}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
           <p
             style={{
-              color: "var(--ink-3)",
-              fontSize: "var(--t-body-s)",
-              margin: "0 0 var(--s-7)",
+              color: "#3a342f",
+              margin: "var(--s-4) 0 0",
+              fontSize: 14,
+              lineHeight: 1.55,
             }}
           >
-            We sent a confirmation link when you signed up. Check your
-            inbox, or use the Resend button in the banner above.
+            Got a friend with great dresses sitting in the back of a
+            wardrobe?{" "}
+            <Link
+              href="/profile/refer"
+              style={{
+                color: "#1c1816",
+                fontWeight: 600,
+                textDecoration: "underline",
+                textDecorationColor: "rgba(28,24,22,0.3)",
+                textUnderlineOffset: 3,
+              }}
+            >
+              Get your referral link →
+            </Link>
           </p>
-        )}
-        {user.emailVerified && <div style={{ marginBottom: "var(--s-7)" }} />}
+          {!user.emailVerified && (
+            <p
+              style={{
+                color: "#3a342f",
+                fontSize: 13,
+                margin: "var(--s-3) 0 0",
+                opacity: 0.85,
+              }}
+            >
+              We sent a confirmation link when you signed up. Check
+              your inbox, or use the Resend button in the banner above.
+            </p>
+          )}
+        </section>
 
         {saved && (
           <p className="form-success" style={{ marginBottom: "var(--s-5)" }}>
