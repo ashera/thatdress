@@ -87,6 +87,49 @@ export async function findReferrerByCode(
   return r.rows[0]?.id ?? null;
 }
 
+export type ReferrerDisplay = {
+  /** Normalised alphanumeric form, e.g. SARAHK. Surfaced in the
+   *  footer in brackets so the visitor can verify the code matches
+   *  the one their referrer sent. */
+  code: string;
+  /** Referrer's first name, when set. Falls back to the local-part
+   *  of their email when it isn't. */
+  displayName: string;
+};
+
+/**
+ * Resolve a referral code into a footer-ready display row
+ * (first name + canonical code). Returns null when the code
+ * doesn't match an active user — callers should silently hide
+ * the footer chip in that case rather than surfacing 'invalid
+ * code' to the visitor.
+ */
+export async function lookupReferrerDisplay(
+  rawCode: string,
+): Promise<ReferrerDisplay | null> {
+  const code = rawCode.trim().toUpperCase();
+  if (!/^[A-Z0-9]{4,16}$/.test(code)) return null;
+  try {
+    const r = await query<{ first_name: string | null; email: string | null }>(
+      `SELECT first_name, email FROM users
+        WHERE referral_code = $1
+          AND suspended_at IS NULL
+        LIMIT 1`,
+      [code],
+    );
+    const row = r.rows[0];
+    if (!row) return null;
+    const name = row.first_name?.trim();
+    const fallback = row.email?.split("@")[0] ?? "A frockd member";
+    return {
+      code,
+      displayName: name && name.length > 0 ? name : fallback,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export type ReferredUser = {
   id: string;
   email: string;
