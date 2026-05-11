@@ -148,6 +148,7 @@ async function getFeaturedListings(
               l.trust_status,
               l.is_published,
               l.sold_at::text,
+              l.is_featured,
               (
                 SELECT ROUND(AVG(stars)::numeric, 1)::text
                   FROM listing_reviews

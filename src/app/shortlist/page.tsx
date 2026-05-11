@@ -57,6 +57,7 @@ async function fetchShortlistedListings(userId: string) {
               l.trust_status,
               l.is_published,
               l.sold_at::text,
+              l.is_featured,
               (
                 SELECT COUNT(DISTINCT buyer_id)::text FROM conversations
                   WHERE listing_id = l.id

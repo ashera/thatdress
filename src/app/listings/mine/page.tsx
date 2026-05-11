@@ -233,6 +233,7 @@ async function fetchOwnListings(
               l.has_original_receipt,
               l.trust_status,
               l.sold_at::text,
+              l.is_featured,
               (
                 SELECT COUNT(DISTINCT buyer_id)::text FROM conversations
                   WHERE listing_id = l.id

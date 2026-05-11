@@ -127,6 +127,7 @@ async function fetchSellerListings(
               l.trust_status,
               l.is_published,
               l.sold_at::text,
+              l.is_featured,
               (SELECT COUNT(DISTINCT buyer_id)::text FROM conversations
                   WHERE listing_id = l.id) AS conversation_count
          FROM listings l
