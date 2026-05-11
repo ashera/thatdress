@@ -888,5 +888,23 @@ export async function publishDraftListing(formData: FormData): Promise<void> {
   revalidatePath("/listings");
   revalidatePath("/listings/mine");
   revalidatePath("/");
+
+  // First-publish celebration: when this transition takes the
+  // seller from 'zero published listings' to 'one', route them
+  // through /first-publish-thanks where we celebrate + prompt
+  // them to invite friends. Existing edits and second-publishes
+  // skip the celebration and land on the listing detail as
+  // before.
+  if (isPublishingDraft) {
+    const c = await query<{ count: string }>(
+      `SELECT COUNT(*)::text AS count FROM listings
+        WHERE seller_id = $1::bigint
+          AND is_draft = FALSE`,
+      [user.id],
+    );
+    if (Number(c.rows[0]?.count ?? 0) === 1) {
+      redirect(`/listings/${listingId}/first-publish-thanks`);
+    }
+  }
   redirect(`/listings/${listingId}`);
 }

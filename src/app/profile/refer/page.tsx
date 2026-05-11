@@ -9,6 +9,7 @@ import {
 import { loadSiteSettings } from "@/lib/site-settings";
 import { ReferralLinkCopier } from "./_referral-link-copier";
 import { ReferralMilestones } from "./_referral-milestones";
+import { ReferralConversionBanner } from "./_referral-conversion-banner";
 
 function priceLabel(cents: number): string {
   return new Intl.NumberFormat("en-AU", {
@@ -72,6 +73,22 @@ export default async function ReferPage() {
     (sum, r) => sum + r.verified_listing_count,
     0,
   );
+  // Most-recently-signed-up referred user who's crossed Verified.
+  // Fed to the conversion banner so it can name a friend; referred[]
+  // is sorted newest-first by listReferredUsers, so .find() returns
+  // the most recent qualifier.
+  const latestVerified = referred.find((r) => r.verified_listing_count > 0);
+  const latestVerifiedName = latestVerified
+    ? (() => {
+        const name = [latestVerified.first_name, latestVerified.surname]
+          .map((s) => s?.trim() ?? "")
+          .filter(Boolean)
+          .join(" ");
+        return name.length > 0
+          ? name
+          : latestVerified.email.split("@")[0] ?? null;
+      })()
+    : null;
   const friendsWhoListed = referred.filter(
     (r) => r.verified_listing_count > 0,
   ).length;
@@ -84,6 +101,11 @@ export default async function ReferPage() {
         <Link href="/profile" className="back-link">
           ← Back to profile
         </Link>
+
+        <ReferralConversionBanner
+          friendsListed={friendsWhoListed}
+          latestVerifiedName={latestVerifiedName}
+        />
 
         <header style={{ margin: "0 0 var(--s-7)" }}>
           <p className="eyebrow" style={{ margin: 0, color: "var(--ink-3)" }}>
