@@ -269,6 +269,19 @@ export function ListingRow({ data }: { data: ListingCardData }) {
         {data.isHidden && (
           <span className="listing-row-hidden-flag">Hidden</span>
         )}
+        {data.trustStatus === "flagged" && (
+          <span
+            className="listing-row-hidden-flag"
+            style={{
+              background: "#fee2e2",
+              color: "#991b1b",
+              borderColor: "#fca5a5",
+            }}
+            title="Admin-flagged · hidden from public browse"
+          >
+            Flagged
+          </span>
+        )}
         {data.isSold && (
           <span className="listing-row-sold-overlay">Sold</span>
         )}
@@ -417,6 +430,19 @@ export function ListingCard({ data }: { data: ListingCardData }) {
           </span>
         )}
         {data.isHidden && <span className="listing-hidden-flag">Hidden</span>}
+        {data.trustStatus === "flagged" && (
+          <span
+            className="listing-hidden-flag"
+            style={{
+              background: "#fee2e2",
+              color: "#991b1b",
+              borderColor: "#fca5a5",
+            }}
+            title="Admin-flagged · hidden from public browse"
+          >
+            Flagged
+          </span>
+        )}
         {data.isSold && <span className="listing-sold-overlay">Sold</span>}
         {data.showShortlist && !data.isSold && (
           <ShortlistButton
