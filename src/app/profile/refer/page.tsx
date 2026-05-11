@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
-import { getEmailBaseUrl } from "@/lib/email";
+import { getShareBaseUrl } from "@/lib/email";
 import {
   ensureReferralCode,
   listReferredUsers,
@@ -56,11 +56,10 @@ export default async function ReferPage() {
   // than the column may not have one yet (the schema backfill SQL
   // covers most, but this is the belt to that braces).
   const code = await ensureReferralCode(user.id);
-  // getEmailBaseUrl prefers APP_URL over the request host so the
-  // share link points at the public domain even when the page is
-  // viewed from a local dev server. The link is going somewhere
-  // else's phone — same constraint as transactional emails.
-  const baseUrl = await getEmailBaseUrl();
+  // Share link goes to someone else's phone; their localhost is
+  // not your localhost. getShareBaseUrl always resolves to APP_URL
+  // or the hardcoded production domain — never the request host.
+  const baseUrl = getShareBaseUrl();
   // /r/CODE reads as 'a person inviting you' in a chat preview;
   // the route handler at src/app/r/[code]/route.ts redirects to
   // /?ref=CODE so the existing middleware attribution still runs.

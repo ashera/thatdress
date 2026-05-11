@@ -94,6 +94,21 @@ export async function getEmailBaseUrl(): Promise<string> {
   return getBaseUrl();
 }
 
+/** Resolve a public base URL for links being shared elsewhere
+ *  (referral links pasted into iMessage, social share intents,
+ *  anywhere the recipient isn't necessarily on the same host as
+ *  the page that rendered the link).
+ *
+ *  Strictly prefers `APP_URL`, then the hardcoded production
+ *  default. **Never** falls back to the request host the way
+ *  {@link getEmailBaseUrl} does — a dev server's localhost host
+ *  is useless to a recipient. If you set `APP_URL` in your dev
+ *  `.env` it'll be respected; otherwise you get the production
+ *  domain so shared links always work. */
+export function getShareBaseUrl(): string {
+  return appUrlOrDefault();
+}
+
 function appUrlOrDefault(opts?: { skipHardcoded?: boolean }): string {
   const raw = process.env.APP_URL?.trim().replace(/\/+$/, "");
   if (raw) {
