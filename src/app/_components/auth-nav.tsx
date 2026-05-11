@@ -208,6 +208,7 @@ export async function AuthNav() {
                 <AvatarMenu email={user.email} name={user.firstName}>
                   <Link href="/listings/mine">My listings</Link>
                   <Link href="/alerts">Saved searches</Link>
+                  <Link href="/profile/refer">Refer &amp; earn</Link>
                   <Link href="/profile">Profile</Link>
                   <form action={logout}>
                     <button type="submit">Log out</button>

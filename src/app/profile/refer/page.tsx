@@ -57,7 +57,10 @@ export default async function ReferPage() {
   // covers most, but this is the belt to that braces).
   const code = await ensureReferralCode(user.id);
   const baseUrl = await getBaseUrl();
-  const referralUrl = code ? `${baseUrl}/?ref=${code}` : null;
+  // /r/CODE reads as 'a person inviting you' in a chat preview;
+  // the route handler at src/app/r/[code]/route.ts redirects to
+  // /?ref=CODE so the existing middleware attribution still runs.
+  const referralUrl = code ? `${baseUrl}/r/${code}` : null;
   const [referred, settings] = await Promise.all([
     listReferredUsers(user.id),
     loadSiteSettings(),
