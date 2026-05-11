@@ -477,37 +477,41 @@ export function ListingCard({ data }: { data: ListingCardData }) {
         ))}
       </div>
 
-      <ul className="listing-highlights">
-        {data.highlights.map((h, i) => (
-          <li key={i} className={h ? "" : "is-empty"} aria-hidden={!h}>
-            <Icon name="check" size="sm" />
-            <span>{h ?? "—"}</span>
-          </li>
-        ))}
-      </ul>
-
-      {data.interestedCount && data.interestedCount > 0 ? (
-        <div className="listing-interest">
-          <Icon name="msg" size="sm" />
-          <span>
-            <strong>{data.interestedCount}</strong>{" "}
-            {data.interestedCount === 1 ? "buyer" : "buyers"} interested
-          </span>
+      <div className="listing-body-row">
+        <ul className="listing-highlights">
+          {data.highlights.map((h, i) => (
+            <li key={i} className={h ? "" : "is-empty"} aria-hidden={!h}>
+              <Icon name="check" size="sm" />
+              <span>{h ?? "—"}</span>
+            </li>
+          ))}
+        </ul>
+        <div className="listing-side">
+          <div className="listing-price">{data.price}</div>
+          {data.interestedCount && data.interestedCount > 0 ? (
+            <div className="listing-interest">
+              <Icon name="msg" size="sm" />
+              <span>
+                <strong>{data.interestedCount}</strong>{" "}
+                {data.interestedCount === 1 ? "buyer" : "buyers"} interested
+              </span>
+            </div>
+          ) : (
+            <div className="listing-interest is-empty">
+              <Icon name="msg" size="sm" />
+              <span>No comments</span>
+            </div>
+          )}
         </div>
-      ) : (
-        <div className="listing-interest is-empty">
-          <Icon name="msg" size="sm" />
-          <span>No buyer comments yet</span>
-        </div>
-      )}
+      </div>
 
       <div className="listing-foot">
-        <div className="listing-price">{data.price}</div>
         <ButtonLink
           href={detailHref}
           variant="primary"
           iconRight="arrow"
           className="listing-cta"
+          block
         >
           View Details &amp; Photos
         </ButtonLink>

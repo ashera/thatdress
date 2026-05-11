@@ -1211,6 +1211,26 @@ textarea.input {
   color: var(--ink-4);
 }
 
+.listing-body-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+.listing-body-row .listing-highlights {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.listing-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  flex: 0 0 auto;
+  text-align: right;
+}
+.listing-side .listing-interest { align-self: flex-end; }
+
 .listing-highlights {
   list-style: none;
   margin: 0;
@@ -1276,11 +1296,10 @@ textarea.input {
 .listing-foot {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: stretch;
   gap: var(--s-3);
   padding-top: var(--s-3);
   border-top: 1px solid var(--hairline);
-  flex-wrap: wrap;
 }
 .listing-price {
   font-family: var(--font-display);
