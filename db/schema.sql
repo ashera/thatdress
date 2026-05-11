@@ -75,6 +75,12 @@ ALTER TABLE users
   ADD COLUMN IF NOT EXISTS surname           TEXT,
   ADD COLUMN IF NOT EXISTS town              TEXT,
   ADD COLUMN IF NOT EXISTS postcode          TEXT,
+  -- Buyer-side body measurements, used by the fit calculator on
+  -- listing detail. Optional; rendered against the dresses.*_inches
+  -- columns to surface a 'how it fits you' chip per listing.
+  ADD COLUMN IF NOT EXISTS bust_inches       NUMERIC(4,1),
+  ADD COLUMN IF NOT EXISTS waist_inches      NUMERIC(4,1),
+  ADD COLUMN IF NOT EXISTS hips_inches       NUMERIC(4,1),
   ADD COLUMN IF NOT EXISTS suspended_at      TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMPTZ,
   -- Referral programme. Every user gets a personal referral_code they

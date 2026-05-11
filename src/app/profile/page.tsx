@@ -198,6 +198,64 @@ export default async function ProfilePage({
               change it any time using the pill in the menu bar.
             </p>
 
+            <h3
+              className="card-heading"
+              style={{
+                marginTop: "var(--s-5)",
+                marginBottom: "var(--s-2)",
+                fontSize: 18,
+              }}
+            >
+              Your measurements
+            </h3>
+            <p className="card-sub" style={{ marginTop: 0 }}>
+              All optional. When you enter any of these, listing detail
+              pages will show how each dress fits you against the
+              seller&rsquo;s measurements. Private to you — sellers
+              never see them.
+            </p>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(3, 1fr)",
+                gap: "var(--s-3)",
+              }}
+            >
+              <Field label="Bust (inches)" htmlFor="bust_inches">
+                <Input
+                  id="bust_inches"
+                  name="bust_inches"
+                  type="text"
+                  inputMode="decimal"
+                  pattern="^\d{1,3}(\.\d{1,2})?$"
+                  placeholder="e.g. 36"
+                  defaultValue={user.bustInches?.toString() ?? ""}
+                />
+              </Field>
+              <Field label="Waist (inches)" htmlFor="waist_inches">
+                <Input
+                  id="waist_inches"
+                  name="waist_inches"
+                  type="text"
+                  inputMode="decimal"
+                  pattern="^\d{1,3}(\.\d{1,2})?$"
+                  placeholder="e.g. 28"
+                  defaultValue={user.waistInches?.toString() ?? ""}
+                />
+              </Field>
+              <Field label="Hips (inches)" htmlFor="hips_inches">
+                <Input
+                  id="hips_inches"
+                  name="hips_inches"
+                  type="text"
+                  inputMode="decimal"
+                  pattern="^\d{1,3}(\.\d{1,2})?$"
+                  placeholder="e.g. 38"
+                  defaultValue={user.hipsInches?.toString() ?? ""}
+                />
+              </Field>
+            </div>
+
             <div style={{ display: "flex", justifyContent: "flex-end" }}>
               <Button type="submit" variant="primary" iconRight="arrow">
                 Save personal info

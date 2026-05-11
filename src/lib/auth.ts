@@ -19,6 +19,12 @@ export type User = {
   surname: string | null;
   town: string | null;
   postcode: string | null;
+  /** Body measurements in inches — populated when the user has
+   *  entered them on /profile. Feeds the listing-detail fit
+   *  calculator. */
+  bustInches: number | null;
+  waistInches: number | null;
+  hipsInches: number | null;
   /** Set when an admin is impersonating this user. The id and email
    *  are of the *original* admin; the rest of the User fields are
    *  the target's. UI uses these to show the 'Acting as X' banner
@@ -88,6 +94,9 @@ export async function getCurrentUser(): Promise<User | null> {
       surname: string | null;
       town: string | null;
       postcode: string | null;
+      bust_inches: string | null;
+      waist_inches: string | null;
+      hips_inches: string | null;
       impersonator_id: string | null;
       impersonator_email: string | null;
     }>(
@@ -100,6 +109,9 @@ export async function getCurrentUser(): Promise<User | null> {
               u.surname,
               u.town,
               u.postcode,
+              u.bust_inches::text  AS bust_inches,
+              u.waist_inches::text AS waist_inches,
+              u.hips_inches::text  AS hips_inches,
               s.impersonator_user_id::text AS impersonator_id,
               imp.email                    AS impersonator_email
          FROM sessions s
@@ -113,6 +125,11 @@ export async function getCurrentUser(): Promise<User | null> {
     );
     const row = result.rows[0];
     if (!row) return null;
+    const toInches = (v: string | null): number | null => {
+      if (v == null) return null;
+      const n = Number(v);
+      return Number.isFinite(n) ? n : null;
+    };
     return {
       id: row.id,
       email: row.email,
@@ -123,6 +140,9 @@ export async function getCurrentUser(): Promise<User | null> {
       surname: row.surname,
       town: row.town,
       postcode: row.postcode,
+      bustInches: toInches(row.bust_inches),
+      waistInches: toInches(row.waist_inches),
+      hipsInches: toInches(row.hips_inches),
       impersonatorId: row.impersonator_id,
       impersonatorEmail: row.impersonator_email,
     };

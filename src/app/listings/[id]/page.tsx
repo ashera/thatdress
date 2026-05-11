@@ -21,6 +21,7 @@ import {
 import { deriveTrustStatus, isTrustStatus } from "@/lib/listing-trust";
 import { setListingTrustStatus } from "@/lib/actions/listing-trust";
 import { computeHealth, type HealthInput } from "@/lib/listing-health";
+import { assessFit, fitPalette } from "@/lib/fit";
 import { loadSiteSettings } from "@/lib/site-settings";
 import { TrustBadge } from "../../_components/trust-badge";
 import { FlagListingDialog } from "../../_components/flag-listing-dialog";
@@ -759,6 +760,25 @@ export default async function ListingDetailPage({
     : "Unknown seller";
 
   const specGroups = buildSpecs(l);
+  // Fit calculator: surface how the dress fits the current viewer
+  // when they've entered their own measurements on /profile. Only
+  // renders for non-owner buyers (sellers don't need a fit chip on
+  // their own listing; admins see it for parity).
+  const fit =
+    currentUser && !isOwner
+      ? assessFit(
+          {
+            bust: currentUser.bustInches,
+            waist: currentUser.waistInches,
+            hips: currentUser.hipsInches,
+          },
+          {
+            bust: l.bust_inches,
+            waist: l.waist_inches,
+            hips: l.hips_inches,
+          },
+        )
+      : null;
   // Seller's review summary — surfaced inline in the seller block
   // once the count crosses the admin-configured threshold.
   const [sellerReviewSummary, pageSettings, provenance] = await Promise.all([
@@ -1297,6 +1317,109 @@ export default async function ListingDetailPage({
           </p>
         </div>
       </article>
+
+      {fit && (
+        <section className="detail-specs">
+          <h2 className="detail-specs-heading">How it fits you</h2>
+          {(() => {
+            const overall = fit.overall === "unknown" ? "perfect" : fit.overall;
+            const overallPalette = fitPalette(overall);
+            return (
+              <>
+                <div
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "6px 14px",
+                    borderRadius: 999,
+                    background: overallPalette.bg,
+                    border: `1px solid ${overallPalette.border}`,
+                    color: overallPalette.fg,
+                    fontFamily: "var(--font-mono)",
+                    fontSize: 12,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                    fontWeight: 700,
+                    marginBottom: "var(--s-3)",
+                  }}
+                >
+                  {fit.overallLabel}
+                </div>
+                <ul
+                  style={{
+                    listStyle: "none",
+                    padding: 0,
+                    margin: 0,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 6,
+                  }}
+                >
+                  {fit.axes.map((a) => {
+                    const p = fitPalette(a.status);
+                    const diffLabel =
+                      a.diff > 0
+                        ? `+${a.diff}" room`
+                        : a.diff < 0
+                          ? `${a.diff}" short`
+                          : "exact match";
+                    return (
+                      <li
+                        key={a.axis}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 10,
+                          padding: "8px 12px",
+                          background: p.bg,
+                          border: `1px solid ${p.border}`,
+                          borderRadius: 8,
+                          color: p.fg,
+                          fontSize: 14,
+                        }}
+                      >
+                        <span style={{ fontWeight: 700, minWidth: 56 }}>
+                          {a.axis.charAt(0).toUpperCase() + a.axis.slice(1)}
+                        </span>
+                        <span style={{ flex: 1 }}>{a.label.split(" · ")[1]}</span>
+                        <span
+                          style={{
+                            fontFamily: "var(--font-mono)",
+                            fontSize: 11,
+                            opacity: 0.85,
+                          }}
+                        >
+                          {diffLabel}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+                <p
+                  style={{
+                    fontSize: 12,
+                    color: "var(--ink-4)",
+                    margin: "var(--s-3) 0 0",
+                  }}
+                >
+                  Computed from your measurements on{" "}
+                  <Link
+                    href="/profile"
+                    style={{
+                      color: "var(--ink-3)",
+                      textDecoration: "underline",
+                    }}
+                  >
+                    your profile
+                  </Link>{" "}
+                  — only you can see this assessment.
+                </p>
+              </>
+            );
+          })()}
+        </section>
+      )}
 
       {specGroups.length > 0 && (
         <section className="detail-specs">
