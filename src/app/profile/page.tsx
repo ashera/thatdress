@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { updateProfile } from "@/lib/actions/auth";
 import { requestEmailChange } from "@/lib/actions/email-change";
 import { deleteAccount } from "@/lib/actions/account";
+import { query } from "@/lib/db";
 import { countFriendsListed } from "@/lib/referral";
 import { currentReferralTier } from "@/lib/referral-tiers";
 import { Button, Field, Input } from "../_components/ui";
@@ -49,6 +50,46 @@ export default async function ProfilePage({
 
   const friendsListed = await countFriendsListed(user.id);
   const tier = currentReferralTier(friendsListed);
+
+  // If the current user arrived via someone else's link, surface
+  // who and when in the hero. Lookup is direct so we don't have to
+  // carry referrer info on every getCurrentUser call site-wide.
+  const referrerRow = await query<{
+    first_name: string | null;
+    surname: string | null;
+    email: string | null;
+    referred_at: string | null;
+  }>(
+    `SELECT r.first_name, r.surname, r.email,
+            me.referred_at::text AS referred_at
+       FROM users me
+       JOIN users r ON r.id = me.referred_by_user_id
+      WHERE me.id = $1::bigint
+      LIMIT 1`,
+    [user.id],
+  );
+  const referrer = referrerRow.rows[0] ?? null;
+  const referrerName = referrer
+    ? [referrer.first_name, referrer.surname]
+        .map((s) => s?.trim() ?? "")
+        .filter(Boolean)
+        .join(" ") ||
+      referrer.email?.split("@")[0] ||
+      "a frockd member"
+    : null;
+  const referredAtLabel = referrer?.referred_at
+    ? (() => {
+        try {
+          return new Date(referrer.referred_at).toLocaleDateString("en-AU", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+          });
+        } catch {
+          return null;
+        }
+      })()
+    : null;
 
   const displayName =
     [user.firstName, user.surname].filter(Boolean).join(" ").trim() ||
@@ -257,6 +298,38 @@ export default async function ProfilePage({
               We sent a confirmation link when you signed up. Check
               your inbox, or use the Resend button in the banner above.
             </p>
+          )}
+          {referrerName && (
+            <div
+              style={{
+                marginTop: "var(--s-4)",
+                padding: "10px 14px",
+                background: "rgba(255,255,255,0.55)",
+                border: "1px solid rgba(28,24,22,0.08)",
+                borderRadius: 10,
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                flexWrap: "wrap",
+                fontSize: 13,
+                color: "#3a342f",
+              }}
+              title="The person whose referral link you signed up through"
+            >
+              <span aria-hidden style={{ fontSize: 18, lineHeight: 1 }}>
+                💌
+              </span>
+              <span>
+                Invited by{" "}
+                <strong style={{ color: "#1c1816" }}>{referrerName}</strong>
+                {referredAtLabel ? (
+                  <>
+                    <span style={{ color: "#7a7470" }}> · joined </span>
+                    {referredAtLabel}
+                  </>
+                ) : null}
+              </span>
+            </div>
           )}
         </section>
 
