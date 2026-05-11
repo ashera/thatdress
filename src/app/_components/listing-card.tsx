@@ -380,31 +380,6 @@ export function ListingCard({ data }: { data: ListingCardData }) {
   const detailHref = `/listings/${data.id}`;
   return (
     <article className="listing">
-      <div className="listing-head">
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 8,
-            flexWrap: "wrap",
-          }}
-        >
-          <div className="listing-chips">
-            {data.chips.map((c, i) => (
-              <span
-                key={i}
-                className={`listing-chip ${c === PLACEHOLDER ? "is-empty" : ""}`}
-              >
-                {c}
-              </span>
-            ))}
-          </div>
-          <TrustBadge status={data.trustStatus} />
-        </div>
-        <h3 className="listing-title">{data.title}</h3>
-      </div>
-
       <div className="listing-photo">
         <Link
           href={detailHref}
@@ -424,6 +399,16 @@ export function ListingCard({ data }: { data: ListingCardData }) {
             <span className="listing-photo-empty">Dress photo</span>
           )}
         </Link>
+        <div className="listing-chips">
+          {data.chips.map((c, i) => (
+            <span
+              key={i}
+              className={`listing-chip ${c === PLACEHOLDER ? "is-empty" : ""}`}
+            >
+              {c}
+            </span>
+          ))}
+        </div>
         {data.isOwn && (
           <span className="listing-own-flag" title="Your listing">
             Yours
@@ -453,6 +438,24 @@ export function ListingCard({ data }: { data: ListingCardData }) {
         )}
       </div>
 
+      <div className="listing-head">
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            gap: 8,
+          }}
+        >
+          <h3 className="listing-title">{data.title}</h3>
+          {data.trustStatus && data.trustStatus !== "self-declared" && (
+            <div style={{ flex: "0 0 auto", marginTop: 2 }}>
+              <TrustBadge status={data.trustStatus} />
+            </div>
+          )}
+        </div>
+      </div>
+
       <div className="listing-stats">
         {data.stats.map((s, i) => (
           <div key={`${s.label}-${i}`} className="listing-stat">
@@ -462,8 +465,8 @@ export function ListingCard({ data }: { data: ListingCardData }) {
                 alt=""
                 aria-hidden
                 className="listing-stat-icon"
-                width={28}
-                height={28}
+                width={22}
+                height={22}
               />
             )}
             <span className={`v ${s.value === PLACEHOLDER ? "is-empty" : ""}`}>
