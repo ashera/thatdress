@@ -184,7 +184,12 @@ export async function closeListingWithBuyer(
   revalidatePath("/listings");
   revalidatePath("/");
   revalidatePath("/listings/mine");
-  redirect(next);
+  // Always route through the post-sale celebration / share-prompt
+  // page — the seller's peak-engagement moment is right after the
+  // sale closes. The page has its own 'Back to my listings' link
+  // for sellers who want to skip the prompt.
+  void next;
+  redirect(`/listings/${listingId}/sold-thanks`);
 }
 
 /**
