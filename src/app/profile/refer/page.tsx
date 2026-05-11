@@ -8,6 +8,7 @@ import {
 } from "@/lib/referral";
 import { loadSiteSettings } from "@/lib/site-settings";
 import { ReferralLinkCopier } from "./_referral-link-copier";
+import { ReferralMilestones } from "./_referral-milestones";
 
 function priceLabel(cents: number): string {
   return new Intl.NumberFormat("en-AU", {
@@ -161,6 +162,8 @@ export default async function ReferPage() {
             refreshing — if it keeps happening, let support know.
           </div>
         )}
+
+        <ReferralMilestones friendsListed={friendsWhoListed} />
 
         <section
           style={{
