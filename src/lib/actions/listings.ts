@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { query, withTransaction } from "@/lib/db";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, requireAdmin } from "@/lib/auth";
 import { getCurrentRegionId } from "@/lib/regions";
 import { deriveTrustStatus, isTrustStatus } from "@/lib/listing-trust";
 import { recomputeListingTrustStatus } from "@/lib/listing-trust-server";
@@ -388,6 +388,66 @@ export async function setListingVisibility(formData: FormData): Promise<void> {
   revalidatePath(`/`);
   revalidatePath(`/listings/mine`);
   redirect(`/listings/${listingId}/edit?vis=1`);
+}
+
+/**
+ * Admin-only Featured flag. Toggles listings.is_featured for one
+ * listing. If the listing's region already has another featured
+ * listing, the previous one is un-featured first so the partial
+ * unique index (one feature per region) isn't violated. Featured
+ * listings sort to position one on the browse page and get a
+ * faint yellow border on their card.
+ */
+export async function toggleListingFeatured(
+  formData: FormData,
+): Promise<void> {
+  await requireAdmin();
+  const listingId = String(formData.get("listingId") ?? "");
+  if (!/^\d+$/.test(listingId)) redirect("/listings");
+
+  const r = await query<{
+    is_featured: boolean;
+    region_id: string | null;
+  }>(
+    `SELECT is_featured, region_id::text
+       FROM listings
+      WHERE id = $1::bigint
+      LIMIT 1`,
+    [listingId],
+  );
+  const row = r.rows[0];
+  if (!row) redirect("/listings");
+
+  if (row.is_featured) {
+    // Un-feature this listing.
+    await query(
+      `UPDATE listings SET is_featured = FALSE WHERE id = $1::bigint`,
+      [listingId],
+    );
+  } else {
+    // Un-feature any other listing in this region first so the
+    // partial unique index has room to land. Skip if listing has
+    // no region (won't show on any browse anyway, but still allow
+    // the flag for completeness).
+    if (row.region_id) {
+      await query(
+        `UPDATE listings
+            SET is_featured = FALSE
+          WHERE region_id   = $1::bigint
+            AND is_featured = TRUE`,
+        [row.region_id],
+      );
+    }
+    await query(
+      `UPDATE listings SET is_featured = TRUE WHERE id = $1::bigint`,
+      [listingId],
+    );
+  }
+
+  revalidatePath(`/listings/${listingId}`);
+  revalidatePath(`/listings`);
+  revalidatePath(`/`);
+  redirect(`/listings/${listingId}`);
 }
 
 /**

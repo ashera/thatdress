@@ -157,6 +157,15 @@ ALTER TABLE listings
 CREATE INDEX IF NOT EXISTS listings_sold_to_idx
   ON listings (sold_to_user_id) WHERE sold_to_user_id IS NOT NULL;
 
+-- Admin-curated 'Featured' slot. At most one featured listing per
+-- region; the partial unique index enforces that at the DB layer
+-- so the application can't accidentally double-feature.
+ALTER TABLE listings
+  ADD COLUMN IF NOT EXISTS is_featured BOOLEAN NOT NULL DEFAULT FALSE;
+
+CREATE UNIQUE INDEX IF NOT EXISTS listings_one_featured_per_region
+  ON listings (region_id) WHERE is_featured = TRUE;
+
 CREATE INDEX IF NOT EXISTS listings_draft_idx
   ON listings (seller_id, is_draft) WHERE is_draft = TRUE;
 

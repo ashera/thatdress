@@ -921,6 +921,14 @@ textarea.input {
   box-shadow: var(--e-3);
   border-color: var(--hairline-strong);
 }
+.listing.is-featured {
+  border-color: #fde68a;
+  box-shadow: 0 0 0 1px #fef9c3, var(--e-1);
+}
+.listing.is-featured:hover {
+  border-color: #fcd34d;
+  box-shadow: 0 0 0 1px #fef3c7, var(--e-3);
+}
 
 .listing-head { display: flex; flex-direction: column; gap: 4px; }
 .listing-chips {

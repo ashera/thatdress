@@ -330,6 +330,7 @@ async function fetchListings(
               l.trust_status,
               l.is_published,
               l.sold_at::text,
+              l.is_featured,
               (
                 SELECT COUNT(DISTINCT buyer_id)::text FROM conversations
                   WHERE listing_id = l.id
@@ -358,7 +359,7 @@ async function fetchListings(
          LEFT JOIN sleeve_styles    ss  ON ss.id  = dr.sleeve_style_id
          LEFT JOIN dress_lengths    dl  ON dl.id  = dr.length_id
          ${whereSql}
-         ORDER BY ${orderBy}
+         ORDER BY l.is_featured DESC, ${orderBy}
          LIMIT 50`,
       params,
     );

@@ -21,6 +21,7 @@ export type ListingCardData = {
   highlights: [string | null, string | null, string | null];
   photo?: string;
   isHidden?: boolean;
+  isFeatured?: boolean;
   isOwn?: boolean;
   isSold?: boolean;
   isShortlisted?: boolean;
@@ -67,6 +68,7 @@ export type ListingCardRow = {
   original_retail_cents: number | null;
   has_original_receipt: boolean | null;
   trust_status?: string | null;
+  is_featured?: boolean | null;
   is_published?: boolean | null;
   sold_at?: string | null;
   conversation_count?: string | number | null;
@@ -162,6 +164,7 @@ export function listingFromRow(
       ? `/api/listings/${row.id}/images/${row.primary_image_id}`
       : undefined,
     isHidden: row.is_published === false,
+    isFeatured: !!row.is_featured,
     isOwn,
     isSold: !!row.sold_at,
     isShortlisted,
@@ -282,6 +285,19 @@ export function ListingRow({ data }: { data: ListingCardData }) {
             Flagged
           </span>
         )}
+        {data.isFeatured && (
+          <span
+            className="listing-row-hidden-flag"
+            style={{
+              background: "#fef9c3",
+              color: "#854d0e",
+              borderColor: "#fde68a",
+            }}
+            title="Featured listing for this region"
+          >
+            ★ Featured
+          </span>
+        )}
         {data.isSold && (
           <span className="listing-row-sold-overlay">Sold</span>
         )}
@@ -379,7 +395,7 @@ export function ListingRow({ data }: { data: ListingCardData }) {
 export function ListingCard({ data }: { data: ListingCardData }) {
   const detailHref = `/listings/${data.id}`;
   return (
-    <article className="listing">
+    <article className={`listing ${data.isFeatured ? "is-featured" : ""}`}>
       <div className="listing-head">
         <div
           style={{
@@ -444,6 +460,19 @@ export function ListingCard({ data }: { data: ListingCardData }) {
             title="Admin-flagged · hidden from public browse"
           >
             Flagged
+          </span>
+        )}
+        {data.isFeatured && (
+          <span
+            className="listing-hidden-flag"
+            style={{
+              background: "#fef9c3",
+              color: "#854d0e",
+              borderColor: "#fde68a",
+            }}
+            title="Featured listing for this region"
+          >
+            ★ Featured
           </span>
         )}
         {data.isSold && <span className="listing-sold-overlay">Sold</span>}

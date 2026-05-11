@@ -8,6 +8,7 @@ import { getCurrentRegionId } from "@/lib/regions";
 import { getBaseUrl } from "@/lib/email";
 import { startConversation } from "@/lib/actions/messages";
 import {
+  toggleListingFeatured,
   toggleListingSold,
   toggleListingVisibility,
 } from "@/lib/actions/listings";
@@ -49,6 +50,7 @@ type ListingRow = {
   sold_at: string | null;
   region_id: string | null;
   dress_id: string;
+  is_featured: boolean;
   conversation_count: string;
   // detail fields
   designer_name: string | null;
@@ -94,6 +96,7 @@ const LISTING_SELECT = `
   l.sold_at::text,
   l.region_id::text,
   l.dress_id::text,
+  l.is_featured,
   (
     SELECT COUNT(DISTINCT buyer_id)::text FROM conversations
       WHERE listing_id = l.id
@@ -1250,6 +1253,23 @@ export default async function ListingDetailPage({
             )}
             {isAdmin && l.trust_status !== "flagged" && (
               <FlagListingDialog listingId={l.id} next="detail" />
+            )}
+            {isAdmin && (
+              <form action={toggleListingFeatured}>
+                <input type="hidden" name="listingId" value={l.id} />
+                <Button
+                  type="submit"
+                  variant={l.is_featured ? "primary" : "ghost"}
+                  size="sm"
+                  title={
+                    l.is_featured
+                      ? "Remove the Featured flag from this listing"
+                      : "Feature this listing — it will appear first in its region's browse page (replaces any current feature in this region)"
+                  }
+                >
+                  {l.is_featured ? "★ Featured" : "Feature in region"}
+                </Button>
+              </form>
             )}
             {!isOwner && !isAdmin && currentUser && !l.sold_at && (
               <ReportListingDialog listingId={l.id} />
