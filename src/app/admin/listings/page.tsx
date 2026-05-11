@@ -57,6 +57,7 @@ type Row = {
   title: string;
   price_cents: number;
   is_published: boolean;
+  is_featured: boolean;
   sold_at: string | null;
   created_at: string;
   trust_status: string | null;
@@ -117,6 +118,7 @@ async function fetchListings(opts: {
               l.title,
               l.price_cents,
               l.is_published,
+              l.is_featured,
               l.sold_at::text,
               l.created_at::text,
               l.trust_status,
@@ -630,6 +632,11 @@ export default async function AdminListingsPage({
                         {isAuthenticated && (
                           <StatusPill color="#1c1816" textColor="#fff">
                             Authenticated
+                          </StatusPill>
+                        )}
+                        {row.is_featured && (
+                          <StatusPill color="#fef9c3" textColor="#854d0e">
+                            ★ Featured
                           </StatusPill>
                         )}
                       </div>
