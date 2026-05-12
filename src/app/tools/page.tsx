@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getBaseUrl } from "@/lib/email";
+import { getBaseUrl, getShareBaseUrl } from "@/lib/email";
+import { ToolsShareRow } from "./_share-row";
 
 export const revalidate = 86400; // tools list changes rarely
 
@@ -85,6 +86,10 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default function ToolsIndexPage() {
+  const shareBase = getShareBaseUrl();
+  const shareUrl = `${shareBase}/tools`;
+  const shareBlurb =
+    "Free dress-resale calculators from frockd, Australia's peer-to-peer formal-dress marketplace: a value estimator, alterations cost ranges, and a buyer's inspection checklist. No sign-up.";
   return (
     <div className="page page--pad">
       <main style={{ maxWidth: 720, margin: "0 auto" }}>
@@ -227,6 +232,36 @@ export default function ToolsIndexPage() {
             </li>
           ))}
         </ul>
+
+        <section
+          style={{
+            marginTop: "var(--s-7)",
+            padding: "var(--s-5) var(--s-6)",
+            background: "var(--surface)",
+            border: "1px solid var(--hairline)",
+            borderRadius: 12,
+          }}
+        >
+          <h2
+            className="card-heading"
+            style={{ marginTop: 0, marginBottom: 4 }}
+          >
+            Link to these tools
+          </h2>
+          <p
+            className="card-sub"
+            style={{ marginTop: 0, marginBottom: "var(--s-3)" }}
+          >
+            Writing about pre-loved fashion in Australia? You&rsquo;re
+            welcome to link to any tool — the URL and a pre-written
+            blurb are below.
+          </p>
+          <ToolsShareRow
+            url={shareUrl}
+            shareText={shareBlurb}
+            ogImageUrl={`${shareBase}/tools/opengraph-image`}
+          />
+        </section>
       </main>
     </div>
   );
