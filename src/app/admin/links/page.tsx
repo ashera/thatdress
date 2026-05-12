@@ -185,6 +185,26 @@ export default async function AdminLinksPage({
           up. Add new links manually below; automated link checking
           and discovery jobs will plug into this table later.
         </p>
+        <div style={{ marginTop: "var(--s-4)" }}>
+          <Link
+            href="/admin/links/pinterest"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "8px 14px",
+              borderRadius: 999,
+              background: "#E60023",
+              color: "#fff",
+              textDecoration: "none",
+              fontWeight: 600,
+              fontSize: 14,
+            }}
+          >
+            <span aria-hidden style={{ fontSize: 16 }}>📌</span>
+            Pin a listing to Pinterest
+          </Link>
+        </div>
       </header>
 
       {flash && (
