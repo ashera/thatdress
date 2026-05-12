@@ -426,6 +426,14 @@ export default async function AdminUserDetailPage({
         </p>
 
         <div className="account-controls">
+          <ButtonLink
+            href={`/sellers/${user.id}`}
+            variant="ghost"
+            iconRight="arrow"
+            title="Open this user's public seller profile — listings, reviews, region"
+          >
+            Show profile
+          </ButtonLink>
           <form action={toggleAdminRole}>
             <input type="hidden" name="userId" value={user.id} />
             <Button type="submit" variant="ghost" disabled={isMe}>
