@@ -92,6 +92,140 @@ async function fetchSeller(id: string): Promise<SellerRow | null> {
   }
 }
 
+type OwnedDressStatus = "listed" | "drafted" | "in-use" | "kept" | "lost";
+
+const WARDROBE_STATUS_PILL: Record<
+  OwnedDressStatus,
+  { bg: string; fg: string; border: string; label: string }
+> = {
+  listed: {
+    bg: "#cffafe",
+    fg: "#155e75",
+    border: "#67e8f9",
+    label: "Listed",
+  },
+  drafted: {
+    bg: "#e5e7eb",
+    fg: "#374151",
+    border: "#d1d5db",
+    label: "Drafted",
+  },
+  "in-use": {
+    bg: "#dcfce7",
+    fg: "#166534",
+    border: "#86efac",
+    label: "In use",
+  },
+  kept: {
+    bg: "#e0e7ff",
+    fg: "#3730a3",
+    border: "#a5b4fc",
+    label: "Kept",
+  },
+  lost: {
+    bg: "#fee2e2",
+    fg: "#991b1b",
+    border: "#fca5a5",
+    label: "Lost",
+  },
+};
+
+type OwnedDressRow = {
+  dress_id: string;
+  status: OwnedDressStatus;
+  designer_name: string | null;
+  model: string | null;
+  year: number | null;
+  size_label: string | null;
+  thumb_listing_id: string | null;
+  thumb_image_id: string | null;
+  live_listing_id: string | null;
+};
+
+/**
+ * Every dress this user currently owns plus a derived display
+ * status. Gated to admin + self on the page side (privacy: a
+ * casual public visitor shouldn't see a stranger's entire closet).
+ *
+ * 'available' is split into 'listed' / 'drafted' the same way
+ * the /admin/dresses table does — based on whether a live
+ * published listing exists. The lateral picks the newest
+ * listing's primary image for the thumbnail; live_listing_id is
+ * non-null only when there's a current published listing the
+ * card can deep-link to.
+ */
+async function fetchOwnedDresses(
+  ownerId: string,
+): Promise<OwnedDressRow[]> {
+  if (!/^\d+$/.test(ownerId)) return [];
+  try {
+    const r = await query<OwnedDressRow>(
+      `SELECT d.id::text                            AS dress_id,
+              CASE
+                WHEN d.disposition = 'available' AND EXISTS (
+                  SELECT 1 FROM listings l
+                   WHERE l.dress_id     = d.id
+                     AND l.is_draft     = FALSE
+                     AND l.is_published = TRUE
+                     AND l.sold_at IS NULL
+                ) THEN 'listed'
+                WHEN d.disposition = 'available' THEN 'drafted'
+                ELSE d.disposition
+              END                                    AS status,
+              des.name                               AS designer_name,
+              d.model,
+              d.year,
+              ds.label                               AS size_label,
+              thumb.listing_id::text                 AS thumb_listing_id,
+              thumb.image_id::text                   AS thumb_image_id,
+              live.id::text                          AS live_listing_id
+         FROM dresses d
+         LEFT JOIN designers   des ON des.id = d.designer_id
+         LEFT JOIN dress_sizes ds  ON ds.id  = d.size_id
+         LEFT JOIN LATERAL (
+           SELECT l.id AS listing_id, li.id AS image_id
+             FROM listings l
+             JOIN listing_images li ON li.listing_id = l.id
+            WHERE l.dress_id = d.id
+            ORDER BY l.created_at DESC,
+                     li.is_primary DESC, li.position, li.id
+            LIMIT 1
+         ) thumb ON TRUE
+         LEFT JOIN LATERAL (
+           SELECT l.id
+             FROM listings l
+            WHERE l.dress_id     = d.id
+              AND l.is_draft     = FALSE
+              AND l.is_published = TRUE
+              AND l.sold_at IS NULL
+            ORDER BY l.created_at DESC
+            LIMIT 1
+         ) live ON TRUE
+        WHERE d.current_owner_user_id = $1::bigint
+        ORDER BY
+          CASE
+            WHEN d.disposition = 'available' AND EXISTS (
+              SELECT 1 FROM listings l
+               WHERE l.dress_id     = d.id
+                 AND l.is_draft     = FALSE
+                 AND l.is_published = TRUE
+                 AND l.sold_at IS NULL
+            ) THEN 1
+            WHEN d.disposition = 'available' THEN 2
+            WHEN d.disposition = 'in-use'    THEN 3
+            WHEN d.disposition = 'kept'      THEN 4
+            ELSE 5
+          END,
+          d.created_at DESC
+        LIMIT 200`,
+      [ownerId],
+    );
+    return r.rows;
+  } catch {
+    return [];
+  }
+}
+
 async function fetchSellerListings(
   sellerId: string,
 ): Promise<ListingCardRow[]> {
@@ -217,6 +351,17 @@ export default async function SellerProfilePage({
   ]);
   const reviewsThreshold = settings.reviewsDisplayThreshold;
   const shortlistedIds = await getShortlistIds(currentUser?.id);
+
+  // Wardrobe-view (every dress the seller currently owns + status)
+  // is private — only the seller themselves and admins see it. A
+  // casual public visitor sees the existing live-listings grid only.
+  const canSeeWardrobe = !!(
+    currentUser &&
+    (currentUser.isAdmin || currentUser.id === seller.id)
+  );
+  const wardrobe = canSeeWardrobe
+    ? await fetchOwnedDresses(seller.id)
+    : [];
 
   // Region gate the *listings*, not the profile — non-admins still
   // get to see the seller exists but won't see out-of-region dresses
@@ -456,6 +601,171 @@ export default async function SellerProfilePage({
               </li>
             ))}
           </ul>
+        )}
+
+        {canSeeWardrobe && wardrobe.length > 0 && (
+          <section style={{ marginTop: "var(--s-7)" }}>
+            <h2
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: 28,
+                color: "var(--ink-1)",
+                margin: "0 0 var(--s-2)",
+                letterSpacing: "-0.01em",
+              }}
+            >
+              Wardrobe
+            </h2>
+            <p
+              style={{
+                color: "var(--ink-3)",
+                fontSize: 14,
+                margin: "0 0 var(--s-4)",
+                lineHeight: 1.5,
+              }}
+            >
+              Every dress this seller currently owns and where each one
+              sits. Visible to you because you&rsquo;re{" "}
+              {currentUser?.isAdmin
+                ? "an admin"
+                : "viewing your own profile"}
+              .
+            </p>
+            <ul
+              style={{
+                listStyle: "none",
+                padding: 0,
+                margin: 0,
+                display: "grid",
+                gridTemplateColumns:
+                  "repeat(auto-fill, minmax(260px, 1fr))",
+                gap: "var(--s-3)",
+              }}
+            >
+              {wardrobe.map((w) => {
+                const label =
+                  [w.designer_name, w.model].filter(Boolean).join(" ") ||
+                  "Untitled dress";
+                const meta = [
+                  w.year ? String(w.year) : null,
+                  w.size_label ? `size ${w.size_label}` : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ");
+                const pill = WARDROBE_STATUS_PILL[w.status];
+                // Card click target: live listing when there is one,
+                // otherwise the admin dress page for admins, no link
+                // for self-view of an unlisted dress.
+                const cardHref = w.live_listing_id
+                  ? `/listings/${w.live_listing_id}`
+                  : currentUser?.isAdmin
+                    ? `/admin/dresses/${w.dress_id}`
+                    : null;
+                const inner = (
+                  <div
+                    className="form-card"
+                    style={{
+                      display: "flex",
+                      gap: "var(--s-3)",
+                      alignItems: "flex-start",
+                      padding: "var(--s-4)",
+                      height: "100%",
+                      transition: "border-color 120ms, background 120ms",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 64,
+                        aspectRatio: "3 / 4",
+                        borderRadius: 8,
+                        overflow: "hidden",
+                        background: "var(--surface-sunken)",
+                        position: "relative",
+                        flex: "0 0 auto",
+                      }}
+                    >
+                      {w.thumb_image_id && w.thumb_listing_id ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={`/api/listings/${w.thumb_listing_id}/images/${w.thumb_image_id}?w=200`}
+                          alt=""
+                          style={{
+                            position: "absolute",
+                            inset: 0,
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                          }}
+                        />
+                      ) : null}
+                    </div>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div
+                        style={{
+                          display: "inline-flex",
+                          padding: "2px 8px",
+                          borderRadius: 999,
+                          background: pill.bg,
+                          color: pill.fg,
+                          border: `1px solid ${pill.border}`,
+                          fontFamily: "var(--font-mono)",
+                          fontSize: 10,
+                          letterSpacing: "0.12em",
+                          textTransform: "uppercase",
+                          fontWeight: 700,
+                          marginBottom: 6,
+                        }}
+                      >
+                        {pill.label}
+                      </div>
+                      <div
+                        style={{
+                          fontWeight: 700,
+                          fontSize: 14,
+                          color: "var(--ink-1)",
+                          lineHeight: 1.2,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {label}
+                      </div>
+                      {meta && (
+                        <div
+                          style={{
+                            fontSize: 12,
+                            color: "var(--ink-3)",
+                            marginTop: 2,
+                          }}
+                        >
+                          {meta}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+                return (
+                  <li key={w.dress_id}>
+                    {cardHref ? (
+                      <Link
+                        href={cardHref}
+                        style={{
+                          color: "inherit",
+                          textDecoration: "none",
+                          display: "block",
+                        }}
+                      >
+                        {inner}
+                      </Link>
+                    ) : (
+                      inner
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
         )}
 
         {reviews.length > 0 && (

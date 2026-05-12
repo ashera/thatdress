@@ -430,9 +430,9 @@ export default async function AdminUserDetailPage({
             href={`/sellers/${user.id}`}
             variant="ghost"
             iconRight="arrow"
-            title="Open this user's public seller profile — listings, reviews, region"
+            title="Open this user's wardrobe — every dress they own + status, plus their public listings and reviews"
           >
-            Show profile
+            Show Wardrobe
           </ButtonLink>
           <form action={toggleAdminRole}>
             <input type="hidden" name="userId" value={user.id} />

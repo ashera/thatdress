@@ -215,7 +215,7 @@ export async function AuthNav() {
                   tierEmoji={tier?.emoji ?? null}
                   tierLabel={tier?.label ?? null}
                 >
-                  <Link href="/listings/mine">My listings</Link>
+                  <Link href="/listings/mine">My Wardrobe</Link>
                   <Link href="/alerts">Saved searches</Link>
                   <Link href="/profile/refer">Refer &amp; earn</Link>
                   <Link href="/profile">Profile</Link>
