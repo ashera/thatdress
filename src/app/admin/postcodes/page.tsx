@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/auth";
 import { query } from "@/lib/db";
 import { importGeoNamesAUPostcodes } from "@/lib/actions/admin-postcodes";
 import { Button, Field, Input } from "../../_components/ui";
+import { CentroidMap } from "../../_components/centroid-map";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Postcodes — Admin" };
@@ -425,25 +426,38 @@ export default async function AdminPostcodesPage({
             </dl>
 
             {lookup.found && lookup.latitude != null && lookup.longitude != null && (
-              <p
-                style={{
-                  margin: "var(--s-3) 0 0",
-                  fontSize: 12,
-                  color: "var(--ink-3)",
-                }}
-              >
-                <a
-                  href={`https://www.openstreetmap.org/?mlat=${lookup.latitude}&mlon=${lookup.longitude}#map=14/${lookup.latitude}/${lookup.longitude}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
+              <>
+                <div style={{ marginTop: "var(--s-3)" }}>
+                  <CentroidMap
+                    latitude={lookup.latitude}
+                    longitude={lookup.longitude}
+                    label={
+                      lookup.place_name
+                        ? `${lookup.place_name} · ${lookup.postcode}`
+                        : `Postcode ${lookup.postcode}`
+                    }
+                  />
+                </div>
+                <p
                   style={{
-                    color: "var(--ink-2)",
-                    textDecoration: "underline",
+                    margin: "var(--s-3) 0 0",
+                    fontSize: 12,
+                    color: "var(--ink-3)",
                   }}
                 >
-                  View centroid on OpenStreetMap →
-                </a>
-              </p>
+                  <a
+                    href={`https://www.openstreetmap.org/?mlat=${lookup.latitude}&mlon=${lookup.longitude}#map=14/${lookup.latitude}/${lookup.longitude}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      color: "var(--ink-2)",
+                      textDecoration: "underline",
+                    }}
+                  >
+                    Open full map on OpenStreetMap →
+                  </a>
+                </p>
+              </>
             )}
 
             {!lookup.found && lookup.listingTotal > 0 && (
