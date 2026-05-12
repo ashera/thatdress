@@ -363,26 +363,49 @@ export default async function AdminUserDetailPage({
         ← All users
       </Link>
 
-      <header className="admin-header">
-        <p className="eyebrow">Admin · User</p>
-        <h1>
-          {user.email}{" "}
-          {user.email_verified_at ? (
-            <span className="users-tag --ok">Verified</span>
-          ) : (
-            <span className="users-tag --susp">Unverified</span>
-          )}
-        </h1>
-        <p className="sub">
-          Joined {formatDate(user.created_at)}
-          {user.email_verified_at
-            ? ` · Verified ${formatDate(user.email_verified_at)}`
-            : ""}
-          {isSuspended ? ` · Suspended ${formatDate(user.suspended_at)}` : ""}
-          {user.is_admin ? " · Admin" : ""}
-          {isMe ? " · This is you" : ""}
-        </p>
-      </header>
+      {(() => {
+        const fullName = [user.title, user.first_name, user.surname]
+          .map((s) => s?.trim() ?? "")
+          .filter(Boolean)
+          .join(" ");
+        const heading = fullName.length > 0 ? fullName : user.email;
+        const showEmailLine = fullName.length > 0;
+        return (
+          <header className="admin-header">
+            <p className="eyebrow">Admin · User</p>
+            <h1>
+              {heading}{" "}
+              {user.email_verified_at ? (
+                <span className="users-tag --ok">Verified</span>
+              ) : (
+                <span className="users-tag --susp">Unverified</span>
+              )}
+            </h1>
+            {showEmailLine && (
+              <p
+                style={{
+                  margin: "var(--s-2) 0 0",
+                  fontSize: 14,
+                  color: "var(--ink-3)",
+                  fontFamily: "var(--font-mono)",
+                  letterSpacing: "0.02em",
+                }}
+              >
+                {user.email}
+              </p>
+            )}
+            <p className="sub">
+              Joined {formatDate(user.created_at)}
+              {user.email_verified_at
+                ? ` · Verified ${formatDate(user.email_verified_at)}`
+                : ""}
+              {isSuspended ? ` · Suspended ${formatDate(user.suspended_at)}` : ""}
+              {user.is_admin ? " · Admin" : ""}
+              {isMe ? " · This is you" : ""}
+            </p>
+          </header>
+        );
+      })()}
 
       {saved && !errorMessage && (
         <p className="form-success" style={{ marginBottom: "var(--s-5)" }}>
