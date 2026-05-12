@@ -8,6 +8,10 @@ import {
   runSavedSearchDigest,
   type SavedSearchRunStats,
 } from "@/lib/cron/saved-searches";
+import {
+  runBacklinkCheckBatch,
+  type BacklinkCheckStats,
+} from "@/lib/cron/backlink-check";
 
 export const dynamic = "force-dynamic";
 
@@ -126,9 +130,10 @@ export default async function AdminHomePage() {
   // already-emailed saved-searches keep their last_emailed_at
   // gate — so re-running on every load doesn't re-send. Card
   // below reports what actually happened on this load.
-  const [relist, digest] = await Promise.all([
+  const [relist, digest, backlinks] = await Promise.all([
     timed<RelistNudgeRunStats>(runRelistNudgeBatch),
     timed<SavedSearchRunStats>(runSavedSearchDigest),
+    timed<BacklinkCheckStats>(runBacklinkCheckBatch),
   ]);
 
   return (
@@ -224,6 +229,35 @@ export default async function AdminHomePage() {
                 label: "Errors",
                 value: s.errors,
                 hint: "Failures during match query or email send. Check server logs.",
+                emphasise: s.errors > 0,
+              },
+            ]}
+          />
+          <JobCard
+            name="Backlink check"
+            description="Fetches a small batch of backlinks (10 per run) whose last check is over a week old, looks for the target URL in the page's HTML, and updates status to 'alive' or 'dead' accordingly. Stamps last_checked_at on every successful fetch."
+            outcome={backlinks}
+            metrics={(s) => [
+              {
+                label: "Due now",
+                value: s.candidates,
+                hint: "Backlinks selected for re-check: status='alive' or 'pending' and either never checked or last checked > 7 days ago. Capped at 10 per run.",
+              },
+              {
+                label: "Still alive",
+                value: s.stillAlive,
+                hint: "Target URL was still present as an href on the source page after this fetch. last_checked_at bumped.",
+              },
+              {
+                label: "Now dead",
+                value: s.nowDead,
+                hint: "Fetched OK but the link was missing. Status flipped to 'dead' automatically — admin can restore from /admin/links if it was a false positive.",
+                emphasise: s.nowDead > 0,
+              },
+              {
+                label: "Errors",
+                value: s.errors,
+                hint: "Network failure, timeout, or non-200. last_checked_at is NOT stamped on errors so the row re-tries on the next run.",
                 emphasise: s.errors > 0,
               },
             ]}
@@ -335,7 +369,7 @@ function JobCard<T>({
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
+            gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
             gap: "var(--s-3)",
           }}
         >
