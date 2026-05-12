@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
 import { query } from "@/lib/db";
 import { importGeoNamesAUPostcodes } from "@/lib/actions/admin-postcodes";
-import { Button } from "../../_components/ui";
+import { Button, Field, Input } from "../../_components/ui";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Postcodes — Admin" };
@@ -59,6 +59,91 @@ async function loadSummary(): Promise<Summary> {
   }
 }
 
+type LookupResult = {
+  postcode: string;
+  found: boolean;
+  place_name: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  listingTotal: number;
+  listingsLive: number;
+  listingsSold: number;
+};
+
+/**
+ * Single-postcode lookup. Returns 'found: false' when the postcode
+ * isn't in the table — callers should surface that as 'no centroid
+ * on file' so admins know to run the import. Listing counts are
+ * computed against location_postal so admins can spot a postcode
+ * that's actively used in the marketplace even when its centroid
+ * is missing (a queue-the-import signal).
+ */
+async function lookupPostcode(code: string): Promise<LookupResult> {
+  let row: {
+    place_name: string | null;
+    latitude: string;
+    longitude: string;
+  } | null = null;
+  try {
+    const r = await query<{
+      place_name: string | null;
+      latitude: string;
+      longitude: string;
+    }>(
+      `SELECT place_name,
+              latitude::text  AS latitude,
+              longitude::text AS longitude
+         FROM postcodes
+        WHERE country_code = 'AU'
+          AND postcode     = $1
+        LIMIT 1`,
+      [code],
+    );
+    row = r.rows[0] ?? null;
+  } catch {
+    row = null;
+  }
+
+  let listingTotal = 0;
+  let listingsLive = 0;
+  let listingsSold = 0;
+  try {
+    const r = await query<{
+      total: string;
+      live: string;
+      sold: string;
+    }>(
+      `SELECT COUNT(*)::text AS total,
+              COUNT(*) FILTER (
+                WHERE l.is_draft = FALSE
+                  AND l.is_published = TRUE
+                  AND l.sold_at IS NULL
+              )::text AS live,
+              COUNT(*) FILTER (WHERE l.sold_at IS NOT NULL)::text AS sold
+         FROM listings l
+        WHERE UPPER(TRIM(l.location_postal)) = $1`,
+      [code],
+    );
+    const c = r.rows[0];
+    listingTotal = Number(c?.total ?? 0);
+    listingsLive = Number(c?.live ?? 0);
+    listingsSold = Number(c?.sold ?? 0);
+  } catch {
+    // Ignore — leave counts at 0.
+  }
+
+  return {
+    postcode: code,
+    found: !!row,
+    place_name: row?.place_name ?? null,
+    latitude: row ? Number(row.latitude) : null,
+    longitude: row ? Number(row.longitude) : null,
+    listingTotal,
+    listingsLive,
+    listingsSold,
+  };
+}
+
 export default async function AdminPostcodesPage({
   searchParams,
 }: {
@@ -70,11 +155,23 @@ export default async function AdminPostcodesPage({
     bytes?: string;
     error?: string;
     status?: string;
+    q?: string;
   }>;
 }) {
   await requireAdmin();
   const sp = await searchParams;
   const summary = await loadSummary();
+
+  // Lookup form: normalise to alphanumeric uppercase and only
+  // query when the shape is plausible.
+  const rawQuery = (sp.q ?? "").trim();
+  const lookupCode = rawQuery
+    ? rawQuery.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8)
+    : "";
+  const lookup =
+    lookupCode && /^[A-Z0-9]{3,8}$/.test(lookupCode)
+      ? await lookupPostcode(lookupCode)
+      : null;
 
   const flash = (() => {
     if (sp.ok) {
@@ -171,6 +268,202 @@ export default async function AdminPostcodesPage({
         )}
       </section>
 
+      <section
+        className="form-card"
+        style={{ marginBottom: "var(--s-5)" }}
+      >
+        <h2 className="card-heading" style={{ marginTop: 0 }}>
+          Look up a postcode
+        </h2>
+        <p className="card-sub">
+          Type any postcode to see whether we have a centroid for it
+          and how many listings reference it. Useful for verifying
+          coverage before publishing in a new region.
+        </p>
+        <form
+          method="get"
+          action="/admin/postcodes"
+          style={{
+            display: "flex",
+            gap: "var(--s-3)",
+            alignItems: "flex-end",
+            flexWrap: "wrap",
+          }}
+        >
+          <Field label="Postcode" htmlFor="q">
+            <Input
+              id="q"
+              name="q"
+              type="text"
+              inputMode="numeric"
+              maxLength={8}
+              placeholder="e.g. 2000"
+              defaultValue={rawQuery}
+              autoComplete="off"
+              style={{ minWidth: 160 }}
+            />
+          </Field>
+          <Button type="submit" variant="primary">
+            Look up
+          </Button>
+          {rawQuery && (
+            <Link
+              href="/admin/postcodes"
+              style={{
+                fontSize: 13,
+                color: "var(--ink-3)",
+                textDecoration: "underline",
+                marginLeft: 8,
+              }}
+            >
+              Clear
+            </Link>
+          )}
+        </form>
+
+        {rawQuery && !lookup && (
+          <p
+            className="form-error"
+            style={{ marginTop: "var(--s-4)", marginBottom: 0 }}
+          >
+            <strong>Invalid format.</strong>
+            {" "}Postcodes should be 3–8 alphanumeric characters
+            (e.g. 2000).
+          </p>
+        )}
+
+        {lookup && (
+          <div
+            style={{
+              marginTop: "var(--s-4)",
+              padding: "var(--s-4) var(--s-5)",
+              background: lookup.found ? "#ecfdf5" : "#fef3c7",
+              border: `1px solid ${lookup.found ? "#a7f3d0" : "#fcd34d"}`,
+              borderRadius: 10,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "baseline",
+                gap: "var(--s-3)",
+                flexWrap: "wrap",
+                marginBottom: "var(--s-3)",
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: "var(--font-display)",
+                  fontSize: 32,
+                  fontWeight: 700,
+                  letterSpacing: "-0.02em",
+                  color: "var(--ink-1)",
+                  lineHeight: 1,
+                }}
+              >
+                {lookup.postcode}
+              </span>
+              <span
+                style={{
+                  fontFamily: "var(--font-mono)",
+                  fontSize: 11,
+                  letterSpacing: "0.12em",
+                  textTransform: "uppercase",
+                  fontWeight: 700,
+                  padding: "3px 10px",
+                  borderRadius: 999,
+                  background: lookup.found ? "#065f46" : "#78350f",
+                  color: "#fff",
+                }}
+              >
+                {lookup.found ? "Centroid on file" : "Not in table"}
+              </span>
+            </div>
+
+            <dl
+              style={{
+                display: "grid",
+                gridTemplateColumns: "auto 1fr",
+                columnGap: "var(--s-4)",
+                rowGap: 6,
+                margin: 0,
+                fontSize: 14,
+              }}
+            >
+              <LookupRow
+                k="Place name"
+                v={lookup.place_name ?? "—"}
+                muted={!lookup.place_name}
+              />
+              <LookupRow
+                k="Latitude"
+                v={lookup.latitude != null ? lookup.latitude.toFixed(5) : "—"}
+                muted={lookup.latitude == null}
+                mono
+              />
+              <LookupRow
+                k="Longitude"
+                v={lookup.longitude != null ? lookup.longitude.toFixed(5) : "—"}
+                muted={lookup.longitude == null}
+                mono
+              />
+              <LookupRow
+                k="Listings · total"
+                v={lookup.listingTotal.toLocaleString()}
+                mono
+              />
+              <LookupRow
+                k="Listings · live"
+                v={lookup.listingsLive.toLocaleString()}
+                mono
+              />
+              <LookupRow
+                k="Listings · sold"
+                v={lookup.listingsSold.toLocaleString()}
+                mono
+              />
+            </dl>
+
+            {lookup.found && lookup.latitude != null && lookup.longitude != null && (
+              <p
+                style={{
+                  margin: "var(--s-3) 0 0",
+                  fontSize: 12,
+                  color: "var(--ink-3)",
+                }}
+              >
+                <a
+                  href={`https://www.openstreetmap.org/?mlat=${lookup.latitude}&mlon=${lookup.longitude}#map=14/${lookup.latitude}/${lookup.longitude}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    color: "var(--ink-2)",
+                    textDecoration: "underline",
+                  }}
+                >
+                  View centroid on OpenStreetMap →
+                </a>
+              </p>
+            )}
+
+            {!lookup.found && lookup.listingTotal > 0 && (
+              <p
+                style={{
+                  margin: "var(--s-3) 0 0",
+                  fontSize: 12,
+                  color: "#78350f",
+                  lineHeight: 1.5,
+                }}
+              >
+                This postcode is in active use but missing from the
+                centroid table — run the GeoNames import below to
+                cover it.
+              </p>
+            )}
+          </div>
+        )}
+      </section>
+
       <section className="form-card">
         <h2 className="card-heading" style={{ marginTop: 0 }}>
           Import GeoNames AU
@@ -219,6 +512,43 @@ export default async function AdminPostcodesPage({
         </form>
       </section>
     </div>
+  );
+}
+
+function LookupRow({
+  k,
+  v,
+  muted,
+  mono,
+}: {
+  k: string;
+  v: string;
+  muted?: boolean;
+  mono?: boolean;
+}) {
+  return (
+    <>
+      <dt
+        style={{
+          color: "var(--ink-3)",
+          fontFamily: "var(--font-mono)",
+          fontSize: 11,
+          letterSpacing: "0.08em",
+          textTransform: "uppercase",
+        }}
+      >
+        {k}
+      </dt>
+      <dd
+        style={{
+          margin: 0,
+          color: muted ? "var(--ink-4)" : "var(--ink-1)",
+          fontFamily: mono ? "var(--font-mono)" : undefined,
+        }}
+      >
+        {v}
+      </dd>
+    </>
   );
 }
 
