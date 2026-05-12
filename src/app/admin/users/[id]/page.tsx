@@ -358,7 +358,7 @@ export default async function AdminUserDetailPage({
   const isSuspended = !!user.suspended_at;
 
   return (
-    <div className="page admin-page" style={{ maxWidth: 720 }}>
+    <div className="page admin-page" style={{ maxWidth: "100%" }}>
       <Link href="/admin/users" className="back-link">
         ← All users
       </Link>
