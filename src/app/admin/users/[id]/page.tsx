@@ -396,6 +396,131 @@ export default async function AdminUserDetailPage({
       )}
 
       <section className="form-card" style={{ marginBottom: "var(--s-5)" }}>
+        <h2 className="card-heading">Account controls</h2>
+        <p className="card-sub">
+          Suspending kills active sessions and blocks login. Toggle admin
+          carefully — admins can manage other accounts.
+        </p>
+
+        <div className="account-controls">
+          <form action={toggleAdminRole}>
+            <input type="hidden" name="userId" value={user.id} />
+            <Button type="submit" variant="ghost" disabled={isMe}>
+              {user.is_admin ? "Revoke admin role" : "Make admin"}
+            </Button>
+          </form>
+          <form action={toggleUserSuspended}>
+            <input type="hidden" name="userId" value={user.id} />
+            <Button
+              type="submit"
+              variant={isSuspended ? "primary" : "dark"}
+              disabled={isMe}
+            >
+              {isSuspended ? "Unsuspend account" : "Suspend account"}
+            </Button>
+          </form>
+          <form action={startImpersonation}>
+            <input type="hidden" name="targetUserId" value={user.id} />
+            <Button
+              type="submit"
+              variant="dark"
+              disabled={isMe || isSuspended}
+              title={
+                isMe
+                  ? "You can't impersonate yourself."
+                  : isSuspended
+                  ? "Unsuspend the account first."
+                  : "Open the site as this user — switch back via the menu bar."
+              }
+            >
+              Log in as this user
+            </Button>
+          </form>
+        </div>
+      </section>
+
+      <section className="form-card" style={{ marginBottom: "var(--s-5)" }}>
+        <h2 className="card-heading">Profile</h2>
+        <p className="card-sub">
+          Edit on behalf of the user. Changes apply immediately.
+        </p>
+
+        <form
+          action={updateUserAsAdmin}
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "var(--s-4)",
+          }}
+        >
+          <input type="hidden" name="userId" value={user.id} />
+
+          <div className="grid-2">
+            <Field label="Title" htmlFor="title">
+              <select
+                id="title"
+                name="title"
+                className="input"
+                defaultValue={user.title ?? ""}
+              >
+                <option value="">—</option>
+                {TITLES.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <div />
+          </div>
+
+          <div className="grid-2">
+            <Field label="First name" htmlFor="first_name">
+              <Input
+                id="first_name"
+                name="first_name"
+                maxLength={64}
+                defaultValue={user.first_name ?? ""}
+              />
+            </Field>
+            <Field label="Surname" htmlFor="surname">
+              <Input
+                id="surname"
+                name="surname"
+                maxLength={64}
+                defaultValue={user.surname ?? ""}
+              />
+            </Field>
+          </div>
+
+          <div className="grid-2">
+            <Field label="Town / city" htmlFor="town">
+              <Input
+                id="town"
+                name="town"
+                maxLength={64}
+                defaultValue={user.town ?? ""}
+              />
+            </Field>
+            <Field label="Postcode" htmlFor="postcode">
+              <Input
+                id="postcode"
+                name="postcode"
+                maxLength={16}
+                defaultValue={user.postcode ?? ""}
+              />
+            </Field>
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "flex-end" }}>
+            <Button type="submit" variant="primary" iconRight="arrow">
+              Save profile
+            </Button>
+          </div>
+        </form>
+      </section>
+
+      <section className="form-card" style={{ marginBottom: "var(--s-5)" }}>
         <h2 className="card-heading">Activity</h2>
         <div className="kv-list">
           <dt>Listings</dt>
@@ -1072,131 +1197,6 @@ export default async function AdminUserDetailPage({
             This user hasn&rsquo;t referred anyone yet.
           </p>
         )}
-      </section>
-
-      <section className="form-card" style={{ marginBottom: "var(--s-5)" }}>
-        <h2 className="card-heading">Profile</h2>
-        <p className="card-sub">
-          Edit on behalf of the user. Changes apply immediately.
-        </p>
-
-        <form
-          action={updateUserAsAdmin}
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "var(--s-4)",
-          }}
-        >
-          <input type="hidden" name="userId" value={user.id} />
-
-          <div className="grid-2">
-            <Field label="Title" htmlFor="title">
-              <select
-                id="title"
-                name="title"
-                className="input"
-                defaultValue={user.title ?? ""}
-              >
-                <option value="">—</option>
-                {TITLES.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <div />
-          </div>
-
-          <div className="grid-2">
-            <Field label="First name" htmlFor="first_name">
-              <Input
-                id="first_name"
-                name="first_name"
-                maxLength={64}
-                defaultValue={user.first_name ?? ""}
-              />
-            </Field>
-            <Field label="Surname" htmlFor="surname">
-              <Input
-                id="surname"
-                name="surname"
-                maxLength={64}
-                defaultValue={user.surname ?? ""}
-              />
-            </Field>
-          </div>
-
-          <div className="grid-2">
-            <Field label="Town / city" htmlFor="town">
-              <Input
-                id="town"
-                name="town"
-                maxLength={64}
-                defaultValue={user.town ?? ""}
-              />
-            </Field>
-            <Field label="Postcode" htmlFor="postcode">
-              <Input
-                id="postcode"
-                name="postcode"
-                maxLength={16}
-                defaultValue={user.postcode ?? ""}
-              />
-            </Field>
-          </div>
-
-          <div style={{ display: "flex", justifyContent: "flex-end" }}>
-            <Button type="submit" variant="primary" iconRight="arrow">
-              Save profile
-            </Button>
-          </div>
-        </form>
-      </section>
-
-      <section className="form-card" style={{ marginBottom: "var(--s-5)" }}>
-        <h2 className="card-heading">Account controls</h2>
-        <p className="card-sub">
-          Suspending kills active sessions and blocks login. Toggle admin
-          carefully — admins can manage other accounts.
-        </p>
-
-        <div className="account-controls">
-          <form action={toggleAdminRole}>
-            <input type="hidden" name="userId" value={user.id} />
-            <Button type="submit" variant="ghost" disabled={isMe}>
-              {user.is_admin ? "Revoke admin role" : "Make admin"}
-            </Button>
-          </form>
-          <form action={toggleUserSuspended}>
-            <input type="hidden" name="userId" value={user.id} />
-            <Button
-              type="submit"
-              variant={isSuspended ? "primary" : "dark"}
-              disabled={isMe}
-            >
-              {isSuspended ? "Unsuspend account" : "Suspend account"}
-            </Button>
-          </form>
-          <form action={startImpersonation}>
-            <input type="hidden" name="targetUserId" value={user.id} />
-            <Button
-              type="submit"
-              variant="dark"
-              disabled={isMe || isSuspended}
-              title={
-                isMe
-                  ? "You can't impersonate yourself."
-                  : isSuspended
-                  ? "Unsuspend the account first."
-                  : "Open the site as this user — switch back via the menu bar."
-              }
-            >
-              Log in as this user
-            </Button>
-          </form>
-        </div>
       </section>
 
       <section className="form-card">
