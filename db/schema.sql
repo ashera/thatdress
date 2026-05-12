@@ -1216,3 +1216,57 @@ UPDATE listings
   ) derived
  WHERE listings.id = derived.id
    AND listings.title IS DISTINCT FROM derived.t;
+
+-- =========================================================
+-- Backlink ledger. Manual + future-automated record of every
+-- inbound link we know of — where it lives, what it points at,
+-- whether it's still up. Drives /admin/links so the SEO /
+-- outreach work has a single source of truth instead of a
+-- scattered spreadsheet.
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS backlinks (
+  id                 BIGSERIAL    PRIMARY KEY,
+  source_url         TEXT         NOT NULL,
+  source_domain      TEXT         NOT NULL,
+  source_title       TEXT,
+  target_url         TEXT         NOT NULL,
+  anchor_text        TEXT,
+  status             TEXT         NOT NULL DEFAULT 'alive',
+  link_type          TEXT         NOT NULL DEFAULT 'unknown',
+  source_kind        TEXT         NOT NULL DEFAULT 'other',
+  discovered_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  last_checked_at    TIMESTAMPTZ,
+  notes              TEXT,
+  created_by_user_id BIGINT       REFERENCES users(id) ON DELETE SET NULL,
+  created_at         TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  updated_at         TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE backlinks
+  DROP CONSTRAINT IF EXISTS backlinks_status_check;
+ALTER TABLE backlinks
+  ADD CONSTRAINT backlinks_status_check
+    CHECK (status IN ('alive', 'dead', 'pending', 'removed'));
+
+ALTER TABLE backlinks
+  DROP CONSTRAINT IF EXISTS backlinks_link_type_check;
+ALTER TABLE backlinks
+  ADD CONSTRAINT backlinks_link_type_check
+    CHECK (link_type IN ('dofollow', 'nofollow', 'sponsored', 'ugc', 'unknown'));
+
+ALTER TABLE backlinks
+  DROP CONSTRAINT IF EXISTS backlinks_source_kind_check;
+ALTER TABLE backlinks
+  ADD CONSTRAINT backlinks_source_kind_check
+    CHECK (source_kind IN (
+      'editorial', 'directory', 'forum', 'social', 'blog-post',
+      'press', 'partner', 'review', 'other'
+    ));
+
+CREATE INDEX IF NOT EXISTS backlinks_status_idx
+  ON backlinks (status);
+CREATE INDEX IF NOT EXISTS backlinks_source_domain_idx
+  ON backlinks (source_domain);
+CREATE INDEX IF NOT EXISTS backlinks_discovered_idx
+  ON backlinks (discovered_at DESC);

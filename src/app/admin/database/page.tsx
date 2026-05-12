@@ -184,6 +184,12 @@ const TABLE_DESCRIPTIONS: Record<string, TableMeta> = {
     group: "Auth & users",
     desc: "Site-wide switches (e.g. allow_indexing). Single-row table managed at /admin/site-settings.",
   },
+
+  // SEO / Outreach
+  backlinks: {
+    group: "Marketplace",
+    desc: "Inbound-link ledger. Every external page known to link back to frockd, with status (alive / dead / pending / removed), source kind, anchor text, and check timestamps. Managed at /admin/links.",
+  },
 };
 
 const GROUP_ORDER = [

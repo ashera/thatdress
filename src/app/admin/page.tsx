@@ -91,6 +91,11 @@ const ADMIN_LINKS: Array<{ href: string; title: string; desc: string }> = [
     desc: "Import the GeoNames AU dataset to power the listings map view. Tracks coverage of live listings against centroid lookups.",
   },
   {
+    href: "/admin/links",
+    title: "Link manager",
+    desc: "Inbound-link ledger — log every external page that links back to frockd, track whether each link is still alive, and group by source kind.",
+  },
+  {
     href: "/admin/site-settings",
     title: "Site Settings",
     desc: "Block crawlers pre-launch, set the Verified-badge threshold, other site-wide switches.",
