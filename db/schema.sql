@@ -615,6 +615,84 @@ CREATE TABLE IF NOT EXISTS regions (
 ALTER TABLE regions
   ADD COLUMN IF NOT EXISTS short_name TEXT;
 
+-- =========================================================
+-- Postcode → centroid lookup. Drives the map view on /listings:
+-- listings.location_postal matches postcodes.postcode and the
+-- map renders one cluster marker per postcode at its centroid.
+-- Seeded with major AU metros below; full GeoNames AU dataset
+-- can be imported by an admin later via the postcodes admin tool.
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS postcodes (
+  country_code  TEXT         NOT NULL DEFAULT 'AU',
+  postcode      TEXT         NOT NULL,
+  place_name    TEXT,
+  latitude      NUMERIC(8,5) NOT NULL,
+  longitude     NUMERIC(8,5) NOT NULL,
+  PRIMARY KEY (country_code, postcode)
+);
+
+CREATE INDEX IF NOT EXISTS postcodes_postcode_idx
+  ON postcodes (postcode);
+
+-- Seed: major AU metro postcodes. Enough to make the map view
+-- meaningful on day one; a full GeoNames import covers the long
+-- tail. ON CONFLICT DO NOTHING so re-running the migration is safe.
+INSERT INTO postcodes (country_code, postcode, place_name, latitude, longitude) VALUES
+  ('AU', '2000', 'Sydney',                 -33.86785, 151.20732),
+  ('AU', '2010', 'Surry Hills',            -33.88410, 151.21260),
+  ('AU', '2011', 'Potts Point',            -33.87000, 151.22500),
+  ('AU', '2026', 'Bondi',                  -33.89150, 151.27330),
+  ('AU', '2031', 'Randwick',               -33.91220, 151.24130),
+  ('AU', '2060', 'North Sydney',           -33.83980, 151.20670),
+  ('AU', '2088', 'Mosman',                 -33.83020, 151.24340),
+  ('AU', '2095', 'Manly',                  -33.79730, 151.28490),
+  ('AU', '2150', 'Parramatta',             -33.81500, 151.00100),
+  ('AU', '2200', 'Bankstown',              -33.91950, 151.03450),
+  ('AU', '2500', 'Wollongong',             -34.42490, 150.89310),
+  ('AU', '2600', 'Canberra (Parkes)',      -35.30750, 149.12440),
+  ('AU', '2601', 'Canberra (City)',        -35.27800, 149.13100),
+  ('AU', '2602', 'Canberra (Dickson)',     -35.25080, 149.13990),
+  ('AU', '2914', 'Forde',                  -35.17040, 149.15010),
+  ('AU', '3000', 'Melbourne',              -37.81360, 144.96310),
+  ('AU', '3004', 'Melbourne (St Kilda Rd)',-37.84210, 144.97550),
+  ('AU', '3008', 'Docklands',              -37.81700, 144.94650),
+  ('AU', '3052', 'Parkville',              -37.78670, 144.95630),
+  ('AU', '3121', 'Richmond',               -37.81920, 144.99970),
+  ('AU', '3141', 'South Yarra',            -37.83830, 144.99230),
+  ('AU', '3182', 'St Kilda',               -37.86770, 144.97800),
+  ('AU', '3206', 'Albert Park',            -37.84680, 144.95430),
+  ('AU', '3220', 'Geelong',                -38.14990, 144.36170),
+  ('AU', '3350', 'Ballarat Central',       -37.56220, 143.85030),
+  ('AU', '3550', 'Bendigo',                -36.75820, 144.27940),
+  ('AU', '4000', 'Brisbane',               -27.46980, 153.02510),
+  ('AU', '4005', 'New Farm',               -27.46720, 153.04760),
+  ('AU', '4006', 'Fortitude Valley',       -27.45680, 153.03430),
+  ('AU', '4101', 'South Brisbane',         -27.48140, 153.02430),
+  ('AU', '4169', 'Kangaroo Point',         -27.47410, 153.03680),
+  ('AU', '4215', 'Southport',              -27.96770, 153.40010),
+  ('AU', '4217', 'Surfers Paradise',       -28.00040, 153.42890),
+  ('AU', '4218', 'Broadbeach',             -28.02670, 153.43320),
+  ('AU', '4350', 'Toowoomba',              -27.56000, 151.94300),
+  ('AU', '4551', 'Caloundra',              -26.79780, 153.13310),
+  ('AU', '4870', 'Cairns',                 -16.92030, 145.77200),
+  ('AU', '5000', 'Adelaide',               -34.92850, 138.60070),
+  ('AU', '5006', 'North Adelaide',         -34.90730, 138.59300),
+  ('AU', '5067', 'Norwood',                -34.92090, 138.62930),
+  ('AU', '5095', 'Mawson Lakes',           -34.80710, 138.61560),
+  ('AU', '6000', 'Perth',                  -31.95220, 115.86140),
+  ('AU', '6005', 'West Perth',             -31.94830, 115.84410),
+  ('AU', '6008', 'Subiaco',                -31.94780, 115.82540),
+  ('AU', '6010', 'Claremont',              -31.98260, 115.78050),
+  ('AU', '6011', 'Cottesloe',              -31.99580, 115.75420),
+  ('AU', '6160', 'Fremantle',              -32.05690, 115.74390),
+  ('AU', '6230', 'Bunbury',                -33.32710, 115.63660),
+  ('AU', '7000', 'Hobart',                 -42.88210, 147.32720),
+  ('AU', '7008', 'New Town',               -42.84620, 147.30060),
+  ('AU', '7250', 'Launceston',             -41.43880, 147.13830),
+  ('AU', '0800', 'Darwin',                 -12.46340, 130.84560)
+ON CONFLICT (country_code, postcode) DO NOTHING;
+
 ALTER TABLE listings
   ADD COLUMN IF NOT EXISTS region_id BIGINT REFERENCES regions(id) ON DELETE SET NULL;
 
