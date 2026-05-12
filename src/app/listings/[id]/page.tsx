@@ -760,12 +760,22 @@ export default async function ListingDetailPage({
     : "Unknown seller";
 
   const specGroups = buildSpecs(l);
-  // Fit calculator: surface how the dress fits the current viewer
-  // when they've entered their own measurements on /profile. Only
-  // renders for non-owner buyers (sellers don't need a fit chip on
-  // their own listing; admins see it for parity).
+  // Fit calculator: surface how the dress fits the current viewer.
+  // Three states for non-owner buyers:
+  //  - 'assessed' — user has measurements + at least one overlaps a
+  //                 dress measurement → real per-axis assessment.
+  //  - 'cta'      — user has no measurements yet → empty card with a
+  //                 'set your measurements' link.
+  //  - hidden     — user has measurements but dress has none, or
+  //                 viewer is the seller/admin on their own listing.
+  const userHasMeasurements = !!(
+    currentUser &&
+    (currentUser.bustInches != null ||
+      currentUser.waistInches != null ||
+      currentUser.hipsInches != null)
+  );
   const fit =
-    currentUser && !isOwner
+    currentUser && !isOwner && userHasMeasurements
       ? assessFit(
           {
             bust: currentUser.bustInches,
@@ -779,6 +789,10 @@ export default async function ListingDetailPage({
           },
         )
       : null;
+  // Show the empty-state card to a signed-in non-owner buyer who
+  // hasn't entered measurements yet — encourages profile completion
+  // and primes them to come back with a fit assessment.
+  const showFitCta = !!(currentUser && !isOwner && !userHasMeasurements);
   // Seller's review summary — surfaced inline in the seller block
   // once the count crosses the admin-configured threshold.
   const [sellerReviewSummary, pageSettings, provenance] = await Promise.all([
@@ -1318,6 +1332,68 @@ export default async function ListingDetailPage({
           </p>
         </div>
       </article>
+
+      {showFitCta && (
+        <section className="detail-specs">
+          <h2 className="detail-specs-heading">How it fits you</h2>
+          <div
+            style={{
+              padding: "var(--s-4) var(--s-5)",
+              background: "var(--surface-sunken)",
+              border: "1px dashed var(--hairline-strong)",
+              borderRadius: 10,
+              display: "flex",
+              alignItems: "center",
+              gap: "var(--s-4)",
+              flexWrap: "wrap",
+            }}
+          >
+            <div style={{ flex: "1 1 280px", minWidth: 0 }}>
+              <p
+                style={{
+                  margin: "0 0 4px",
+                  fontWeight: 700,
+                  color: "var(--ink-1)",
+                  fontSize: 15,
+                }}
+              >
+                Set your measurements once, get fit checks on every
+                listing.
+              </p>
+              <p
+                style={{
+                  margin: 0,
+                  color: "var(--ink-3)",
+                  fontSize: 13,
+                  lineHeight: 1.5,
+                }}
+              >
+                We&rsquo;ll compare your bust, waist, and hips against
+                each dress&rsquo;s measurements and show a chip per
+                axis (perfect / snug / loose). Private — only you see
+                it.
+              </p>
+            </div>
+            <Link
+              href="/profile"
+              style={{
+                display: "inline-block",
+                padding: "10px 18px",
+                borderRadius: 999,
+                background: "var(--ink-1)",
+                color: "#fff",
+                textDecoration: "none",
+                fontWeight: 600,
+                fontSize: 14,
+                whiteSpace: "nowrap",
+                flex: "0 0 auto",
+              }}
+            >
+              Add measurements →
+            </Link>
+          </div>
+        </section>
+      )}
 
       {fit && (
         <section className="detail-specs">
