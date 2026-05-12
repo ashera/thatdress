@@ -1306,6 +1306,17 @@ export default async function ListingDetailPage({
                 </Button>
               </form>
             )}
+            {isAdmin && l.dress_id && (
+              <ButtonLink
+                href={`/admin/dresses/${l.dress_id}`}
+                variant="ghost"
+                size="sm"
+                iconRight="arrow"
+                title="Open this dress's admin detail page — ownership history, listing timeline, force-relist-nudge"
+              >
+                Open dress
+              </ButtonLink>
+            )}
             {!isOwner && !isAdmin && currentUser && !l.sold_at && (
               <ReportListingDialog listingId={l.id} />
             )}
