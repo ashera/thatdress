@@ -688,7 +688,7 @@ export default async function SellerProfilePage({
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={`/api/listings/${w.thumb_listing_id}/images/${w.thumb_image_id}?w=200`}
-                          alt=""
+                          alt={label}
                           style={{
                             position: "absolute",
                             inset: 0,

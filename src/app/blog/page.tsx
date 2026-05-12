@@ -262,7 +262,7 @@ export default async function BlogIndexPage({
                   >
                     <img
                       src={`/api/blog/posts/${p.id}/hero`}
-                      alt=""
+                      alt={`Hero image for blog post: ${p.title}`}
                       style={{
                         width: "100%",
                         height: "100%",

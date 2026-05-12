@@ -258,8 +258,7 @@ export default async function HowItWorksPage() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/how-it-works.png"
-            alt=""
-            aria-hidden
+            alt="Illustrated walk-through of buying and selling pre-loved formal dresses on frockd"
             width={280}
             height={280}
             style={{

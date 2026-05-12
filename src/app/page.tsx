@@ -272,10 +272,10 @@ export default async function Home({
         </div>
       )}
       <section className="hero">
-        <div className="hero-sketch" aria-hidden>
+        <div className="hero-sketch">
           <Image
             src="/dress-sketch-tr-back.png"
-            alt=""
+            alt="Illustration of an elegant pre-loved formal dress hanging from a hanger — frockd's peer-to-peer marketplace for second-hand designer dresses in Australia"
             fill
             priority
             sizes="(max-width: 900px) 100vw, 50vw"

@@ -409,7 +409,7 @@ export default async function MyListingsPage({
       >
         <Image
           src="/tidy-wardrobe.png"
-          alt=""
+          alt="A tidy wardrobe filled with formal dresses — your frockd wardrobe"
           width={140}
           height={140}
           priority
@@ -753,7 +753,7 @@ export default async function MyListingsPage({
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={`/api/listings/${d.thumb_listing_id}/images/${d.thumb_image_id}?w=200`}
-                          alt=""
+                          alt={label}
                           style={{
                             position: "absolute",
                             inset: 0,
@@ -960,7 +960,7 @@ function SellerStatsPanel({ stats }: { stats: SellerStats }) {
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={`/api/listings/${stats.topListing.id}/images/${stats.topListing.primary_image_id}?w=200`}
-              alt=""
+              alt={stats.topListing.title}
               style={{
                 width: 40,
                 height: 53,

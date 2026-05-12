@@ -238,7 +238,7 @@ export default async function BlogPostPage({
             <img
               className="blog-banner-img"
               src={`/api/blog/posts/${post.id}/hero`}
-              alt=""
+              alt={`Hero image for ${post.title}`}
             />
           )}
           <div className="blog-banner-scrim" aria-hidden />

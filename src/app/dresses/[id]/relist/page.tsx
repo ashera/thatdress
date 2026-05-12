@@ -200,7 +200,7 @@ export default async function RelistDressPage({
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={`/api/listings/${dress.via_listing_id}/images/${dress.via_primary_image_id}?w=200`}
-                alt=""
+                alt={label}
                 style={{
                   position: "absolute",
                   inset: 0,

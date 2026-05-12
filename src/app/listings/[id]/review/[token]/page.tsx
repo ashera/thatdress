@@ -179,7 +179,7 @@ export default async function ReviewListingPage({
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={`/api/listings/${id}/images/${listing.primary_image_id}?w=200`}
-                alt=""
+                alt={listing.title}
                 style={{ width: "100%", height: "100%", objectFit: "cover" }}
               />
             )}
