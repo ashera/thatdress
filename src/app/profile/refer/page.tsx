@@ -97,7 +97,7 @@ export default async function ReferPage() {
 
   return (
     <div className="page page--pad">
-      <main style={{ maxWidth: 720, margin: "0 auto" }}>
+      <main style={{ maxWidth: 880, margin: "0 auto" }}>
         <Link href="/profile" className="back-link">
           ← Back to profile
         </Link>
