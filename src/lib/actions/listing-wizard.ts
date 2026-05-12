@@ -732,8 +732,14 @@ export async function publishDraftListing(formData: FormData): Promise<void> {
   const priceCents = parsePriceToCents(getString(formData, "price"));
   if (priceCents === null) redirect(`${stepUrl}?error=invalid-price`);
 
-  const location_postal = getString(formData, "location_postal", 64);
-  if (!location_postal) redirect(`${stepUrl}?error=invalid-location`);
+  // AU postcodes are 4 digits (NT codes are zero-padded — '0800',
+  // not '800'). The wizard's PostcodeInput restricts typing to that
+  // shape; we re-enforce here so a hand-crafted POST can't slip in
+  // free-text values that would later miss the centroid lookup.
+  const location_postal = getString(formData, "location_postal", 4);
+  if (!/^\d{4}$/.test(location_postal)) {
+    redirect(`${stepUrl}?error=invalid-location`);
+  }
 
   const formRegionId = String(formData.get("region_id") ?? "").trim();
   const regionId = /^\d+$/.test(formRegionId)

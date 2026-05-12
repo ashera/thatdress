@@ -10,6 +10,7 @@ import {
   type DesignerTier,
 } from "@/lib/value-estimator";
 import { Button, Field, Input, Textarea } from "../../../../_components/ui";
+import { PostcodeInput } from "./_postcode-input";
 import {
   isEditMode,
   loadDraft,
@@ -266,14 +267,8 @@ export default async function WizardPublishPage({
                 defaultValue={priceInputDefault}
               />
             </Field>
-            <Field label="Postal code / location" htmlFor="location_postal">
-              <Input
-                id="location_postal"
-                name="location_postal"
-                required
-                maxLength={64}
-                defaultValue={draft.location_postal ?? ""}
-              />
+            <Field label="Postcode" htmlFor="location_postal">
+              <PostcodeInput defaultValue={draft.location_postal ?? ""} />
             </Field>
           </div>
 

@@ -797,7 +797,7 @@ export const STEP_ERRORS: Record<string, string> = {
   "invalid-occasion": "Pick an occasion.",
   "invalid-condition": "Pick a condition.",
   "invalid-price": "Enter a valid price.",
-  "invalid-location": "Postal code or location is required.",
+  "invalid-location": "Enter a valid 4-digit AU postcode.",
   "out-of-range": "One of the numeric values is out of the allowed range.",
   "too-many": "You can attach up to 10 photos.",
   "too-large": "Each photo must be 5 MB or smaller.",
