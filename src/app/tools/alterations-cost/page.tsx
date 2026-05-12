@@ -8,6 +8,7 @@ import {
   type AlterationKind,
 } from "@/lib/alterations-estimator";
 import { Button, ButtonLink } from "../../_components/ui";
+import { ToolHero } from "../../_components/tool-hero";
 
 export const revalidate = 86400;
 
@@ -75,37 +76,28 @@ export default async function AlterationsCostPage({
           ← All tools
         </Link>
 
-        <header style={{ margin: "var(--s-5) 0 var(--s-7)" }}>
-          <p className="eyebrow" style={{ margin: 0, color: "var(--ink-3)" }}>
-            frockd tools
-          </p>
-          <h1
-            style={{
-              fontFamily: "var(--font-display)",
-              fontSize: "var(--t-h1)",
-              color: "var(--ink-1)",
-              margin: "var(--s-2) 0 var(--s-3)",
-              letterSpacing: "-0.02em",
-              lineHeight: 1.05,
-            }}
-          >
-            What should the tailor charge?
-          </h1>
-          <p
-            style={{
-              color: "var(--ink-2)",
-              fontSize: "var(--t-body-l)",
-              margin: 0,
-              maxWidth: "60ch",
-              lineHeight: 1.5,
-            }}
-          >
-            Pick what needs doing. We&rsquo;ll estimate the total based on
-            Australian metro tailor pricing. Ranges, not single numbers —
-            beaded fabric, brand-name dresses, and emergency turnarounds
-            all cost more.
-          </p>
-        </header>
+        <ToolHero
+          eyebrow="frockd · tools"
+          title="What should the tailor charge?"
+          subtitle={
+            <>
+              Pick what needs doing. We&rsquo;ll estimate the total based
+              on Australian metro tailor pricing. Ranges, not single
+              numbers — beaded fabric, brand-name dresses, and emergency
+              turnarounds all cost more.
+            </>
+          }
+          /* (3,1) sitting, hand-sewing — careful tailoring. */
+          spriteX="75%"
+          spriteY="100%"
+          speech="Let's see what tailoring will cost you."
+          accent={{
+            from: "#fdf2f8",
+            to: "#fce7f3",
+            border: "#fbcfe8",
+            ink: "#9d174d",
+          }}
+        />
 
         <form
           method="get"

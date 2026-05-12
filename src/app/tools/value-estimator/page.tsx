@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { query } from "@/lib/db";
 import { getBaseUrl } from "@/lib/email";
+import { ToolHero } from "../../_components/tool-hero";
 import {
   estimateValue,
   isConditionSlug,
@@ -390,36 +391,27 @@ export default async function ValueEstimatorPage({
           </Link>
         )}
 
-        <header style={{ margin: "var(--s-5) 0 var(--s-7)" }}>
-          <p className="eyebrow" style={{ margin: 0, color: "var(--ink-3)" }}>
-            frockd tools
-          </p>
-          <h1
-            style={{
-              fontFamily: "var(--font-display)",
-              fontSize: "var(--t-h1)",
-              color: "var(--ink-1)",
-              margin: "var(--s-2) 0 var(--s-3)",
-              letterSpacing: "-0.02em",
-              lineHeight: 1.05,
-            }}
-          >
-            What&rsquo;s my dress worth?
-          </h1>
-          <p
-            style={{
-              color: "var(--ink-2)",
-              fontSize: "var(--t-body-l)",
-              margin: 0,
-              maxWidth: "60ch",
-              lineHeight: 1.5,
-            }}
-          >
-            A guidance range for your designer dress on the Australian
-            peer-to-peer resale market. Based on the brand, condition, age,
-            and original retail price — no email required.
-          </p>
-        </header>
+        <ToolHero
+          eyebrow="frockd · tools"
+          title="What's my dress worth?"
+          subtitle={
+            <>
+              A guidance range for your designer dress on the Australian
+              peer-to-peer resale market. Based on the brand, condition,
+              age, and original retail price — no email required.
+            </>
+          }
+          /* (4,0) standing by the mannequin — presenting / appraising. */
+          spriteX="100%"
+          spriteY="0%"
+          speech="Let me appraise this for you."
+          accent={{
+            from: "#ecfdf5",
+            to: "#d1fae5",
+            border: "#a7f3d0",
+            ink: "#065f46",
+          }}
+        />
 
         <form
           method="get"

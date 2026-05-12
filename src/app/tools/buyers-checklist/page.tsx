@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getBaseUrl } from "@/lib/email";
 import { BUYERS_CHECKLIST } from "@/lib/buyers-checklist";
 import { ButtonLink } from "../../_components/ui";
+import { ToolHero } from "../../_components/tool-hero";
 
 export const revalidate = 86400;
 
@@ -47,36 +48,27 @@ export default function BuyersChecklistPage() {
           ← All tools
         </Link>
 
-        <header style={{ margin: "var(--s-5) 0 var(--s-7)" }}>
-          <p className="eyebrow" style={{ margin: 0, color: "var(--ink-3)" }}>
-            frockd tools
-          </p>
-          <h1
-            style={{
-              fontFamily: "var(--font-display)",
-              fontSize: "var(--t-h1)",
-              color: "var(--ink-1)",
-              margin: "var(--s-2) 0 var(--s-3)",
-              letterSpacing: "-0.02em",
-              lineHeight: 1.05,
-            }}
-          >
-            Buyer&rsquo;s checklist
-          </h1>
-          <p
-            style={{
-              color: "var(--ink-2)",
-              fontSize: "var(--t-body-l)",
-              margin: 0,
-              maxWidth: "60ch",
-              lineHeight: 1.5,
-            }}
-          >
-            {TOTAL_ITEMS} things to check before, during, and after a
-            pre-loved dress purchase. Tick them off as you go — most
-            buyer regret comes from skipping items in section&nbsp;2.
-          </p>
-        </header>
+        <ToolHero
+          eyebrow="frockd · tools"
+          title="Buyer's checklist"
+          subtitle={
+            <>
+              {TOTAL_ITEMS} things to check before, during, and after a
+              pre-loved dress purchase. Tick them off as you go — most
+              buyer regret comes from skipping items in section&nbsp;2.
+            </>
+          }
+          /* (0,0) tape measure at the mannequin — inspecting carefully. */
+          spriteX="0%"
+          spriteY="0%"
+          speech="Let me show you what to look for."
+          accent={{
+            from: "#eff6ff",
+            to: "#dbeafe",
+            border: "#bfdbfe",
+            ink: "#1e40af",
+          }}
+        />
 
         {BUYERS_CHECKLIST.map((section, sectionIdx) => (
           <section
