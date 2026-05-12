@@ -3,7 +3,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { query } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { startDraftListing } from "@/lib/actions/listing-wizard";
+import {
+  startDraftListing,
+  startRelistFromDress,
+} from "@/lib/actions/listing-wizard";
 import { computeHealth } from "@/lib/listing-health";
 import { getSellerStats, type SellerStats } from "@/lib/listing-views";
 import { loadSiteSettings } from "@/lib/site-settings";
@@ -149,6 +152,78 @@ async function fetchDrafts(userId: string): Promise<DraftItem[]> {
         health_score: score,
       };
     });
+  } catch {
+    return [];
+  }
+}
+
+type OwnedDress = {
+  dress_id: string;
+  disposition: "in-use" | "kept";
+  designer_name: string | null;
+  model: string | null;
+  year: number | null;
+  size_label: string | null;
+  thumb_listing_id: string | null;
+  thumb_image_id: string | null;
+  last_sold_at: string | null;
+};
+
+/**
+ * Dresses the user currently owns but doesn't have a live listing
+ * for. Covers two cases:
+ *  - disposition='in-use'  — bought from someone, hasn't relisted
+ *  - disposition='kept'    — relist-nudge dismissed via 'I'm keeping it'
+ *
+ * Excludes anything with a live published non-sold listing (those
+ * show in the listings list above) and 'lost' / 'available' dresses
+ * (no current owner, or already being relisted). LATERAL picks the
+ * newest listing's primary image as the thumbnail so the card has
+ * a face even when the dress has changed owners.
+ */
+async function fetchOwnedDresses(userId: string): Promise<OwnedDress[]> {
+  if (!/^\d+$/.test(userId)) return [];
+  try {
+    const r = await query<OwnedDress>(
+      `SELECT d.id::text                            AS dress_id,
+              d.disposition                          AS disposition,
+              des.name                               AS designer_name,
+              d.model,
+              d.year,
+              ds.label                               AS size_label,
+              thumb.listing_id::text                 AS thumb_listing_id,
+              thumb.image_id::text                   AS thumb_image_id,
+              (
+                SELECT MAX(l.sold_at)::text FROM listings l
+                  WHERE l.dress_id = d.id
+                    AND l.sold_at IS NOT NULL
+              )                                      AS last_sold_at
+         FROM dresses d
+         LEFT JOIN designers   des ON des.id = d.designer_id
+         LEFT JOIN dress_sizes ds  ON ds.id  = d.size_id
+         LEFT JOIN LATERAL (
+           SELECT l.id AS listing_id, li.id AS image_id
+             FROM listings l
+             JOIN listing_images li ON li.listing_id = l.id
+            WHERE l.dress_id = d.id
+            ORDER BY l.created_at DESC,
+                     li.is_primary DESC, li.position, li.id
+            LIMIT 1
+         ) thumb ON TRUE
+        WHERE d.current_owner_user_id = $1::bigint
+          AND d.disposition IN ('in-use', 'kept')
+          AND NOT EXISTS (
+            SELECT 1 FROM listings l
+             WHERE l.dress_id     = d.id
+               AND l.is_draft     = FALSE
+               AND l.is_published = TRUE
+               AND l.sold_at IS NULL
+          )
+        ORDER BY d.created_at DESC
+        LIMIT 100`,
+      [userId],
+    );
+    return r.rows;
   } catch {
     return [];
   }
@@ -306,10 +381,11 @@ export default async function MyListingsPage({
   const sp = searchParams ? await searchParams : {};
   const nudgeFlash = sp.nudge ?? null;
 
-  const [result, drafts, settings, stats, buyersByListing] =
+  const [result, drafts, ownedDresses, settings, stats, buyersByListing] =
     await Promise.all([
       fetchOwnListings(user.id),
       fetchDrafts(user.id),
+      fetchOwnedDresses(user.id),
       loadSiteSettings(),
       getSellerStats(user.id),
       fetchBuyersByListing(user.id),
@@ -569,6 +645,167 @@ export default async function MyListingsPage({
             </div>
           ))}
         </div>
+      )}
+
+      {ownedDresses.length > 0 && (
+        <section style={{ marginTop: "var(--s-8)" }}>
+          <header style={{ marginBottom: "var(--s-4)" }}>
+            <h2
+              className="card-heading"
+              style={{ margin: 0, fontSize: 22 }}
+            >
+              Dresses in your closet
+            </h2>
+            <p className="card-sub" style={{ marginTop: 4 }}>
+              Dresses you own that aren&rsquo;t currently listed. Re-list
+              one to bring it back to the marketplace — the wizard
+              starts pre-filled with the dress&rsquo;s details, so you
+              only re-enter price, photos, and condition.
+            </p>
+          </header>
+          <ul
+            style={{
+              listStyle: "none",
+              padding: 0,
+              margin: 0,
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+              gap: "var(--s-4)",
+            }}
+          >
+            {ownedDresses.map((d) => {
+              const label =
+                [d.designer_name, d.model].filter(Boolean).join(" ") ||
+                "Untitled dress";
+              const meta = [
+                d.year ? String(d.year) : null,
+                d.size_label ? `size ${d.size_label}` : null,
+              ]
+                .filter(Boolean)
+                .join(" · ");
+              const pill =
+                d.disposition === "kept"
+                  ? {
+                      bg: "#e0e7ff",
+                      fg: "#3730a3",
+                      border: "#a5b4fc",
+                      label: "Keeping",
+                    }
+                  : {
+                      bg: "#dcfce7",
+                      fg: "#166534",
+                      border: "#86efac",
+                      label: "In use",
+                    };
+              return (
+                <li
+                  key={d.dress_id}
+                  className="form-card"
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "var(--s-3)",
+                    padding: "var(--s-4)",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "var(--s-3)",
+                      alignItems: "flex-start",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 64,
+                        aspectRatio: "3 / 4",
+                        borderRadius: 8,
+                        overflow: "hidden",
+                        background: "var(--surface-sunken)",
+                        position: "relative",
+                        flex: "0 0 auto",
+                      }}
+                    >
+                      {d.thumb_image_id && d.thumb_listing_id ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={`/api/listings/${d.thumb_listing_id}/images/${d.thumb_image_id}?w=200`}
+                          alt=""
+                          style={{
+                            position: "absolute",
+                            inset: 0,
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                          }}
+                        />
+                      ) : null}
+                    </div>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          padding: "2px 8px",
+                          borderRadius: 999,
+                          background: pill.bg,
+                          color: pill.fg,
+                          border: `1px solid ${pill.border}`,
+                          fontFamily: "var(--font-mono)",
+                          fontSize: 10,
+                          letterSpacing: "0.12em",
+                          textTransform: "uppercase",
+                          fontWeight: 700,
+                          marginBottom: 6,
+                        }}
+                      >
+                        {pill.label}
+                      </div>
+                      <div
+                        style={{
+                          fontWeight: 700,
+                          color: "var(--ink-1)",
+                          fontSize: 15,
+                          lineHeight: 1.2,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {label}
+                      </div>
+                      {meta && (
+                        <div
+                          style={{
+                            fontSize: 12,
+                            color: "var(--ink-3)",
+                            marginTop: 2,
+                          }}
+                        >
+                          {meta}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <form action={startRelistFromDress}>
+                    <input type="hidden" name="dressId" value={d.dress_id} />
+                    <Button
+                      type="submit"
+                      variant="primary"
+                      size="sm"
+                      iconRight="arrow"
+                      block
+                    >
+                      {d.disposition === "kept"
+                        ? "List it again"
+                        : "Relist"}
+                    </Button>
+                  </form>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
       )}
     </div>
   );
