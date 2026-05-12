@@ -134,10 +134,10 @@ export default async function ReferPage() {
             }}
           >
             Send them your link. You earn a commission for{" "}
-            <strong>every Verified listing</strong> they post — five
-            dresses, five commissions. Frockd&rsquo;s inventory grows,
-            your friend&rsquo;s wardrobe shrinks, and you get something
-            for the introduction.
+            <strong>every Verified listing</strong>
+            {" "}they post — five dresses, five commissions. Frockd&rsquo;s
+            inventory grows, your friend&rsquo;s wardrobe shrinks, and
+            you get something for the introduction.
           </p>
         </header>
 

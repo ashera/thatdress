@@ -108,8 +108,9 @@ export default async function FirstPublishThanksPage({
               lineHeight: 1.55,
             }}
           >
-            <strong>{row.title}</strong> is now in front of every buyer
-            in your region. Now the fun part…
+            <strong>{row.title}</strong>
+            {" "}is now in front of every buyer in your region. Now
+            the fun part…
           </p>
         </header>
 

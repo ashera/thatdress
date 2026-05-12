@@ -981,8 +981,9 @@ export default async function ListingDetailPage({
             lineHeight: 1.5,
           }}
         >
-          <strong>Can&rsquo;t reactivate.</strong> This dress has
-          been sold to someone else and now belongs to them — you
+          <strong>Can&rsquo;t reactivate.</strong>
+          {" "}This dress has been sold to someone else and now
+          belongs to them — you
           can&rsquo;t un-mark this listing as sold. If the sale
           fell through, contact the buyer or message support.
         </div>
@@ -1000,8 +1001,8 @@ export default async function ListingDetailPage({
             lineHeight: 1.5,
           }}
         >
-          <strong>Can&rsquo;t reactivate.</strong> There&rsquo;s
-          already another live listing for this dress
+          <strong>Can&rsquo;t reactivate.</strong>
+          {" "}There&rsquo;s already another live listing for this dress
           {unmarkOtherListingId ? (
             <>
               {" "}
