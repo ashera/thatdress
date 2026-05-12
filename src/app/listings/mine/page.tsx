@@ -398,13 +398,36 @@ export default async function MyListingsPage({
 
   return (
     <div className="page page--pad">
-      <header className="my-listings-header">
-        <p className="eyebrow">Your wardrobe</p>
-        <h1>Sell a dress</h1>
-        <p className="sub">
-          We&rsquo;ll walk you through it in six short steps: basics,
-          photos, style, size &amp; fit, condition, and pricing.
-        </p>
+      <header
+        className="my-listings-header"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "var(--s-5)",
+          flexWrap: "wrap",
+        }}
+      >
+        <Image
+          src="/tidy-wardrobe.png"
+          alt=""
+          width={140}
+          height={140}
+          priority
+          style={{
+            width: 140,
+            height: 140,
+            objectFit: "contain",
+            flex: "0 0 auto",
+          }}
+        />
+        <div style={{ flex: "1 1 240px", minWidth: 0 }}>
+          <p className="eyebrow">Your wardrobe</p>
+          <h1>Sell a dress</h1>
+          <p className="sub">
+            We&rsquo;ll walk you through it in six short steps: basics,
+            photos, style, size &amp; fit, condition, and pricing.
+          </p>
+        </div>
       </header>
 
       {nudgeFlash === "confirmed" && (
