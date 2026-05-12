@@ -3742,3 +3742,11 @@ textarea.input {
   background: var(--surface-sunken) !important;
 }
 .prose th { background: var(--surface-sunken); font-weight: 600; }
+
+.referral-row-link {
+  transition: background 120ms, border-color 120ms;
+}
+.referral-row-link:hover {
+  background: var(--surface-sunken) !important;
+  border-color: var(--hairline-strong) !important;
+}

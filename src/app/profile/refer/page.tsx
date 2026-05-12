@@ -264,19 +264,24 @@ export default async function ReferPage() {
               }}
             >
               {referred.map((r) => (
-                <li
-                  key={r.id}
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    gap: "var(--s-3)",
-                    padding: "10px 12px",
-                    background: "var(--surface)",
-                    border: "1px solid var(--hairline)",
-                    borderRadius: 10,
-                  }}
-                >
+                <li key={r.id}>
+                  <Link
+                    href={`/sellers/${r.id}`}
+                    title={`See ${fullName(r.first_name, r.surname) ?? r.email}'s listings`}
+                    className="referral-row-link"
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: "var(--s-3)",
+                      padding: "10px 12px",
+                      background: "var(--surface)",
+                      border: "1px solid var(--hairline)",
+                      borderRadius: 10,
+                      textDecoration: "none",
+                      color: "inherit",
+                    }}
+                  >
                   <div style={{ minWidth: 0 }}>
                     {(() => {
                       const name = fullName(r.first_name, r.surname);
@@ -375,6 +380,19 @@ export default async function ReferPage() {
                       Not yet
                     </span>
                   )}
+                  <span
+                    aria-hidden
+                    style={{
+                      flex: "0 0 auto",
+                      color: "var(--ink-4)",
+                      fontSize: 18,
+                      lineHeight: 1,
+                      marginLeft: 4,
+                    }}
+                  >
+                    ›
+                  </span>
+                  </Link>
                 </li>
               ))}
             </ul>
