@@ -3750,3 +3750,12 @@ textarea.input {
   background: var(--surface-sunken) !important;
   border-color: var(--hairline-strong) !important;
 }
+
+.tool-card-link {
+  transition: border-color 120ms, box-shadow 120ms, transform 120ms;
+}
+.tool-card-link:hover {
+  border-color: var(--hairline-strong) !important;
+  box-shadow: 0 4px 16px rgba(28, 24, 22, 0.06);
+  transform: translateY(-1px);
+}
