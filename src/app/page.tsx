@@ -180,7 +180,7 @@ async function getFeaturedListings(
           AND l.sold_at IS NULL
           AND l.trust_status <> 'flagged'
           ${regionId ? "AND l.region_id = $1::bigint" : ""}
-        ORDER BY l.created_at DESC
+        ORDER BY l.is_featured DESC, l.created_at DESC
         LIMIT 3`,
       regionId ? [regionId] : [],
     );
