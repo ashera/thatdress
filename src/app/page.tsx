@@ -25,8 +25,11 @@ export async function generateMetadata(): Promise<Metadata> {
   const baseUrl = await getBaseUrl();
   const title =
     "frockd — buy & sell pre-loved formal dresses in Australia";
+  // SEO note: Google truncates meta descriptions in the SERP at
+  // ~160 chars. Keep this string ≤160 to avoid the '…' cut-off
+  // suggested by external SEO audits. Current: 146 chars.
   const description =
-    "Australia's peer-to-peer marketplace for pre-loved formal dresses and gowns. Wedding-guest, black-tie, prom, bridesmaid — verified designers, honest condition, no listing fees.";
+    "Australia's peer-to-peer marketplace for pre-loved formal dresses. Wedding-guest, black-tie, prom, bridesmaid — verified sellers, no listing fees.";
   return {
     title,
     description,
