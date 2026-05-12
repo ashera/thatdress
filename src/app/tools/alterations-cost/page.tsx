@@ -315,6 +315,13 @@ export default async function AlterationsCostPage({
                 Browse better-fitting dresses
               </ButtonLink>
               <ButtonLink
+                href="/listings/mine"
+                variant="ghost"
+                iconRight="arrow"
+              >
+                List your dress on frockd
+              </ButtonLink>
+              <ButtonLink
                 href="/tools/value-estimator"
                 variant="ghost"
               >

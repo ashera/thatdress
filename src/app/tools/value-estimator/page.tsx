@@ -295,10 +295,10 @@ function ResultCard({
             List your dress on frockd
           </ButtonLink>
           <ButtonLink
-            href={`/listings?designer_id=${designer.id}`}
+            href={`/listings?designer_id=${designer.id}&min_price=${Math.floor(result.lowCents / 100)}&max_price=${Math.ceil(result.highCents / 100)}`}
             variant="ghost"
           >
-            See similar listings
+            See dresses {fmtAud(result.lowCents)} – {fmtAud(result.highCents)}
           </ButtonLink>
         </div>
       )}

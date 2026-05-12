@@ -14,6 +14,10 @@ export type ActiveFilters = {
   min_price?: string;
   max_price?: string;
   visibility?: VisibilityFilter;
+  /** When set via ?trust_status= on the URL, only listings with
+   *  that trust status surface in browse. Currently driven by the
+   *  buyer's-checklist CTA pointing at /listings?trust_status=verified. */
+  trustStatus?: "verified" | "authenticated";
 };
 
 type Props = {

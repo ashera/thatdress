@@ -80,6 +80,7 @@ type RawSearchParams = {
   visibility?: string | string[];
   mode?: string | string[];
   sort?: string | string[];
+  trust_status?: string | string[];
 };
 
 type BrowseMode = "for-sale" | "sold" | "shortlist";
@@ -241,6 +242,17 @@ function buildFilters(
     params.push(value);
     where.push(clause.replace("$?", `$${params.length}`));
   };
+
+  // Trust-status filter — supports a single value via ?trust_status=
+  // (e.g. /listings?trust_status=verified from the buyer's checklist
+  // CTA). Accepts the two non-default states; anything else is
+  // ignored. Built off whichever values the listings_trust_status_check
+  // constraint allows.
+  const trustStatusRaw = asScalar(raw.trust_status);
+  if (trustStatusRaw === "verified" || trustStatusRaw === "authenticated") {
+    pushClause(`l.trust_status = $?`, trustStatusRaw);
+    active.trustStatus = trustStatusRaw;
+  }
 
   // Text search (q): single param reused across columns.
   const q = asScalar(raw.q)?.slice(0, 120).trim();

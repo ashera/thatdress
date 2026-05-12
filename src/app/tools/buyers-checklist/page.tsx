@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getBaseUrl } from "@/lib/email";
 import { BUYERS_CHECKLIST } from "@/lib/buyers-checklist";
+import { ButtonLink } from "../../_components/ui";
 
 export const revalidate = 86400;
 
@@ -184,6 +185,25 @@ export default function BuyersChecklistPage() {
             </a>{" "}
             tells you what a less-than-perfect fit will cost to make right.
           </p>
+          <div
+            style={{
+              display: "flex",
+              gap: "var(--s-3)",
+              marginTop: "var(--s-5)",
+              flexWrap: "wrap",
+            }}
+          >
+            <ButtonLink
+              href="/listings?trust_status=verified"
+              variant="primary"
+              iconRight="arrow"
+            >
+              Browse Verified dresses
+            </ButtonLink>
+            <ButtonLink href="/listings" variant="ghost">
+              See all listings
+            </ButtonLink>
+          </div>
         </section>
       </main>
     </div>
