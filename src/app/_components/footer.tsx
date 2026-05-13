@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import Link from "next/link";
 import { buildInfo } from "@/lib/build-info";
 import { lookupReferrerDisplay, REFERRAL_COOKIE } from "@/lib/referral";
 
@@ -28,6 +29,10 @@ export async function Footer() {
               <span aria-hidden>·</span>
             </>
           )}
+          <Link href="/privacy" style={{ color: "inherit" }}>
+            Privacy
+          </Link>
+          <span aria-hidden>·</span>
           <span>v{buildInfo.version}</span>
           <span aria-hidden>·</span>
           <span title={buildInfo.commitFull}>{buildInfo.commit}</span>
