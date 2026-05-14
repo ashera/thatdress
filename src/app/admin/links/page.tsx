@@ -185,7 +185,14 @@ export default async function AdminLinksPage({
           up. Add new links manually below; automated link checking
           and discovery jobs will plug into this table later.
         </p>
-        <div style={{ marginTop: "var(--s-4)" }}>
+        <div
+          style={{
+            marginTop: "var(--s-4)",
+            display: "flex",
+            gap: "var(--s-2)",
+            flexWrap: "wrap",
+          }}
+        >
           <Link
             href="/admin/links/pinterest"
             style={{
@@ -203,6 +210,25 @@ export default async function AdminLinksPage({
           >
             <span aria-hidden style={{ fontSize: 16 }}>📌</span>
             Pin a listing to Pinterest
+          </Link>
+          <Link
+            href="/admin/links/instagram"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "8px 14px",
+              borderRadius: 999,
+              background:
+                "linear-gradient(135deg, #f58529 0%, #dd2a7b 45%, #8134af 85%, #515bd4 100%)",
+              color: "#fff",
+              textDecoration: "none",
+              fontWeight: 600,
+              fontSize: 14,
+            }}
+          >
+            <span aria-hidden style={{ fontSize: 16 }}>📸</span>
+            Post a listing to Instagram
           </Link>
         </div>
       </header>
