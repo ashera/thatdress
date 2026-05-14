@@ -665,6 +665,36 @@ export default async function MyListingsPage({
                   {row.conversation_count === "1" ? "" : "s"}
                 </span>
               </div>
+              {row.is_published && !row.sold_at && (
+                <div
+                  style={{
+                    marginTop: "var(--s-2)",
+                    display: "flex",
+                    gap: "var(--s-2)",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <Link
+                    href={`/listings/${row.id}/promote`}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      padding: "6px 14px",
+                      borderRadius: 999,
+                      background:
+                        "linear-gradient(135deg, #f58529 0%, #dd2a7b 45%, #8134af 85%, #515bd4 100%)",
+                      color: "#fff",
+                      textDecoration: "none",
+                      fontWeight: 600,
+                      fontSize: 13,
+                    }}
+                  >
+                    <span aria-hidden style={{ fontSize: 14 }}>📸</span>
+                    Promote on Instagram
+                  </Link>
+                </div>
+              )}
             </div>
           ))}
         </div>

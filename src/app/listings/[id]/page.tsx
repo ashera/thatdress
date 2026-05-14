@@ -1277,6 +1277,28 @@ export default async function ListingDetailPage({
                 </Button>
               </form>
             )}
+            {isOwner && l.is_published && !l.sold_at && (
+              <Link
+                href={`/listings/${l.id}/promote`}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "6px 14px",
+                  borderRadius: 999,
+                  background:
+                    "linear-gradient(135deg, #f58529 0%, #dd2a7b 45%, #8134af 85%, #515bd4 100%)",
+                  color: "#fff",
+                  textDecoration: "none",
+                  fontWeight: 600,
+                  fontSize: 13,
+                }}
+                title="Generate an Instagram post for this listing"
+              >
+                <span aria-hidden style={{ fontSize: 14 }}>📸</span>
+                Promote on Instagram
+              </Link>
+            )}
             {isAdmin && l.trust_status === "flagged" && (
               <form action={setListingTrustStatus}>
                 <input type="hidden" name="listingId" value={l.id} />

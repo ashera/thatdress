@@ -2,7 +2,6 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import sharp from "sharp";
-import { requireAdmin } from "@/lib/auth";
 import { query } from "@/lib/db";
 
 export const runtime = "nodejs";
@@ -83,7 +82,10 @@ export async function GET(
   _req: Request,
   ctx: { params: Promise<{ id: string }> },
 ): Promise<Response> {
-  await requireAdmin();
+  // Card image is public — every input (photo / price / title) is
+  // already public on the listing detail page; the branded overlay
+  // doesn't add private info. Filter SQL-side to live listings only
+  // so we don't render marketing cards for drafts or sold dresses.
   const { id } = await ctx.params;
   if (!/^\d+$/.test(id)) {
     return new Response("Not found", { status: 404 });
@@ -112,7 +114,11 @@ export async function GET(
             ORDER BY is_primary DESC, position, id
             LIMIT 1
          ) img ON TRUE
-        WHERE l.id = $1::bigint
+        WHERE l.id           = $1::bigint
+          AND l.is_draft     = FALSE
+          AND l.is_published = TRUE
+          AND l.sold_at IS NULL
+          AND l.trust_status <> 'flagged'
         LIMIT 1`,
       [id],
     );

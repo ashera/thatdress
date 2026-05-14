@@ -3,7 +3,7 @@ import { requireAdmin } from "@/lib/auth";
 import { query } from "@/lib/db";
 import { logInstagramPost } from "@/lib/actions/admin-instagram";
 import { Button, Field, Input } from "../../../_components/ui";
-import { CaptionCopier } from "./_caption-copier";
+import { CaptionCopier } from "../../../_components/caption-copier";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Post to Instagram — Admin" };
