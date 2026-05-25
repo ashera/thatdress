@@ -8,6 +8,7 @@ import {
   toggleUserSuspended,
   updateUserAsAdmin,
 } from "@/lib/actions/users";
+import { adminResetUserPassword } from "@/lib/actions/password-reset";
 import { startImpersonation } from "@/lib/actions/impersonation";
 import { listReferredUsers } from "@/lib/referral";
 import { loadSiteSettings } from "@/lib/site-settings";
@@ -255,6 +256,8 @@ const TITLES = ["Mr", "Mrs", "Ms", "Mx", "Dr", "Prof"];
 const ERRORS: Record<string, string> = {
   "self-demote": "You can't change your own admin role.",
   "self-suspend": "You can't suspend your own account.",
+  "self-reset":
+    "You can't reset your own password here — use the public /forgot flow.",
   "empty-message": "Message body is empty.",
   "self-impersonate": "You can't impersonate yourself.",
   "cannot-impersonate-suspended":
@@ -301,11 +304,15 @@ export default async function AdminUserDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ saved?: string; error?: string }>;
+  searchParams: Promise<{
+    saved?: string;
+    error?: string;
+    temp_password?: string;
+  }>;
 }) {
   const me = await requireAdmin();
   const { id } = await params;
-  const { saved, error } = await searchParams;
+  const { saved, error, temp_password: tempPassword } = await searchParams;
   const errorMessage = error ? (ERRORS[error] ?? "Something went wrong.") : null;
 
   if (!/^\d+$/.test(id)) notFound();
@@ -407,7 +414,7 @@ export default async function AdminUserDetailPage({
         );
       })()}
 
-      {saved && !errorMessage && (
+      {saved && !errorMessage && !tempPassword && (
         <p className="form-success" style={{ marginBottom: "var(--s-5)" }}>
           Saved.
         </p>
@@ -416,6 +423,60 @@ export default async function AdminUserDetailPage({
         <p className="form-error" style={{ marginBottom: "var(--s-5)" }}>
           {errorMessage}
         </p>
+      )}
+      {tempPassword && (
+        <div
+          role="alert"
+          style={{
+            marginBottom: "var(--s-5)",
+            padding: "var(--s-4) var(--s-5)",
+            background: "#fef9c3",
+            border: "1px solid #fde68a",
+            borderRadius: 12,
+          }}
+        >
+          <p
+            style={{
+              margin: "0 0 var(--s-2)",
+              fontFamily: "var(--font-mono)",
+              fontSize: 11,
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+              color: "#854d0e",
+              fontWeight: 700,
+            }}
+          >
+            Temporary password — shown once
+          </p>
+          <p
+            style={{
+              margin: 0,
+              fontFamily: "var(--font-mono)",
+              fontSize: 22,
+              letterSpacing: "0.06em",
+              color: "#1c1816",
+              fontWeight: 700,
+              userSelect: "all",
+              wordBreak: "break-all",
+            }}
+          >
+            {tempPassword}
+          </p>
+          <p
+            style={{
+              margin: "var(--s-3) 0 0",
+              fontSize: 13,
+              color: "#3a342f",
+              lineHeight: 1.5,
+            }}
+          >
+            Share it with the user via a trusted channel. Their existing
+            sessions have been logged out and any outstanding reset
+            links have been invalidated. Once they sign in they can
+            change it from <code>/profile</code>. Navigate away to hide
+            this — we won&rsquo;t show it again.
+          </p>
+        </div>
       )}
 
       <section className="form-card" style={{ marginBottom: "var(--s-5)" }}>
@@ -465,6 +526,21 @@ export default async function AdminUserDetailPage({
               }
             >
               Log in as this user
+            </Button>
+          </form>
+          <form action={adminResetUserPassword}>
+            <input type="hidden" name="userId" value={user.id} />
+            <Button
+              type="submit"
+              variant="ghost"
+              disabled={isMe}
+              title={
+                isMe
+                  ? "Use the public /forgot flow to reset your own password."
+                  : "Set a one-time temp password, kill the user's sessions, and show the password to you once."
+              }
+            >
+              Reset password
             </Button>
           </form>
         </div>

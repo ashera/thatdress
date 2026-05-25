@@ -4,7 +4,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { query, withTransaction } from "@/lib/db";
-import { hashPassword } from "@/lib/auth";
+import { hashPassword, requireAdmin } from "@/lib/auth";
 import {
   emailLayout,
   escapeHtml,
@@ -16,6 +16,22 @@ const TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
+}
+
+// Readable alphabet — drops chars that look alike on a phone screen
+// (0/O, 1/I/l). 54 symbols × 12 chars ≈ 69 bits of entropy, more
+// than enough for a single-use temp password.
+const TEMP_PASSWORD_ALPHABET =
+  "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+
+function generateTempPassword(): string {
+  const len = 12;
+  const bytes = randomBytes(len);
+  let out = "";
+  for (let i = 0; i < len; i++) {
+    out += TEMP_PASSWORD_ALPHABET[bytes[i] % TEMP_PASSWORD_ALPHABET.length];
+  }
+  return out;
 }
 
 export async function requestPasswordReset(formData: FormData): Promise<void> {
@@ -130,4 +146,58 @@ export async function resetPassword(formData: FormData): Promise<void> {
 
   revalidatePath("/", "layout");
   redirect("/login?reset=1");
+}
+
+/**
+ * Admin-initiated password reset. Generates a single-use temp
+ * password, sets it on the target user, kills every session, and
+ * burns any outstanding reset tokens. The plain-text password is
+ * returned in the redirect query so the admin sees it once on the
+ * user detail page — they should communicate it to the user via a
+ * trusted channel (and the user can change it from /profile).
+ *
+ * Admin cannot use this to reset their own password — they must use
+ * the public /forgot flow so the reset goes to their own inbox.
+ */
+export async function adminResetUserPassword(
+  formData: FormData,
+): Promise<void> {
+  const me = await requireAdmin();
+  const userId = String(formData.get("userId") ?? "").trim();
+  if (!/^\d+$/.test(userId)) redirect("/admin/users");
+  if (userId === me.id) {
+    redirect(`/admin/users/${userId}?error=self-reset`);
+  }
+
+  // Confirm the target exists before mutating anything.
+  const r = await query<{ id: string }>(
+    `SELECT id::text FROM users WHERE id = $1::bigint LIMIT 1`,
+    [userId],
+  );
+  if (!r.rows[0]) redirect("/admin/users");
+
+  const tempPassword = generateTempPassword();
+  const passwordHash = await hashPassword(tempPassword);
+
+  await withTransaction(async (client) => {
+    await client.query(
+      `UPDATE users SET password_hash = $1 WHERE id = $2::bigint`,
+      [passwordHash, userId],
+    );
+    await client.query(
+      `UPDATE password_reset_tokens
+          SET used_at = NOW()
+        WHERE user_id = $1::bigint AND used_at IS NULL`,
+      [userId],
+    );
+    await client.query(
+      `DELETE FROM sessions WHERE user_id = $1::bigint`,
+      [userId],
+    );
+  });
+
+  revalidatePath(`/admin/users/${userId}`);
+  redirect(
+    `/admin/users/${userId}?temp_password=${encodeURIComponent(tempPassword)}`,
+  );
 }
