@@ -4,6 +4,7 @@ import { getBaseUrl } from "@/lib/email";
 import { BUYERS_CHECKLIST } from "@/lib/buyers-checklist";
 import { ButtonLink } from "../../_components/ui";
 import { ToolHero } from "../../_components/tool-hero";
+import { PrintButton } from "./_print-button";
 
 export const revalidate = 86400;
 
@@ -35,10 +36,49 @@ const TOTAL_ITEMS = BUYERS_CHECKLIST.reduce(
 
 export default function BuyersChecklistPage() {
   return (
-    <div className="page page--pad">
-      <main style={{ maxWidth: 720, margin: "0 auto" }}>
+    <div className="page page--pad buyers-checklist-page">
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+            @media print {
+              @page { margin: 18mm; }
+              html, body { background: #fff !important; color: #1c1816 !important; }
+              .topbar, .footer, .back-link, .tool-hero, .verify-banner,
+              .buyers-checklist-page .no-print { display: none !important; }
+              .buyers-checklist-page { padding: 0 !important; max-width: 100% !important; }
+              .buyers-checklist-page main { max-width: 100% !important; padding: 0 !important; }
+              .buyers-checklist-page .form-card {
+                box-shadow: none !important;
+                border: 1px solid #d4d4d4 !important;
+                page-break-inside: avoid;
+                break-inside: avoid;
+                margin-bottom: 12px !important;
+              }
+              .buyers-checklist-page .check-row {
+                background: #fff !important;
+                border: 1px solid #d4d4d4 !important;
+                page-break-inside: avoid;
+                break-inside: avoid;
+              }
+              .buyers-checklist-page input[type="checkbox"] {
+                appearance: none !important;
+                -webkit-appearance: none !important;
+                width: 16px !important;
+                height: 16px !important;
+                border: 1.5px solid #1c1816 !important;
+                border-radius: 3px !important;
+                background: #fff !important;
+              }
+              .buyers-checklist-page .print-header { display: block !important; }
+            }
+            .buyers-checklist-page .print-header { display: none; }
+          `,
+        }}
+      />
+      <main>
         <Link
           href="/tools"
+          className="back-link"
           style={{
             color: "var(--ink-3)",
             fontSize: "var(--t-body-s)",
@@ -47,6 +87,26 @@ export default function BuyersChecklistPage() {
         >
           ← All tools
         </Link>
+
+        <div
+          className="print-header"
+          style={{ marginBottom: "var(--s-5)" }}
+        >
+          <h1
+            style={{
+              fontFamily: "var(--font-display)",
+              fontSize: 28,
+              margin: "0 0 4px",
+              color: "#1c1816",
+            }}
+          >
+            Pre-loved dress buyer&rsquo;s checklist
+          </h1>
+          <p style={{ margin: 0, fontSize: 13, color: "#5a534f" }}>
+            frockd.com.au/tools/buyers-checklist — {TOTAL_ITEMS} things
+            to check before, during, and after a purchase.
+          </p>
+        </div>
 
         <ToolHero
           eyebrow="frockd · tools"
@@ -69,6 +129,17 @@ export default function BuyersChecklistPage() {
             ink: "#1e40af",
           }}
         />
+
+        <div
+          className="no-print"
+          style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            margin: "calc(var(--s-5) * -1) 0 var(--s-5)",
+          }}
+        >
+          <PrintButton />
+        </div>
 
         {BUYERS_CHECKLIST.map((section, sectionIdx) => (
           <section
@@ -143,7 +214,7 @@ export default function BuyersChecklistPage() {
         ))}
 
         <section
-          className="form-card"
+          className="form-card no-print"
           style={{
             marginTop: "var(--s-7)",
             padding: "var(--s-5) var(--s-6)",
