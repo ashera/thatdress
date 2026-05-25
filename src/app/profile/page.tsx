@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { updateProfile } from "@/lib/actions/auth";
 import { requestEmailChange } from "@/lib/actions/email-change";
-import { deleteAccount } from "@/lib/actions/account";
+import { changePassword, deleteAccount } from "@/lib/actions/account";
 import { query } from "@/lib/db";
 import { countFriendsListed } from "@/lib/referral";
 import { currentReferralTier } from "@/lib/referral-tiers";
@@ -26,6 +26,13 @@ const DELETE_ERRORS: Record<string, string> = {
   phrase: "Type DELETE exactly to confirm.",
 };
 
+const PASSWORD_ERRORS: Record<string, string> = {
+  current: "Your current password didn't match.",
+  weak: "New password must be between 8 and 72 characters.",
+  mismatch: "New password and confirmation don't match.",
+  same: "New password is the same as your current one — pick a different one.",
+};
+
 export default async function ProfilePage({
   searchParams,
 }: {
@@ -34,6 +41,8 @@ export default async function ProfilePage({
     email_sent?: string;
     email_error?: string;
     delete_error?: string;
+    password_changed?: string;
+    password_error?: string;
   }>;
 }) {
   const user = await getCurrentUser();
@@ -44,9 +53,14 @@ export default async function ProfilePage({
     email_sent: emailSent,
     email_error: emailError,
     delete_error: deleteError,
+    password_changed: passwordChanged,
+    password_error: passwordError,
   } = await searchParams;
   const emailErrorMessage = emailError ? EMAIL_ERRORS[emailError] : null;
   const deleteErrorMessage = deleteError ? DELETE_ERRORS[deleteError] : null;
+  const passwordErrorMessage = passwordError
+    ? (PASSWORD_ERRORS[passwordError] ?? "Couldn't update your password.")
+    : null;
 
   const friendsListed = await countFriendsListed(user.id);
   const tier = currentReferralTier(friendsListed);
@@ -546,6 +560,79 @@ export default async function ProfilePage({
             <div style={{ display: "flex", justifyContent: "flex-end" }}>
               <Button type="submit" variant="primary" iconRight="arrow">
                 Send confirmation
+              </Button>
+            </div>
+          </form>
+        </section>
+
+        <section className="form-card" style={{ marginTop: "var(--s-5)" }}>
+          <h2 className="card-heading">Change password</h2>
+          <p className="card-sub">
+            Enter your current password and a new one (8&ndash;72
+            characters). Other devices you&rsquo;re signed in on will be
+            logged out; you&rsquo;ll stay signed in here.
+          </p>
+
+          {passwordChanged && !passwordErrorMessage && (
+            <p
+              className="form-success"
+              style={{ marginBottom: "var(--s-4)" }}
+            >
+              Password updated. Other devices have been signed out.
+            </p>
+          )}
+          {passwordErrorMessage && (
+            <p
+              className="form-error"
+              style={{ marginBottom: "var(--s-4)" }}
+            >
+              {passwordErrorMessage}
+            </p>
+          )}
+
+          <form
+            action={changePassword}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "var(--s-4)",
+            }}
+          >
+            <Field label="Current password" htmlFor="current_password">
+              <Input
+                id="current_password"
+                name="current_password"
+                type="password"
+                autoComplete="current-password"
+                required
+                maxLength={72}
+              />
+            </Field>
+            <Field label="New password" htmlFor="new_password">
+              <Input
+                id="new_password"
+                name="new_password"
+                type="password"
+                autoComplete="new-password"
+                required
+                minLength={8}
+                maxLength={72}
+              />
+            </Field>
+            <Field label="Confirm new password" htmlFor="confirm_password">
+              <Input
+                id="confirm_password"
+                name="confirm_password"
+                type="password"
+                autoComplete="new-password"
+                required
+                minLength={8}
+                maxLength={72}
+              />
+            </Field>
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <Button type="submit" variant="primary" iconRight="arrow">
+                Update password
               </Button>
             </div>
           </form>
