@@ -315,14 +315,21 @@ CREATE TABLE IF NOT EXISTS condition_grades (
 
 -- Curated list of dress colours surfaced as a dropdown on the style
 -- step. Stored as free text on dresses.color (label, not FK) so
--- legacy free-text values continue to render unchanged.
+-- legacy free-text values continue to render unchanged. swatch_hex
+-- powers the colour-swatch picker; NULL for patterns/metallics
+-- where a single hex would lie.
 CREATE TABLE IF NOT EXISTS colors (
   id          BIGSERIAL    PRIMARY KEY,
   slug        TEXT         UNIQUE NOT NULL,
   label       TEXT         NOT NULL,
+  swatch_hex  TEXT,
   sort_order  INTEGER      NOT NULL DEFAULT 0,
   is_active   BOOLEAN      NOT NULL DEFAULT TRUE
 );
+
+-- Idempotent migration for installs created by the previous commit
+-- (no swatch_hex column yet).
+ALTER TABLE colors ADD COLUMN IF NOT EXISTS swatch_hex TEXT;
 
 -- =========================================================
 -- Dresses — first-class entity. A dress is a physical garment that
@@ -661,57 +668,108 @@ INSERT INTO condition_grades (slug, label, sort_order) VALUES
   ('fair',          'Fair',          50)
 ON CONFLICT (slug) DO NOTHING;
 
--- Common formal-dress colours. Ordered alphabetically at read time;
--- the sort_order here is no-op once the picker reads via
--- listActiveRefOptions which orders by LOWER(label).
-INSERT INTO colors (slug, label) VALUES
-  ('black',       'Black'),
-  ('white',       'White'),
-  ('ivory',       'Ivory'),
-  ('cream',       'Cream'),
-  ('champagne',   'Champagne'),
-  ('blush',       'Blush'),
-  ('pink',        'Pink'),
-  ('rose-gold',   'Rose gold'),
-  ('red',         'Red'),
-  ('burgundy',    'Burgundy'),
-  ('wine',        'Wine'),
-  ('coral',       'Coral'),
-  ('orange',      'Orange'),
-  ('peach',       'Peach'),
-  ('yellow',      'Yellow'),
-  ('gold',        'Gold'),
-  ('mustard',     'Mustard'),
-  ('olive',       'Olive'),
-  ('sage',        'Sage'),
-  ('green',       'Green'),
-  ('emerald',     'Emerald'),
-  ('forest',      'Forest green'),
-  ('teal',        'Teal'),
-  ('turquoise',   'Turquoise'),
-  ('mint',        'Mint'),
-  ('sky-blue',    'Sky blue'),
-  ('blue',        'Blue'),
-  ('royal-blue',  'Royal blue'),
-  ('navy',        'Navy'),
-  ('powder-blue', 'Powder blue'),
-  ('lilac',       'Lilac'),
-  ('lavender',    'Lavender'),
-  ('purple',      'Purple'),
-  ('plum',        'Plum'),
-  ('mauve',       'Mauve'),
-  ('grey',        'Grey'),
-  ('silver',      'Silver'),
-  ('charcoal',    'Charcoal'),
-  ('beige',       'Beige'),
-  ('nude',        'Nude'),
-  ('tan',         'Tan'),
-  ('brown',       'Brown'),
-  ('chocolate',   'Chocolate'),
-  ('multi',       'Multicolour'),
-  ('print',       'Printed / patterned'),
-  ('metallic',    'Metallic')
+-- Common formal-dress colours with swatch hex codes. patterns
+-- (multi / print / metallic) stay NULL — a single hex would lie.
+INSERT INTO colors (slug, label, swatch_hex) VALUES
+  ('black',       'Black',               '#0F0F0F'),
+  ('white',       'White',               '#FFFFFF'),
+  ('ivory',       'Ivory',               '#FFFFF0'),
+  ('cream',       'Cream',               '#F5F0DC'),
+  ('champagne',   'Champagne',           '#F7E7CE'),
+  ('blush',       'Blush',               '#F4C2C2'),
+  ('pink',        'Pink',                '#FFC0CB'),
+  ('rose-gold',   'Rose gold',           '#B76E79'),
+  ('red',         'Red',                 '#C0392B'),
+  ('burgundy',    'Burgundy',            '#800020'),
+  ('wine',        'Wine',                '#722F37'),
+  ('coral',       'Coral',               '#FF7F50'),
+  ('orange',      'Orange',              '#FF8C42'),
+  ('peach',       'Peach',               '#FFE5B4'),
+  ('yellow',      'Yellow',              '#F2D43F'),
+  ('gold',        'Gold',                '#D4AF37'),
+  ('mustard',     'Mustard',             '#D4A436'),
+  ('olive',       'Olive',               '#808000'),
+  ('sage',        'Sage',                '#B2BC9C'),
+  ('green',       'Green',               '#2E8B57'),
+  ('emerald',     'Emerald',             '#50C878'),
+  ('forest',      'Forest green',        '#228B22'),
+  ('teal',        'Teal',                '#008080'),
+  ('turquoise',   'Turquoise',           '#40E0D0'),
+  ('mint',        'Mint',                '#A6E3C0'),
+  ('sky-blue',    'Sky blue',            '#87CEEB'),
+  ('blue',        'Blue',                '#3B82F6'),
+  ('royal-blue',  'Royal blue',          '#1E40AF'),
+  ('navy',        'Navy',                '#001F3F'),
+  ('powder-blue', 'Powder blue',         '#B0E0E6'),
+  ('lilac',       'Lilac',               '#C8A2C8'),
+  ('lavender',    'Lavender',            '#E6E6FA'),
+  ('purple',      'Purple',              '#6B2D8E'),
+  ('plum',        'Plum',                '#8E4585'),
+  ('mauve',       'Mauve',               '#C9A0B4'),
+  ('grey',        'Grey',                '#7C7C7C'),
+  ('silver',      'Silver',              '#C0C0C0'),
+  ('charcoal',    'Charcoal',            '#36454F'),
+  ('beige',       'Beige',               '#E8DCC4'),
+  ('nude',        'Nude',                '#E3BC9A'),
+  ('tan',         'Tan',                 '#D2B48C'),
+  ('brown',       'Brown',               '#7A4E2D'),
+  ('chocolate',   'Chocolate',           '#5C3A21'),
+  ('multi',       'Multicolour',         NULL),
+  ('print',       'Printed / patterned', NULL),
+  ('metallic',    'Metallic',            NULL)
 ON CONFLICT (slug) DO NOTHING;
+
+-- Backfill swatch_hex for installs that seeded colors before the
+-- swatch_hex column existed. Only touches rows where the field is
+-- still null so admin-curated overrides aren't clobbered.
+WITH swatch_seeds(slug, hex) AS (VALUES
+  ('black',       '#0F0F0F'),
+  ('white',       '#FFFFFF'),
+  ('ivory',       '#FFFFF0'),
+  ('cream',       '#F5F0DC'),
+  ('champagne',   '#F7E7CE'),
+  ('blush',       '#F4C2C2'),
+  ('pink',        '#FFC0CB'),
+  ('rose-gold',   '#B76E79'),
+  ('red',         '#C0392B'),
+  ('burgundy',    '#800020'),
+  ('wine',        '#722F37'),
+  ('coral',       '#FF7F50'),
+  ('orange',      '#FF8C42'),
+  ('peach',       '#FFE5B4'),
+  ('yellow',      '#F2D43F'),
+  ('gold',        '#D4AF37'),
+  ('mustard',     '#D4A436'),
+  ('olive',       '#808000'),
+  ('sage',        '#B2BC9C'),
+  ('green',       '#2E8B57'),
+  ('emerald',     '#50C878'),
+  ('forest',      '#228B22'),
+  ('teal',        '#008080'),
+  ('turquoise',   '#40E0D0'),
+  ('mint',        '#A6E3C0'),
+  ('sky-blue',    '#87CEEB'),
+  ('blue',        '#3B82F6'),
+  ('royal-blue',  '#1E40AF'),
+  ('navy',        '#001F3F'),
+  ('powder-blue', '#B0E0E6'),
+  ('lilac',       '#C8A2C8'),
+  ('lavender',    '#E6E6FA'),
+  ('purple',      '#6B2D8E'),
+  ('plum',        '#8E4585'),
+  ('mauve',       '#C9A0B4'),
+  ('grey',        '#7C7C7C'),
+  ('silver',      '#C0C0C0'),
+  ('charcoal',    '#36454F'),
+  ('beige',       '#E8DCC4'),
+  ('nude',        '#E3BC9A'),
+  ('tan',         '#D2B48C'),
+  ('brown',       '#7A4E2D'),
+  ('chocolate',   '#5C3A21')
+)
+UPDATE colors c SET swatch_hex = s.hex
+  FROM swatch_seeds s
+ WHERE c.slug = s.slug AND c.swatch_hex IS NULL;
 
 -- =========================================================
 -- Regions (geographical coverage)

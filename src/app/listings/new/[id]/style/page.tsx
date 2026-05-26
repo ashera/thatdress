@@ -1,6 +1,7 @@
 import { loadListingRefOptions } from "@/lib/ref-data";
 import { saveDraftStyle } from "@/lib/actions/listing-wizard";
 import { Field, Input } from "../../../../_components/ui";
+import { ColorPicker } from "../../../../_components/color-picker";
 import {
   loadDraft,
   StepNav,
@@ -123,25 +124,12 @@ export default async function WizardStylePage({
               />
             </Field>
             <Field label="Main Colour" htmlFor="color">
-              <select
+              <ColorPicker
                 id="color"
-                className="input"
                 name="color"
-                defaultValue={d.color ?? ""}
-              >
-                <option value="">—</option>
-                {refs.colors.map((o) => (
-                  <option key={o.id} value={o.label}>
-                    {o.label}
-                  </option>
-                ))}
-                {/* Surface legacy free-text values that aren't in the
-                    curated list so they don't silently flip to empty. */}
-                {d.color &&
-                  !refs.colors.some((o) => o.label === d.color) && (
-                    <option value={d.color}>{d.color} (legacy)</option>
-                  )}
-              </select>
+                options={refs.colors}
+                defaultValue={d.color}
+              />
             </Field>
           </div>
 

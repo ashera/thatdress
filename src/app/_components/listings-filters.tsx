@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { RefOption } from "@/lib/ref-data";
+import type { ColorOption, RefOption } from "@/lib/ref-data";
 import { Button, Field, Input } from "./ui";
 
 export type VisibilityFilter = "all" | "published" | "hidden";
@@ -11,6 +11,11 @@ export type ActiveFilters = {
   silhouette_id?: string[];
   size_id?: string[];
   condition_id?: string[];
+  length_id?: string[];
+  /** Colours are stored as label strings on dresses.color, so the
+   *  filter passes labels (not ids) and the SQL WHERE clause matches
+   *  the column directly. */
+  color?: string[];
   min_price?: string;
   max_price?: string;
   visibility?: VisibilityFilter;
@@ -28,6 +33,8 @@ type Props = {
     silhouettes: RefOption[];
     sizes: RefOption[];
     conditions: RefOption[];
+    lengths: RefOption[];
+    colors: ColorOption[];
   };
   isAdmin?: boolean;
 };
@@ -40,6 +47,8 @@ export function activeFilterCount(f: ActiveFilters): number {
   if (f.silhouette_id?.length) n++;
   if (f.size_id?.length) n++;
   if (f.condition_id?.length) n++;
+  if (f.length_id?.length) n++;
+  if (f.color?.length) n++;
   if (f.min_price) n++;
   if (f.max_price) n++;
   if (f.visibility && f.visibility !== "all") n++;
@@ -69,6 +78,52 @@ function ChipGroup({
           <span>{o.label}</span>
         </label>
       ))}
+    </div>
+  );
+}
+
+function ColorChipGroup({
+  name,
+  options,
+  selected,
+}: {
+  name: string;
+  options: ColorOption[];
+  selected: string[] | undefined;
+}) {
+  // Compare on label since dresses.color stores the label string.
+  const sel = new Set(selected ?? []);
+  return (
+    <div className="chip-group">
+      {options.map((o) => {
+        const swatch =
+          o.swatch ??
+          "conic-gradient(from 0deg, #f87171, #fbbf24, #34d399, #60a5fa, #a78bfa, #f87171)";
+        return (
+          <label key={o.id} className="chip-check">
+            <input
+              type="checkbox"
+              name={name}
+              value={o.label}
+              defaultChecked={sel.has(o.label)}
+            />
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <span
+                aria-hidden
+                style={{
+                  display: "inline-block",
+                  width: 12,
+                  height: 12,
+                  borderRadius: 999,
+                  background: swatch,
+                  border: "1px solid rgba(0,0,0,0.18)",
+                }}
+              />
+              {o.label}
+            </span>
+          </label>
+        );
+      })}
     </div>
   );
 }
@@ -132,6 +187,24 @@ export function ListingsFilters({ active, options, isAdmin }: Props) {
             name="size_id"
             options={options.sizes}
             selected={active.size_id}
+          />
+        </fieldset>
+
+        <fieldset className="filter-fieldset">
+          <legend>Length</legend>
+          <ChipGroup
+            name="length_id"
+            options={options.lengths}
+            selected={active.length_id}
+          />
+        </fieldset>
+
+        <fieldset className="filter-fieldset">
+          <legend>Colour</legend>
+          <ColorChipGroup
+            name="color"
+            options={options.colors}
+            selected={active.color}
           />
         </fieldset>
 

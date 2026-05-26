@@ -84,6 +84,11 @@ export async function listRefRows(t: RefTable): Promise<RefRow[]> {
 
 export type RefOption = { id: string; label: string };
 
+/** Colour option carries an extra swatch_hex for the picker UI.
+ *  Null when the colour is a pattern/metallic that can't be
+ *  represented as a single hex. */
+export type ColorOption = RefOption & { swatch: string | null };
+
 export async function listActiveRefOptions(t: RefTable): Promise<RefOption[]> {
   // Every dropdown is alphabetical now — the admin doesn't curate
   // an order any more.
@@ -93,6 +98,16 @@ export async function listActiveRefOptions(t: RefTable): Promise<RefOption[]> {
        FROM ${t.table}
       WHERE is_active = TRUE
       ORDER BY LOWER(${displaySql}), id`,
+  );
+  return result.rows;
+}
+
+export async function listActiveColors(): Promise<ColorOption[]> {
+  const result = await query<{ id: string; label: string; swatch: string | null }>(
+    `SELECT id::text, label, swatch_hex AS swatch
+       FROM colors
+      WHERE is_active = TRUE
+      ORDER BY LOWER(label), id`,
   );
   return result.rows;
 }
@@ -210,7 +225,7 @@ export type ListingRefOptions = {
   sleeveStyles: RefOption[];
   lengths: RefOption[];
   conditions: RefOption[];
-  colors: RefOption[];
+  colors: ColorOption[];
   regions: RefOption[];
 };
 
@@ -244,7 +259,7 @@ export async function loadListingRefOptions(): Promise<ListingRefOptions> {
     get("sleeve-styles"),
     get("dress-lengths"),
     get("condition-grades"),
-    get("colors"),
+    listActiveColors(),
     listActiveRegions(),
   ]);
   return {

@@ -1,4 +1,5 @@
 import type { ListingRefOptions, RefOption } from "@/lib/ref-data";
+import { ColorPicker } from "./color-picker";
 import { Button, Field, Input, Textarea } from "./ui";
 
 export type ListingFormDefaults = {
@@ -254,25 +255,12 @@ export function ListingForm({
             />
           </Field>
           <Field label="Main Colour" htmlFor="color">
-            <select
+            <ColorPicker
               id="color"
-              className="input"
               name="color"
-              defaultValue={defaults.color ?? ""}
-            >
-              <option value="">—</option>
-              {refs.colors.map((o) => (
-                <option key={o.id} value={o.label}>
-                  {o.label}
-                </option>
-              ))}
-              {defaults.color &&
-                !refs.colors.some((o) => o.label === defaults.color) && (
-                  <option value={defaults.color}>
-                    {defaults.color} (legacy)
-                  </option>
-                )}
-            </select>
+              options={refs.colors}
+              defaultValue={defaults.color ?? null}
+            />
           </Field>
         </div>
 

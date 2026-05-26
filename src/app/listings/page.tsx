@@ -3,7 +3,11 @@ import Link from "next/link";
 import { query } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { getBaseUrl } from "@/lib/email";
-import { findRefTable, listActiveRefOptions } from "@/lib/ref-data";
+import {
+  findRefTable,
+  listActiveColors,
+  listActiveRefOptions,
+} from "@/lib/ref-data";
 import {
   getCurrentRegionId,
   resolveCurrentRegion,
@@ -74,6 +78,8 @@ type RawSearchParams = {
   silhouette_id?: string | string[];
   size_id?: string | string[];
   condition_id?: string | string[];
+  length_id?: string | string[];
+  color?: string | string[];
   min_price?: string | string[];
   max_price?: string | string[];
   view?: string | string[];
@@ -274,7 +280,8 @@ function buildFilters(
       | "occasion_id"
       | "silhouette_id"
       | "size_id"
-      | "condition_id",
+      | "condition_id"
+      | "length_id",
   ) => {
     const ids = validIds(rawArr);
     if (ids.length === 0) return;
@@ -288,6 +295,19 @@ function buildFilters(
   addArrayFilter("dr.silhouette_id", asArray(raw.silhouette_id), "silhouette_id");
   addArrayFilter("dr.size_id", asArray(raw.size_id), "size_id");
   addArrayFilter("l.condition_id", asArray(raw.condition_id), "condition_id");
+  addArrayFilter("dr.length_id", asArray(raw.length_id), "length_id");
+
+  // Colour is stored as a label string on dresses.color rather than
+  // an FK, so the comparison runs against the text column directly.
+  const colorLabels = asArray(raw.color)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0 && s.length <= 64)
+    .slice(0, 20);
+  if (colorLabels.length > 0) {
+    active.color = colorLabels;
+    params.push(colorLabels);
+    where.push(`dr.color = ANY($${params.length}::text[])`);
+  }
 
   // Numeric ranges
   const minPrice = validInt(asScalar(raw.min_price), 0, 10_000_000);
@@ -473,15 +493,17 @@ async function loadFilterOptions() {
     if (!t) return [];
     return listActiveRefOptions(t);
   };
-  const [designers, occasions, silhouettes, sizes, conditions] =
+  const [designers, occasions, silhouettes, sizes, conditions, lengths, colors] =
     await Promise.all([
       get("designers"),
       get("occasions"),
       get("silhouettes"),
       get("dress-sizes"),
       get("condition-grades"),
+      get("dress-lengths"),
+      listActiveColors(),
     ]);
-  return { designers, occasions, silhouettes, sizes, conditions };
+  return { designers, occasions, silhouettes, sizes, conditions, lengths, colors };
 }
 
 export default async function ListingsPage({
