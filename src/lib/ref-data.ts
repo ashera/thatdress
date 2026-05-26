@@ -3,6 +3,15 @@ import { query } from "@/lib/db";
 
 export type RefSchema = "name" | "slug-label";
 
+export type RefUsage = {
+  /** Table that carries the FK to this ref table (post-dress-refactor,
+   *  most style attributes live on `dresses`, while a couple still
+   *  live on `listings`). */
+  table: "listings" | "dresses";
+  /** FK column on that table. */
+  column: string;
+};
+
 export type RefTable = {
   /** URL slug used at /admin/reference-data/[key] */
   key: string;
@@ -14,20 +23,20 @@ export type RefTable = {
   singular: string;
   /** Column shape */
   schema: RefSchema;
-  /** FK column on listings (for "in-use" counts and delete safety) */
-  listingFk?: string;
+  /** Where the "in use" count comes from. */
+  usage?: RefUsage;
 };
 
 export const REF_TABLES: ReadonlyArray<RefTable> = [
-  { key: "designers",        table: "designers",        label: "Designers",         singular: "designer",   schema: "name",       listingFk: "designer_id" },
-  { key: "occasions",        table: "occasions",        label: "Occasions",         singular: "occasion",   schema: "slug-label", listingFk: "occasion_id" },
-  { key: "silhouettes",      table: "silhouettes",      label: "Silhouettes",       singular: "silhouette", schema: "slug-label", listingFk: "silhouette_id" },
-  { key: "fabrics",          table: "fabrics",          label: "Fabrics",           singular: "fabric",     schema: "slug-label", listingFk: "fabric_id" },
-  { key: "dress-sizes",      table: "dress_sizes",      label: "Sizes",             singular: "size",       schema: "slug-label", listingFk: "size_id" },
-  { key: "necklines",        table: "necklines",        label: "Necklines",         singular: "neckline",   schema: "slug-label", listingFk: "neckline_id" },
-  { key: "sleeve-styles",    table: "sleeve_styles",    label: "Sleeve styles",     singular: "sleeve",     schema: "slug-label", listingFk: "sleeve_style_id" },
-  { key: "dress-lengths",    table: "dress_lengths",    label: "Lengths",           singular: "length",     schema: "slug-label", listingFk: "length_id" },
-  { key: "condition-grades", table: "condition_grades", label: "Condition grades",  singular: "grade",      schema: "slug-label", listingFk: "condition_id" },
+  { key: "designers",        table: "designers",        label: "Designers",        singular: "designer",   schema: "name",       usage: { table: "dresses",  column: "designer_id" } },
+  { key: "occasions",        table: "occasions",        label: "Occasions",        singular: "occasion",   schema: "slug-label", usage: { table: "listings", column: "occasion_id" } },
+  { key: "silhouettes",      table: "silhouettes",      label: "Silhouettes",      singular: "silhouette", schema: "slug-label", usage: { table: "dresses",  column: "silhouette_id" } },
+  { key: "fabrics",          table: "fabrics",          label: "Fabrics",          singular: "fabric",     schema: "slug-label", usage: { table: "dresses",  column: "fabric_id" } },
+  { key: "dress-sizes",      table: "dress_sizes",      label: "Sizes",            singular: "size",       schema: "slug-label", usage: { table: "dresses",  column: "size_id" } },
+  { key: "necklines",        table: "necklines",        label: "Necklines",        singular: "neckline",   schema: "slug-label", usage: { table: "dresses",  column: "neckline_id" } },
+  { key: "sleeve-styles",    table: "sleeve_styles",    label: "Sleeve styles",    singular: "sleeve",     schema: "slug-label", usage: { table: "dresses",  column: "sleeve_style_id" } },
+  { key: "dress-lengths",    table: "dress_lengths",    label: "Lengths",          singular: "length",     schema: "slug-label", usage: { table: "dresses",  column: "length_id" } },
+  { key: "condition-grades", table: "condition_grades", label: "Condition grades", singular: "grade",      schema: "slug-label", usage: { table: "listings", column: "condition_id" } },
 ];
 
 export function findRefTable(key: string): RefTable | null {
@@ -47,8 +56,8 @@ export type RefRow = {
 
 export async function listRefRows(t: RefTable): Promise<RefRow[]> {
   const displaySql = t.schema === "name" ? "name" : "label";
-  const inUseSql = t.listingFk
-    ? `(SELECT COUNT(*) FROM listings WHERE listings.${t.listingFk} = r.id)::int`
+  const inUseSql = t.usage
+    ? `(SELECT COUNT(*) FROM ${t.usage.table} WHERE ${t.usage.table}.${t.usage.column} = r.id)::int`
     : "0";
   const slugCol = t.schema === "slug-label" ? "slug" : "NULL::text";
   const nameCol = t.schema === "name" ? "name" : "NULL::text";
