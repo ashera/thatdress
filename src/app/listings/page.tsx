@@ -4,11 +4,12 @@ import { query } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { getBaseUrl } from "@/lib/email";
 import type { ColorOption, RefOption } from "@/lib/ref-data";
+import { resolveCurrentRegion, regionShortName } from "@/lib/regions";
 import {
-  getCurrentRegionId,
-  resolveCurrentRegion,
-  regionShortName,
-} from "@/lib/regions";
+  buildBrowseFilters,
+  type BrowseMode,
+  type RawBrowseParams,
+} from "@/lib/browse-filters";
 import { getShortlistIds } from "@/lib/shortlist";
 import { Button, ButtonLink, Input } from "../_components/ui";
 import {
@@ -67,25 +68,10 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-type RawSearchParams = {
-  q?: string | string[];
-  designer_id?: string | string[];
-  occasion_id?: string | string[];
-  silhouette_id?: string | string[];
-  size_id?: string | string[];
-  condition_id?: string | string[];
-  length_id?: string | string[];
-  color?: string | string[];
-  min_price?: string | string[];
-  max_price?: string | string[];
+type RawSearchParams = RawBrowseParams & {
   view?: string | string[];
-  visibility?: string | string[];
-  mode?: string | string[];
   sort?: string | string[];
-  trust_status?: string | string[];
 };
-
-type BrowseMode = "for-sale" | "sold" | "shortlist";
 
 type SortOption = "newest" | "price-asc" | "price-desc";
 
@@ -152,172 +138,10 @@ function buildViewHref(view: ListingsView, sp: RawSearchParams): string {
   return qs ? `/listings?${qs}` : "/listings";
 }
 
-function asArray(v: string | string[] | undefined): string[] {
-  if (v === undefined) return [];
-  return (Array.isArray(v) ? v : [v]).filter((s) => s.length > 0);
-}
-
 function asScalar(v: string | string[] | undefined): string | undefined {
   if (v === undefined) return undefined;
   const s = Array.isArray(v) ? v[0] : v;
   return s && s.length > 0 ? s : undefined;
-}
-
-function validIds(arr: string[]): string[] {
-  return arr.filter((s) => /^\d+$/.test(s));
-}
-
-function validInt(
-  s: string | undefined,
-  min: number,
-  max: number,
-): number | undefined {
-  if (!s) return undefined;
-  const n = Number.parseInt(s, 10);
-  if (!Number.isFinite(n) || n < min || n > max) return undefined;
-  return n;
-}
-
-function escapeLike(s: string): string {
-  return s.replace(/[\\%_]/g, (m) => `\\${m}`);
-}
-
-function buildFilters(
-  raw: RawSearchParams,
-  isAdmin: boolean,
-  mode: BrowseMode,
-  userId: string | null,
-): {
-  active: ActiveFilters;
-  where: string[];
-  params: unknown[];
-} {
-  const where: string[] = [];
-  const params: unknown[] = [];
-  const active: ActiveFilters = {};
-
-  // Drafts never belong on the browse page — even for admins. The
-  // wizard / mine page is where in-progress listings are managed.
-  where.push("l.is_draft = FALSE");
-
-  // Mode: for-sale (default), sold, or shortlist (user's saved dresses).
-  if (mode === "sold") {
-    where.push("l.sold_at IS NOT NULL");
-  } else if (mode === "shortlist") {
-    if (userId) {
-      params.push(userId);
-      where.push(
-        `EXISTS (SELECT 1 FROM shortlists s
-          WHERE s.user_id = $${params.length}::bigint
-            AND s.listing_id = l.id
-            AND s.ignored_at IS NULL)`,
-      );
-    } else {
-      // Anonymous viewer: no shortlist exists, force empty result set.
-      where.push("FALSE");
-    }
-  } else {
-    where.push("l.sold_at IS NULL");
-  }
-
-  if (isAdmin) {
-    const v = asScalar(raw.visibility);
-    if (v === "published") {
-      where.push("l.is_published = TRUE");
-      active.visibility = "published";
-    } else if (v === "hidden") {
-      where.push("l.is_published = FALSE");
-      active.visibility = "hidden";
-    } else {
-      active.visibility = "all";
-    }
-  } else {
-    where.push("l.is_published = TRUE");
-    // Hide admin-flagged listings from public browse. Sellers keep
-    // visibility of their own flagged listing via /listings/mine;
-    // admins always see flagged ones (and have a dedicated queue at
-    // /admin/listings/flagged).
-    where.push("l.trust_status <> 'flagged'");
-  }
-
-  const pushClause = (clause: string, value: unknown) => {
-    params.push(value);
-    where.push(clause.replace("$?", `$${params.length}`));
-  };
-
-  // Trust-status filter — supports a single value via ?trust_status=
-  // (e.g. /listings?trust_status=verified from the buyer's checklist
-  // CTA). Accepts the two non-default states; anything else is
-  // ignored. Built off whichever values the listings_trust_status_check
-  // constraint allows.
-  const trustStatusRaw = asScalar(raw.trust_status);
-  if (trustStatusRaw === "verified" || trustStatusRaw === "authenticated") {
-    pushClause(`l.trust_status = $?`, trustStatusRaw);
-    active.trustStatus = trustStatusRaw;
-  }
-
-  // Text search (q): single param reused across columns.
-  const q = asScalar(raw.q)?.slice(0, 120).trim();
-  if (q) {
-    active.q = q;
-    params.push(`%${escapeLike(q)}%`);
-    const n = params.length;
-    where.push(
-      `(l.title ILIKE $${n} ESCAPE '\\' OR l.description ILIKE $${n} ESCAPE '\\' OR dr.model ILIKE $${n} ESCAPE '\\' OR d.name ILIKE $${n} ESCAPE '\\')`,
-    );
-  }
-
-  // Multi-select FKs (use ANY)
-  const addArrayFilter = (
-    column: string,
-    rawArr: string[],
-    key:
-      | "designer_id"
-      | "occasion_id"
-      | "silhouette_id"
-      | "size_id"
-      | "condition_id"
-      | "length_id",
-  ) => {
-    const ids = validIds(rawArr);
-    if (ids.length === 0) return;
-    active[key] = ids;
-    params.push(ids.map((s) => Number(s)));
-    where.push(`${column} = ANY($${params.length}::bigint[])`);
-  };
-
-  addArrayFilter("dr.designer_id", asArray(raw.designer_id), "designer_id");
-  addArrayFilter("l.occasion_id", asArray(raw.occasion_id), "occasion_id");
-  addArrayFilter("dr.silhouette_id", asArray(raw.silhouette_id), "silhouette_id");
-  addArrayFilter("dr.size_id", asArray(raw.size_id), "size_id");
-  addArrayFilter("l.condition_id", asArray(raw.condition_id), "condition_id");
-  addArrayFilter("dr.length_id", asArray(raw.length_id), "length_id");
-
-  // Colour is stored as a label string on dresses.color rather than
-  // an FK, so the comparison runs against the text column directly.
-  const colorLabels = asArray(raw.color)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0 && s.length <= 64)
-    .slice(0, 20);
-  if (colorLabels.length > 0) {
-    active.color = colorLabels;
-    params.push(colorLabels);
-    where.push(`dr.color = ANY($${params.length}::text[])`);
-  }
-
-  // Numeric ranges
-  const minPrice = validInt(asScalar(raw.min_price), 0, 10_000_000);
-  if (minPrice !== undefined) {
-    active.min_price = String(minPrice);
-    pushClause("l.price_cents >= $?", minPrice * 100);
-  }
-  const maxPrice = validInt(asScalar(raw.max_price), 0, 10_000_000);
-  if (maxPrice !== undefined) {
-    active.max_price = String(maxPrice);
-    pushClause("l.price_cents <= $?", maxPrice * 100);
-  }
-
-  return { active, where, params };
 }
 
 /**
@@ -595,39 +419,10 @@ export default async function ListingsPage({
   const user = await getCurrentUser();
   const isAdmin = user?.isAdmin ?? false;
 
-  const rawMode = Array.isArray(sp.mode) ? sp.mode[0] : sp.mode;
-  const mode: BrowseMode =
-    rawMode === "sold"
-      ? "sold"
-      : rawMode === "shortlist"
-        ? "shortlist"
-        : "for-sale";
-
-  const { active, where, params } = buildFilters(
+  const { active, mode, whereSql, params, regionId } = await buildBrowseFilters(
     sp,
-    isAdmin,
-    mode,
-    user?.id ?? null,
+    { isAdmin, userId: user?.id ?? null },
   );
-
-  // Apply current region filter for non-admins. Strict — only listings in
-  // the current region — but always include the viewer's own listings
-  // regardless of region so a seller can manage stock across regions from
-  // the main browse page. Admins see everything sitewide.
-  const regionId = !isAdmin ? await getCurrentRegionId() : null;
-  if (regionId) {
-    params.push(regionId);
-    const regionParam = `$${params.length}::bigint`;
-    if (user) {
-      params.push(user.id);
-      const userParam = `$${params.length}::bigint`;
-      where.push(`(l.region_id = ${regionParam} OR l.seller_id = ${userParam})`);
-    } else {
-      where.push(`l.region_id = ${regionParam}`);
-    }
-  }
-
-  const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
 
   const viewRaw = Array.isArray(sp.view) ? sp.view[0] : sp.view;
   const view: ListingsView =

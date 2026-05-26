@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ColorOption, RefOption } from "@/lib/ref-data";
 import { Button, Field, Input } from "./ui";
+import { LiveFilterCount } from "./live-filter-count";
 
 export type VisibilityFilter = "all" | "published" | "hidden";
 
@@ -268,6 +269,7 @@ export function ListingsFilters({ active, options, isAdmin }: Props) {
               Clear all
             </Link>
           )}
+          <LiveFilterCount />
         </div>
       </form>
     </details>
