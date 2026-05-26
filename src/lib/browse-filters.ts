@@ -1,6 +1,6 @@
 import "server-only";
 import { getCurrentRegionId } from "@/lib/regions";
-import type { ActiveFilters } from "@/app/_components/listings-filters";
+import type { ActiveFilters } from "@/lib/listings-filter-types";
 
 export type RawBrowseParams = {
   q?: string | string[];

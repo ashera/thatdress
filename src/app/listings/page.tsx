@@ -18,11 +18,11 @@ import {
   listingFromRow,
   type ListingCardRow,
 } from "../_components/listing-card";
+import { ListingsFilters } from "../_components/listings-filters";
 import {
-  ListingsFilters,
   activeFilterCount,
   type ActiveFilters,
-} from "../_components/listings-filters";
+} from "@/lib/listings-filter-types";
 import { ViewToggle, type ListingsView } from "../_components/view-toggle";
 import {
   ListingsMap,
