@@ -3,11 +3,7 @@ import Link from "next/link";
 import { query } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { getBaseUrl } from "@/lib/email";
-import {
-  findRefTable,
-  listActiveColors,
-  listActiveRefOptions,
-} from "@/lib/ref-data";
+import type { ColorOption, RefOption } from "@/lib/ref-data";
 import {
   getCurrentRegionId,
   resolveCurrentRegion,
@@ -487,21 +483,103 @@ async function fetchListings(
   }
 }
 
-async function loadFilterOptions() {
-  const get = async (key: string) => {
-    const t = findRefTable(key);
-    if (!t) return [];
-    return listActiveRefOptions(t);
-  };
+/**
+ * Filter options pruned to values that actually appear in at least
+ * one live, for-sale, non-flagged listing. Stops the search panel
+ * surfacing 47 designers when only 6 of them have anything listed.
+ *
+ * Predicate intentionally doesn't include the currently-applied
+ * filters — if it did, ticking "Sage" would hide every other colour,
+ * which makes adding a second filter feel broken. Region scoping
+ * mirrors what the browse query does so the option counts agree
+ * with the visible listing count.
+ */
+async function loadFilterOptions({
+  isAdmin,
+  regionId,
+  userId,
+}: {
+  isAdmin: boolean;
+  regionId: string | null;
+  userId: string | null;
+}) {
+  // Live-listing predicate. Always-on conditions match the public
+  // browse view; region scope only applies to non-admin.
+  const params: unknown[] = [];
+  const conds: string[] = [
+    "l.is_draft = FALSE",
+    "l.is_published = TRUE",
+    "l.sold_at IS NULL",
+    "l.trust_status <> 'flagged'",
+  ];
+  if (!isAdmin && regionId) {
+    params.push(regionId);
+    if (userId) {
+      params.push(userId);
+      conds.push(
+        `(l.region_id = $${params.length - 1}::bigint OR l.seller_id = $${params.length}::bigint)`,
+      );
+    } else {
+      conds.push(`l.region_id = $${params.length}::bigint`);
+    }
+  }
+  const livePredicate = conds.join(" AND ");
+
+  // Helper: ref table whose values are referenced by FK from either
+  // listings.<col> or dresses.<col>.
+  async function loadByFk(
+    refTable: string,
+    refLabelCol: string,
+    fkTable: "dresses" | "listings",
+    fkCol: string,
+  ): Promise<RefOption[]> {
+    const join =
+      fkTable === "dresses" ? "JOIN dresses dr ON dr.id = l.dress_id" : "";
+    const fkExpr = fkTable === "dresses" ? `dr.${fkCol}` : `l.${fkCol}`;
+    const r = await query<{ id: string; label: string }>(
+      `SELECT r.id::text AS id, r.${refLabelCol} AS label
+         FROM ${refTable} r
+        WHERE r.is_active = TRUE
+          AND EXISTS (
+            SELECT 1 FROM listings l
+            ${join}
+             WHERE ${fkExpr} = r.id
+               AND ${livePredicate}
+          )
+        ORDER BY LOWER(r.${refLabelCol}), r.id`,
+      params,
+    );
+    return r.rows;
+  }
+
+  // Colours store labels (not FKs) on dresses.color, so the EXISTS
+  // joins on a case-insensitive label match instead.
+  async function loadColors(): Promise<ColorOption[]> {
+    const r = await query<{ id: string; label: string; swatch: string | null }>(
+      `SELECT c.id::text AS id, c.label, c.swatch_hex AS swatch
+         FROM colors c
+        WHERE c.is_active = TRUE
+          AND EXISTS (
+            SELECT 1 FROM listings l
+            JOIN dresses dr ON dr.id = l.dress_id
+             WHERE LOWER(dr.color) = LOWER(c.label)
+               AND ${livePredicate}
+          )
+        ORDER BY LOWER(c.label), c.id`,
+      params,
+    );
+    return r.rows;
+  }
+
   const [designers, occasions, silhouettes, sizes, conditions, lengths, colors] =
     await Promise.all([
-      get("designers"),
-      get("occasions"),
-      get("silhouettes"),
-      get("dress-sizes"),
-      get("condition-grades"),
-      get("dress-lengths"),
-      listActiveColors(),
+      loadByFk("designers", "name", "dresses", "designer_id"),
+      loadByFk("occasions", "label", "listings", "occasion_id"),
+      loadByFk("silhouettes", "label", "dresses", "silhouette_id"),
+      loadByFk("dress_sizes", "label", "dresses", "size_id"),
+      loadByFk("condition_grades", "label", "listings", "condition_id"),
+      loadByFk("dress_lengths", "label", "dresses", "length_id"),
+      loadColors(),
     ]);
   return { designers, occasions, silhouettes, sizes, conditions, lengths, colors };
 }
@@ -536,18 +614,16 @@ export default async function ListingsPage({
   // the current region — but always include the viewer's own listings
   // regardless of region so a seller can manage stock across regions from
   // the main browse page. Admins see everything sitewide.
-  if (!isAdmin) {
-    const regionId = await getCurrentRegionId();
-    if (regionId) {
-      params.push(regionId);
-      const regionParam = `$${params.length}::bigint`;
-      if (user) {
-        params.push(user.id);
-        const userParam = `$${params.length}::bigint`;
-        where.push(`(l.region_id = ${regionParam} OR l.seller_id = ${userParam})`);
-      } else {
-        where.push(`l.region_id = ${regionParam}`);
-      }
+  const regionId = !isAdmin ? await getCurrentRegionId() : null;
+  if (regionId) {
+    params.push(regionId);
+    const regionParam = `$${params.length}::bigint`;
+    if (user) {
+      params.push(user.id);
+      const userParam = `$${params.length}::bigint`;
+      where.push(`(l.region_id = ${regionParam} OR l.seller_id = ${userParam})`);
+    } else {
+      where.push(`l.region_id = ${regionParam}`);
     }
   }
 
@@ -562,7 +638,11 @@ export default async function ListingsPage({
 
   const [result, options, shortlistedIds, settings] = await Promise.all([
     fetchListings(whereSql, params, orderBy),
-    loadFilterOptions(),
+    loadFilterOptions({
+      isAdmin,
+      regionId,
+      userId: user?.id ?? null,
+    }),
     getShortlistIds(user?.id),
     loadSiteSettings(),
   ]);
