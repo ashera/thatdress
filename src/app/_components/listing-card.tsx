@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ButtonLink, Icon } from "./ui";
-import { toggleShortlist } from "@/lib/actions/shortlist";
+import { FavouriteToggle } from "./favourite-toggle";
 import { isTrustStatus, type TrustStatus } from "@/lib/listing-trust";
 import { TrustBadge } from "./trust-badge";
 
@@ -226,20 +226,12 @@ function ShortlistButton({
   variant: "card" | "row";
 }) {
   return (
-    <form action={toggleShortlist} className="shortlist-form">
-      <input type="hidden" name="listingId" value={listingId} />
-      <input type="hidden" name="next" value={`/listings/${listingId}`} />
-      <button
-        type="submit"
-        className={`shortlist-btn ${variant === "row" ? "is-row" : ""} ${
-          isShortlisted ? "is-on" : ""
-        }`}
-        aria-label={isShortlisted ? "Remove from shortlist" : "Add to shortlist"}
-        title={isShortlisted ? "Remove from shortlist" : "Save to shortlist"}
-      >
-        <Icon name="heart" size="sm" />
-      </button>
-    </form>
+    <FavouriteToggle
+      listingId={listingId}
+      isShortlisted={isShortlisted}
+      variant={variant}
+      nextPath={`/listings/${listingId}`}
+    />
   );
 }
 

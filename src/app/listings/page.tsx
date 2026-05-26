@@ -601,7 +601,7 @@ export default async function ListingsPage({
           className={`mode-toggle-btn ${mode === "shortlist" ? "is-active" : ""}`}
           aria-current={mode === "shortlist" ? "page" : undefined}
         >
-          Shortlist
+          Favourites
         </Link>
       </div>
 
@@ -611,7 +611,7 @@ export default async function ListingsPage({
             {mode === "sold"
               ? "Recently sold"
               : mode === "shortlist"
-                ? "Your shortlist"
+                ? "Your favourites"
                 : "Browse dresses"}
           </h3>
           {result.ok && (
@@ -703,8 +703,8 @@ export default async function ListingsPage({
                 ? "Nothing sold yet"
                 : mode === "shortlist"
                   ? user
-                    ? "Your shortlist is empty"
-                    : "Sign in to see your shortlist"
+                    ? "You haven't favourited anything yet"
+                    : "Sign in to see your favourites"
                   : "No listings yet"}
           </h3>
           <p style={{ margin: "0 0 var(--s-5)" }}>
