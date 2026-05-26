@@ -166,10 +166,10 @@ export default function PrivacyPolicyPage() {
               </li>
               <li>
                 <strong>Body measurements</strong> — optional bust,
-                waist, and hips inches you enter on your profile to
-                power the fit calculator. These are visible only to you;
-                we never expose them to sellers, buyers, or any third
-                party.
+                waist, and hips measurements (cm) you enter on your
+                profile to power the fit calculator. These are visible
+                only to you; we never expose them to sellers, buyers,
+                or any third party.
               </li>
               <li>
                 <strong>Listings</strong> — photos, designer, model,

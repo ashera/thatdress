@@ -62,9 +62,9 @@ export type ListingCardRow = {
   length_label: string | null;
   location_postal: string | null;
   color: string | null;
-  bust_inches: string | null;
-  waist_inches: string | null;
-  hips_inches: string | null;
+  bust_cm: string | null;
+  waist_cm: string | null;
+  hips_cm: string | null;
   original_retail_cents: number | null;
   has_original_receipt: boolean | null;
   trust_status?: string | null;

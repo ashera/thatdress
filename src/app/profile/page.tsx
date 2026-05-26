@@ -462,37 +462,37 @@ export default async function ProfilePage({
                 gap: "var(--s-3)",
               }}
             >
-              <Field label="Bust (inches)" htmlFor="bust_inches">
+              <Field label="Bust (cm)" htmlFor="bust_cm">
                 <Input
-                  id="bust_inches"
-                  name="bust_inches"
+                  id="bust_cm"
+                  name="bust_cm"
                   type="text"
                   inputMode="decimal"
                   pattern="^\d{1,3}(\.\d{1,2})?$"
-                  placeholder="e.g. 36"
-                  defaultValue={user.bustInches?.toString() ?? ""}
+                  placeholder="e.g. 92"
+                  defaultValue={user.bustCm?.toString() ?? ""}
                 />
               </Field>
-              <Field label="Waist (inches)" htmlFor="waist_inches">
+              <Field label="Waist (cm)" htmlFor="waist_cm">
                 <Input
-                  id="waist_inches"
-                  name="waist_inches"
+                  id="waist_cm"
+                  name="waist_cm"
                   type="text"
                   inputMode="decimal"
                   pattern="^\d{1,3}(\.\d{1,2})?$"
-                  placeholder="e.g. 28"
-                  defaultValue={user.waistInches?.toString() ?? ""}
+                  placeholder="e.g. 71"
+                  defaultValue={user.waistCm?.toString() ?? ""}
                 />
               </Field>
-              <Field label="Hips (inches)" htmlFor="hips_inches">
+              <Field label="Hips (cm)" htmlFor="hips_cm">
                 <Input
-                  id="hips_inches"
-                  name="hips_inches"
+                  id="hips_cm"
+                  name="hips_cm"
                   type="text"
                   inputMode="decimal"
                   pattern="^\d{1,3}(\.\d{1,2})?$"
-                  placeholder="e.g. 38"
-                  defaultValue={user.hipsInches?.toString() ?? ""}
+                  placeholder="e.g. 97"
+                  defaultValue={user.hipsCm?.toString() ?? ""}
                 />
               </Field>
             </div>

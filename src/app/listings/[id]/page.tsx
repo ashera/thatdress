@@ -67,9 +67,9 @@ type ListingRow = {
   length_label: string | null;
   location_postal: string | null;
   color: string | null;
-  bust_inches: string | null;
-  waist_inches: string | null;
-  hips_inches: string | null;
+  bust_cm: string | null;
+  waist_cm: string | null;
+  hips_cm: string | null;
   original_retail_cents: number | null;
   alterations_text: string | null;
   has_original_receipt: boolean | null;
@@ -116,9 +116,9 @@ const LISTING_SELECT = `
   dl.label AS length_label,
   l.location_postal,
   dr.color AS color,
-  dr.bust_inches::text  AS bust_inches,
-  dr.waist_inches::text AS waist_inches,
-  dr.hips_inches::text  AS hips_inches,
+  dr.bust_cm::text  AS bust_cm,
+  dr.waist_cm::text AS waist_cm,
+  dr.hips_cm::text  AS hips_cm,
   dr.original_retail_cents AS original_retail_cents,
   l.alterations_text,
   l.has_original_receipt,
@@ -354,7 +354,7 @@ function fmtMeasure(s: string | null): string | null {
   if (!s) return null;
   const n = Number(s);
   if (!Number.isFinite(n)) return null;
-  return `${n}″`;
+  return `${n} cm`;
 }
 
 type Spec = { k: string; v: string };
@@ -379,11 +379,11 @@ function buildSpecs(l: ListingRow): { group: string; items: Spec[] }[] {
 
   const fit: Spec[] = [];
   if (l.size_label) fit.push({ k: "Labelled size", v: l.size_label });
-  const bust = fmtMeasure(l.bust_inches);
+  const bust = fmtMeasure(l.bust_cm);
   if (bust) fit.push({ k: "Bust", v: bust });
-  const waist = fmtMeasure(l.waist_inches);
+  const waist = fmtMeasure(l.waist_cm);
   if (waist) fit.push({ k: "Waist", v: waist });
-  const hips = fmtMeasure(l.hips_inches);
+  const hips = fmtMeasure(l.hips_cm);
   if (hips) fit.push({ k: "Hips", v: hips });
 
   const provenance: Spec[] = [];
@@ -431,9 +431,9 @@ function rowToHealthInput(l: ListingRow, imageCount: number): HealthInput {
     sleeveStyleId: present(l.sleeve_style_label),
     lengthId: present(l.length_label),
     color: l.color,
-    bustInches: num(l.bust_inches),
-    waistInches: num(l.waist_inches),
-    hipsInches: num(l.hips_inches),
+    bustCm: num(l.bust_cm),
+    waistCm: num(l.waist_cm),
+    hipsCm: num(l.hips_cm),
     originalRetailCents: l.original_retail_cents,
     hasOriginalReceipt: !!l.has_original_receipt,
     isAuthenticDeclared: !!l.is_authentic_declared,
@@ -770,22 +770,22 @@ export default async function ListingDetailPage({
   //                 viewer is the seller/admin on their own listing.
   const userHasMeasurements = !!(
     currentUser &&
-    (currentUser.bustInches != null ||
-      currentUser.waistInches != null ||
-      currentUser.hipsInches != null)
+    (currentUser.bustCm != null ||
+      currentUser.waistCm != null ||
+      currentUser.hipsCm != null)
   );
   const fit =
     currentUser && !isOwner && userHasMeasurements
       ? assessFit(
           {
-            bust: currentUser.bustInches,
-            waist: currentUser.waistInches,
-            hips: currentUser.hipsInches,
+            bust: currentUser.bustCm,
+            waist: currentUser.waistCm,
+            hips: currentUser.hipsCm,
           },
           {
-            bust: l.bust_inches,
-            waist: l.waist_inches,
-            hips: l.hips_inches,
+            bust: l.bust_cm,
+            waist: l.waist_cm,
+            hips: l.hips_cm,
           },
         )
       : null;

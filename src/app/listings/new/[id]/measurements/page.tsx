@@ -109,48 +109,48 @@ export default async function WizardMeasurementsPage({
         </section>
 
         <section className="form-card">
-          <h2 className="card-heading">Measurements (inches)</h2>
+          <h2 className="card-heading">Measurements (cm)</h2>
           <p className="card-sub">All optional, but worth their weight in saved messages.</p>
           <WizardTip>
             Measure flat, lying down, then double. Bust is across the fullest
             point; waist is the narrowest part of the dress; hips are about
-            8&Prime; below the waist seam.
+            20&nbsp;cm below the waist seam.
           </WizardTip>
 
           <div className="grid-2">
-            <Field label="Bust" htmlFor="bust_inches">
+            <Field label="Bust" htmlFor="bust_cm">
               <Input
-                id="bust_inches"
-                name="bust_inches"
+                id="bust_cm"
+                name="bust_cm"
                 type="number"
                 step="0.5"
-                min={20}
-                max={70}
-                defaultValue={nstr(d.bust_inches)}
+                min={50}
+                max={180}
+                defaultValue={nstr(d.bust_cm)}
               />
             </Field>
-            <Field label="Waist" htmlFor="waist_inches">
+            <Field label="Waist" htmlFor="waist_cm">
               <Input
-                id="waist_inches"
-                name="waist_inches"
+                id="waist_cm"
+                name="waist_cm"
                 type="number"
                 step="0.5"
-                min={18}
-                max={70}
-                defaultValue={nstr(d.waist_inches)}
+                min={45}
+                max={180}
+                defaultValue={nstr(d.waist_cm)}
               />
             </Field>
           </div>
 
-          <Field label="Hips" htmlFor="hips_inches">
+          <Field label="Hips" htmlFor="hips_cm">
             <Input
-              id="hips_inches"
-              name="hips_inches"
+              id="hips_cm"
+              name="hips_cm"
               type="number"
               step="0.5"
-              min={24}
-              max={80}
-              defaultValue={nstr(d.hips_inches)}
+              min={60}
+              max={210}
+              defaultValue={nstr(d.hips_cm)}
             />
           </Field>
         </section>

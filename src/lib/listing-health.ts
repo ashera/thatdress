@@ -29,9 +29,9 @@ export type HealthInput = {
   sleeveStyleId: string | null;
   lengthId: string | null;
   color: string | null;
-  bustInches: number | null;
-  waistInches: number | null;
-  hipsInches: number | null;
+  bustCm: number | null;
+  waistCm: number | null;
+  hipsCm: number | null;
   originalRetailCents: number | null;
   hasOriginalReceipt: boolean;
   isAuthenticDeclared: boolean;
@@ -133,15 +133,15 @@ export function computeHealth(input: HealthInput): HealthResult {
 
   // --- Measurements: 12 (4 each) ---
   award({
-    earned: input.bustInches ? 4 : 0,
+    earned: input.bustCm ? 4 : 0,
     suggestion: { points: 4, text: "Add bust measurement", step: "measurements" },
   });
   award({
-    earned: input.waistInches ? 4 : 0,
+    earned: input.waistCm ? 4 : 0,
     suggestion: { points: 4, text: "Add waist measurement", step: "measurements" },
   });
   award({
-    earned: input.hipsInches ? 4 : 0,
+    earned: input.hipsCm ? 4 : 0,
     suggestion: { points: 4, text: "Add hips measurement", step: "measurements" },
   });
 

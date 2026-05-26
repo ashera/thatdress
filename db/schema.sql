@@ -75,12 +75,12 @@ ALTER TABLE users
   ADD COLUMN IF NOT EXISTS surname           TEXT,
   ADD COLUMN IF NOT EXISTS town              TEXT,
   ADD COLUMN IF NOT EXISTS postcode          TEXT,
-  -- Buyer-side body measurements, used by the fit calculator on
-  -- listing detail. Optional; rendered against the dresses.*_inches
+  -- Buyer-side body measurements (cm), used by the fit calculator on
+  -- listing detail. Optional; rendered against the dresses.*_cm
   -- columns to surface a 'how it fits you' chip per listing.
-  ADD COLUMN IF NOT EXISTS bust_inches       NUMERIC(4,1),
-  ADD COLUMN IF NOT EXISTS waist_inches      NUMERIC(4,1),
-  ADD COLUMN IF NOT EXISTS hips_inches       NUMERIC(4,1),
+  ADD COLUMN IF NOT EXISTS bust_cm           NUMERIC(4,1),
+  ADD COLUMN IF NOT EXISTS waist_cm          NUMERIC(4,1),
+  ADD COLUMN IF NOT EXISTS hips_cm           NUMERIC(4,1),
   ADD COLUMN IF NOT EXISTS suspended_at      TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMPTZ,
   -- Referral programme. Every user gets a personal referral_code they
@@ -333,9 +333,9 @@ CREATE TABLE IF NOT EXISTS dresses (
   sleeve_style_id          BIGINT       REFERENCES sleeve_styles(id) ON DELETE SET NULL,
   length_id                BIGINT       REFERENCES dress_lengths(id) ON DELETE SET NULL,
   size_id                  BIGINT       REFERENCES dress_sizes(id)   ON DELETE SET NULL,
-  bust_inches              NUMERIC(4,1),
-  waist_inches             NUMERIC(4,1),
-  hips_inches              NUMERIC(4,1),
+  bust_cm                  NUMERIC(4,1),
+  waist_cm                 NUMERIC(4,1),
+  hips_cm                  NUMERIC(4,1),
   color                    TEXT,
   original_retail_cents    INTEGER,
   -- Lifecycle.
@@ -432,6 +432,60 @@ ALTER TABLE listings DROP COLUMN IF EXISTS bust_inches;
 ALTER TABLE listings DROP COLUMN IF EXISTS waist_inches;
 ALTER TABLE listings DROP COLUMN IF EXISTS hips_inches;
 ALTER TABLE listings DROP COLUMN IF EXISTS original_retail_cents;
+
+-- =========================================================
+-- One-time inches → cm conversion. Renames the columns in
+-- place and multiplies any non-null values by 2.54, rounding
+-- to 1 decimal place so the existing NUMERIC(4,1) shape keeps
+-- working. Guarded on the old column name so it's idempotent
+-- across redeploys.
+-- =========================================================
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+     WHERE table_name = 'users' AND column_name = 'bust_inches'
+  ) THEN
+    ALTER TABLE users RENAME COLUMN bust_inches TO bust_cm;
+    UPDATE users SET bust_cm  = ROUND((bust_cm  * 2.54)::numeric, 1) WHERE bust_cm  IS NOT NULL;
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+     WHERE table_name = 'users' AND column_name = 'waist_inches'
+  ) THEN
+    ALTER TABLE users RENAME COLUMN waist_inches TO waist_cm;
+    UPDATE users SET waist_cm = ROUND((waist_cm * 2.54)::numeric, 1) WHERE waist_cm IS NOT NULL;
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+     WHERE table_name = 'users' AND column_name = 'hips_inches'
+  ) THEN
+    ALTER TABLE users RENAME COLUMN hips_inches TO hips_cm;
+    UPDATE users SET hips_cm  = ROUND((hips_cm  * 2.54)::numeric, 1) WHERE hips_cm  IS NOT NULL;
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+     WHERE table_name = 'dresses' AND column_name = 'bust_inches'
+  ) THEN
+    ALTER TABLE dresses RENAME COLUMN bust_inches TO bust_cm;
+    UPDATE dresses SET bust_cm  = ROUND((bust_cm  * 2.54)::numeric, 1) WHERE bust_cm  IS NOT NULL;
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+     WHERE table_name = 'dresses' AND column_name = 'waist_inches'
+  ) THEN
+    ALTER TABLE dresses RENAME COLUMN waist_inches TO waist_cm;
+    UPDATE dresses SET waist_cm = ROUND((waist_cm * 2.54)::numeric, 1) WHERE waist_cm IS NOT NULL;
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+     WHERE table_name = 'dresses' AND column_name = 'hips_inches'
+  ) THEN
+    ALTER TABLE dresses RENAME COLUMN hips_inches TO hips_cm;
+    UPDATE dresses SET hips_cm  = ROUND((hips_cm  * 2.54)::numeric, 1) WHERE hips_cm  IS NOT NULL;
+  END IF;
+END $$;
 
 ALTER TABLE listings
   ADD COLUMN IF NOT EXISTS dress_id BIGINT REFERENCES dresses(id) ON DELETE CASCADE;

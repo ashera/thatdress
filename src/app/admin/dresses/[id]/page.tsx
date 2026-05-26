@@ -19,9 +19,9 @@ type DressRow = {
   sleeve_label: string | null;
   length_label: string | null;
   size_label: string | null;
-  bust_inches: string | null;
-  waist_inches: string | null;
-  hips_inches: string | null;
+  bust_cm: string | null;
+  waist_cm: string | null;
+  hips_cm: string | null;
   color: string | null;
   original_retail_cents: number | null;
   disposition: string;
@@ -72,9 +72,9 @@ async function fetchDress(id: string): Promise<DressRow | null> {
               sle.label                                AS sleeve_label,
               len.label                                AS length_label,
               sz.label                                 AS size_label,
-              d.bust_inches::text                      AS bust_inches,
-              d.waist_inches::text                     AS waist_inches,
-              d.hips_inches::text                      AS hips_inches,
+              d.bust_cm::text                          AS bust_cm,
+              d.waist_cm::text                         AS waist_cm,
+              d.hips_cm::text                          AS hips_cm,
               d.color,
               d.original_retail_cents,
               d.disposition,
@@ -228,9 +228,9 @@ function dressTitle(d: DressRow): string {
 
 function measurements(d: DressRow): string | null {
   const parts: string[] = [];
-  if (d.bust_inches) parts.push(`bust ${d.bust_inches}"`);
-  if (d.waist_inches) parts.push(`waist ${d.waist_inches}"`);
-  if (d.hips_inches) parts.push(`hips ${d.hips_inches}"`);
+  if (d.bust_cm) parts.push(`bust ${d.bust_cm} cm`);
+  if (d.waist_cm) parts.push(`waist ${d.waist_cm} cm`);
+  if (d.hips_cm) parts.push(`hips ${d.hips_cm} cm`);
   return parts.length > 0 ? parts.join(" · ") : null;
 }
 

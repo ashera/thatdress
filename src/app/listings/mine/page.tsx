@@ -62,9 +62,9 @@ type DraftRowFromDb = {
   sleeve_style_id: string | null;
   length_id: string | null;
   color: string | null;
-  bust_inches: string | null;
-  waist_inches: string | null;
-  hips_inches: string | null;
+  bust_cm: string | null;
+  waist_cm: string | null;
+  hips_cm: string | null;
   original_retail_cents: number | null;
   has_original_receipt: boolean | null;
   is_authentic_declared: boolean | null;
@@ -96,9 +96,9 @@ async function fetchDrafts(userId: string): Promise<DraftItem[]> {
               dr.sleeve_style_id::text   AS sleeve_style_id,
               dr.length_id::text         AS length_id,
               dr.color                   AS color,
-              dr.bust_inches::text       AS bust_inches,
-              dr.waist_inches::text      AS waist_inches,
-              dr.hips_inches::text       AS hips_inches,
+              dr.bust_cm::text           AS bust_cm,
+              dr.waist_cm::text          AS waist_cm,
+              dr.hips_cm::text           AS hips_cm,
               dr.original_retail_cents   AS original_retail_cents,
               l.has_original_receipt,
               l.is_authentic_declared,
@@ -130,9 +130,9 @@ async function fetchDrafts(userId: string): Promise<DraftItem[]> {
         sleeveStyleId: d.sleeve_style_id,
         lengthId: d.length_id,
         color: d.color,
-        bustInches: num(d.bust_inches),
-        waistInches: num(d.waist_inches),
-        hipsInches: num(d.hips_inches),
+        bustCm: num(d.bust_cm),
+        waistCm: num(d.waist_cm),
+        hipsCm: num(d.hips_cm),
         originalRetailCents: d.original_retail_cents,
         hasOriginalReceipt: !!d.has_original_receipt,
         isAuthenticDeclared: !!d.is_authentic_declared,
@@ -301,9 +301,9 @@ async function fetchOwnListings(
               dl.label  AS length_label,
               l.location_postal,
               dr.color  AS color,
-              dr.bust_inches::text  AS bust_inches,
-              dr.waist_inches::text AS waist_inches,
-              dr.hips_inches::text  AS hips_inches,
+              dr.bust_cm::text  AS bust_cm,
+              dr.waist_cm::text AS waist_cm,
+              dr.hips_cm::text  AS hips_cm,
               dr.original_retail_cents AS original_retail_cents,
               l.has_original_receipt,
               l.trust_status,

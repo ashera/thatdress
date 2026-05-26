@@ -43,7 +43,7 @@ const TOOLS: Tool[] = [
       chip: "#9d174d",
     },
     example: {
-      input: "Take-in bodice + shorten 2 inches at the hem",
+      input: "Take-in bodice + shorten 5 cm at the hem",
       output: "$80 – $140 at a Sydney tailor",
     },
   },

@@ -20,7 +20,7 @@ const SLOTS = [
   {
     role: "front",
     label: "Full-length front",
-    desc: "On a hanger, dress form, or model. Show the whole silhouette in soft daylight against a plain wall.",
+    desc: "On a hanger, mannequin, or model. Show the whole silhouette against a plain wall.",
     guide: "/seamstress-formal-front.jpg",
   },
   {

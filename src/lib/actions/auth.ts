@@ -112,17 +112,18 @@ function clean(
 }
 
 /**
- * Parse an inches input from a form field. Allows blanks (returns
- * null) and clamps to a sane range so a typo doesn't poison the
- * fit calculator with absurd values.
+ * Parse a centimetre input from a form field. Allows blanks
+ * (returns null) and clamps to a sane range so a typo doesn't
+ * poison the fit calculator with absurd values.
  */
-function cleanInches(formData: FormData, key: string): number | null {
+function cleanCm(formData: FormData, key: string): number | null {
   const raw = String(formData.get(key) ?? "").trim();
   if (raw === "") return null;
   if (!/^\d{1,3}(\.\d{1,2})?$/.test(raw)) return null;
   const n = Number.parseFloat(raw);
   if (!Number.isFinite(n)) return null;
-  if (n < 20 || n > 70) return null;
+  // Roughly the old 20"–70" range converted: 50cm–180cm.
+  if (n < 50 || n > 180) return null;
   // Round to one decimal — matches NUMERIC(4,1) on the column.
   return Math.round(n * 10) / 10;
 }
@@ -137,9 +138,9 @@ export async function updateProfile(formData: FormData): Promise<void> {
   const surname = clean(formData, "surname", 64);
   const town = clean(formData, "town", 64);
   const postcode = clean(formData, "postcode", 16);
-  const bust = cleanInches(formData, "bust_inches");
-  const waist = cleanInches(formData, "waist_inches");
-  const hips = cleanInches(formData, "hips_inches");
+  const bust = cleanCm(formData, "bust_cm");
+  const waist = cleanCm(formData, "waist_cm");
+  const hips = cleanCm(formData, "hips_cm");
 
   await query(
     `UPDATE users
@@ -148,9 +149,9 @@ export async function updateProfile(formData: FormData): Promise<void> {
             surname = $3,
             town = $4,
             postcode = $5,
-            bust_inches = $7,
-            waist_inches = $8,
-            hips_inches = $9
+            bust_cm = $7,
+            waist_cm = $8,
+            hips_cm = $9
       WHERE id = $6::bigint`,
     [title, firstName, surname, town, postcode, user.id, bust, waist, hips],
   );

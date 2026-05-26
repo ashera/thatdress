@@ -90,7 +90,7 @@ export default async function WizardConditionPage({
           <h2 className="card-heading">Alterations</h2>
           <p className="card-sub">Optional.</p>
           <WizardTip>
-            Note any tailoring — hem shortened by 2&Prime;, bust taken in,
+            Note any tailoring — hem shortened by 5&nbsp;cm, bust taken in,
             straps added. It&rsquo;s the first question every buyer asks.
           </WizardTip>
 

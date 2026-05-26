@@ -640,9 +640,9 @@ export async function saveDraftMeasurements(
   const stepUrl = `/listings/new/${listingId}/measurements`;
 
   const measureRanges: Record<string, [number, number]> = {
-    bust_inches: [20, 70],
-    waist_inches: [18, 70],
-    hips_inches: [24, 80],
+    bust_cm: [50, 180],
+    waist_cm: [45, 180],
+    hips_cm: [60, 210],
   };
   const measures: Record<string, number | null> = {};
   for (const [k, [min, max]] of Object.entries(measureRanges)) {
@@ -664,17 +664,17 @@ export async function saveDraftMeasurements(
   await query(
     `UPDATE dresses
         SET size_id              = NULLIF($2, '')::bigint,
-            bust_inches          = $3,
-            waist_inches         = $4,
-            hips_inches          = $5,
+            bust_cm              = $3,
+            waist_cm             = $4,
+            hips_cm              = $5,
             original_retail_cents = $6
       WHERE id = (SELECT dress_id FROM listings WHERE id = $1::bigint)`,
     [
       listingId,
       getOptionalId(formData, "size_id") ?? "",
-      measures.bust_inches,
-      measures.waist_inches,
-      measures.hips_inches,
+      measures.bust_cm,
+      measures.waist_cm,
+      measures.hips_cm,
       original_retail_cents,
     ],
   );
@@ -767,9 +767,9 @@ export async function publishDraftListing(formData: FormData): Promise<void> {
     sleeve_style_id: string | null;
     length_id: string | null;
     color: string | null;
-    bust_inches: string | null;
-    waist_inches: string | null;
-    hips_inches: string | null;
+    bust_cm: string | null;
+    waist_cm: string | null;
+    hips_cm: string | null;
     original_retail_cents: number | null;
     has_original_receipt: boolean | null;
     includes_label_lining_photos: boolean | null;
@@ -791,9 +791,9 @@ export async function publishDraftListing(formData: FormData): Promise<void> {
             dr.sleeve_style_id::text   AS sleeve_style_id,
             dr.length_id::text         AS length_id,
             dr.color                   AS color,
-            dr.bust_inches::text       AS bust_inches,
-            dr.waist_inches::text      AS waist_inches,
-            dr.hips_inches::text       AS hips_inches,
+            dr.bust_cm::text           AS bust_cm,
+            dr.waist_cm::text          AS waist_cm,
+            dr.hips_cm::text           AS hips_cm,
             dr.original_retail_cents   AS original_retail_cents,
             l.has_original_receipt    AS has_original_receipt,
             l.includes_label_lining_photos AS includes_label_lining_photos,
@@ -849,9 +849,9 @@ export async function publishDraftListing(formData: FormData): Promise<void> {
       sleeveStyleId: row.sleeve_style_id,
       lengthId: row.length_id,
       color: row.color,
-      bustInches: num(row.bust_inches),
-      waistInches: num(row.waist_inches),
-      hipsInches: num(row.hips_inches),
+      bustCm: num(row.bust_cm),
+      waistCm: num(row.waist_cm),
+      hipsCm: num(row.hips_cm),
       originalRetailCents: row.original_retail_cents,
       hasOriginalReceipt: !!row.has_original_receipt,
       isAuthenticDeclared,

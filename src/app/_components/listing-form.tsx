@@ -19,9 +19,9 @@ export type ListingFormDefaults = {
   sleeve_style_id?: string | null;
   length_id?: string | null;
   color?: string | null;
-  bust_inches?: number | string | null;
-  waist_inches?: number | string | null;
-  hips_inches?: number | string | null;
+  bust_cm?: number | string | null;
+  waist_cm?: number | string | null;
+  hips_cm?: number | string | null;
   original_retail_dollars?: string;
   alterations_text?: string | null;
   has_original_receipt?: boolean;
@@ -296,39 +296,39 @@ export function ListingForm({
         </Field>
 
         <div className="grid-2">
-          <Field label="Bust (inches)" htmlFor="bust_inches">
+          <Field label="Bust (cm)" htmlFor="bust_cm">
             <Input
-              id="bust_inches"
-              name="bust_inches"
+              id="bust_cm"
+              name="bust_cm"
               type="number"
               step="0.5"
-              min={20}
-              max={70}
-              defaultValue={nullishStr(defaults.bust_inches)}
+              min={50}
+              max={180}
+              defaultValue={nullishStr(defaults.bust_cm)}
             />
           </Field>
-          <Field label="Waist (inches)" htmlFor="waist_inches">
+          <Field label="Waist (cm)" htmlFor="waist_cm">
             <Input
-              id="waist_inches"
-              name="waist_inches"
+              id="waist_cm"
+              name="waist_cm"
               type="number"
               step="0.5"
-              min={18}
-              max={70}
-              defaultValue={nullishStr(defaults.waist_inches)}
+              min={45}
+              max={180}
+              defaultValue={nullishStr(defaults.waist_cm)}
             />
           </Field>
         </div>
 
-        <Field label="Hips (inches)" htmlFor="hips_inches">
+        <Field label="Hips (cm)" htmlFor="hips_cm">
           <Input
-            id="hips_inches"
-            name="hips_inches"
+            id="hips_cm"
+            name="hips_cm"
             type="number"
             step="0.5"
-            min={24}
-            max={80}
-            defaultValue={nullishStr(defaults.hips_inches)}
+            min={60}
+            max={210}
+            defaultValue={nullishStr(defaults.hips_cm)}
           />
         </Field>
       </section>

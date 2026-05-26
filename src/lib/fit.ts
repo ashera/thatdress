@@ -2,16 +2,16 @@
  * Pure fit-comparison logic. No DB, no React, no server-only —
  * usable from any context.
  *
- * Convention: callers pass body measurements in inches. Dress
- * measurements come from `dresses.*_inches` columns (the
- * GARMENT measurement, not the model size). We compare each
- * axis independently and roll up to an overall summary.
+ * Convention: callers pass body measurements in centimetres. Dress
+ * measurements come from `dresses.*_cm` columns (the GARMENT
+ * measurement, not the model size). We compare each axis
+ * independently and roll up to an overall summary.
  *
- * The thresholds assume the dress's measurement already
- * includes whatever ease the cut needs (a 36" body fits a
- * fitted dress with a 36" bust because the ease is baked into
- * the pattern). 'Loose' starts where the gap is bigger than a
- * fitted dress would typically allow.
+ * The thresholds assume the dress's measurement already includes
+ * whatever ease the cut needs (a 91cm body fits a fitted dress with
+ * a 91cm bust because the ease is baked into the pattern). 'Loose'
+ * starts where the gap is bigger than a fitted dress would typically
+ * allow.
  */
 
 export type FitStatus =
@@ -28,7 +28,7 @@ export type AxisFit = {
   axis: FitAxis;
   status: FitStatus;
   label: string;
-  /** Dress measurement minus body measurement, in inches.
+  /** Dress measurement minus body measurement, in centimetres.
    *  Positive = dress is larger than the body, negative = tighter. */
   diff: number;
 };
@@ -57,20 +57,22 @@ const AXIS_LABEL: Record<FitAxis, string> = {
 };
 
 function classify(diff: number): FitStatus {
-  // diff = dress - body, in inches.
-  if (diff < -2) return "tight";
-  if (diff < -0.5) return "snug";
-  if (diff <= 1) return "perfect";
-  if (diff <= 2.5) return "comfortable";
-  if (diff <= 4.5) return "loose";
+  // diff = dress - body, in centimetres. Thresholds are the cm
+  // equivalents of the original inch buckets (×2.54), rounded.
+  if (diff < -5) return "tight";
+  if (diff < -1.5) return "snug";
+  if (diff <= 2.5) return "perfect";
+  if (diff <= 6.5) return "comfortable";
+  if (diff <= 11.5) return "loose";
   return "very-loose";
 }
 
-function parseInches(value: string | number | null | undefined): number | null {
+function parseCm(value: string | number | null | undefined): number | null {
   if (value === null || value === undefined) return null;
   const n = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(n)) return null;
-  if (n < 10 || n > 80) return null;
+  // Sanity bounds — matches the 10"–80" range (~25cm – ~200cm).
+  if (n < 25 || n > 210) return null;
   return n;
 }
 
@@ -126,18 +128,18 @@ export function assessFit(
   const axes: AxisFit[] = [];
   const bust = compareAxis(
     "bust",
-    parseInches(body.bust),
-    parseInches(dress.bust),
+    parseCm(body.bust),
+    parseCm(dress.bust),
   );
   const waist = compareAxis(
     "waist",
-    parseInches(body.waist),
-    parseInches(dress.waist),
+    parseCm(body.waist),
+    parseCm(dress.waist),
   );
   const hips = compareAxis(
     "hips",
-    parseInches(body.hips),
-    parseInches(dress.hips),
+    parseCm(body.hips),
+    parseCm(dress.hips),
   );
   if (bust) axes.push(bust);
   if (waist) axes.push(waist);

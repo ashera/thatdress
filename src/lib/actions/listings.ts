@@ -27,9 +27,9 @@ const MAX_YEAR = CURRENT_YEAR + 1;
 
 type Range = { min: number; max: number };
 const RANGES: Record<string, Range> = {
-  bust_inches: { min: 20, max: 70 },
-  waist_inches: { min: 18, max: 70 },
-  hips_inches: { min: 24, max: 80 },
+  bust_cm: { min: 50, max: 180 },
+  waist_cm: { min: 45, max: 180 },
+  hips_cm: { min: 60, max: 210 },
   original_retail_cents: { min: 0, max: 100_000_000 },
 };
 
@@ -100,9 +100,9 @@ type ListingFields = {
   sleeve_style_id: string | null;
   length_id: string | null;
   color: string | null;
-  bust_inches: number | null;
-  waist_inches: number | null;
-  hips_inches: number | null;
+  bust_cm: number | null;
+  waist_cm: number | null;
+  hips_cm: number | null;
   original_retail_cents: number | null;
   alterations_text: string | null;
   has_original_receipt: boolean;
@@ -151,9 +151,9 @@ function parseListingFields(formData: FormData): ParseResult {
   if (!location_postal) return { ok: false, error: "invalid-location" };
 
   const measureFields = [
-    "bust_inches",
-    "waist_inches",
-    "hips_inches",
+    "bust_cm",
+    "waist_cm",
+    "hips_cm",
   ] as const;
   const measures: Record<string, number | null> = {};
   for (const f of measureFields) {
@@ -189,9 +189,9 @@ function parseListingFields(formData: FormData): ParseResult {
       sleeve_style_id: getOptionalId(formData, "sleeve_style_id"),
       length_id: getOptionalId(formData, "length_id"),
       color: nullableString(getString(formData, "color", 32)),
-      bust_inches: measures.bust_inches,
-      waist_inches: measures.waist_inches,
-      hips_inches: measures.hips_inches,
+      bust_cm: measures.bust_cm,
+      waist_cm: measures.waist_cm,
+      hips_cm: measures.hips_cm,
       original_retail_cents,
       alterations_text: nullableString(
         getString(formData, "alterations_text", ALTERATIONS_MAX),
@@ -225,9 +225,9 @@ const UPDATE_SET = `
   sleeve_style_id = NULLIF($14, '')::bigint,
   length_id = NULLIF($15, '')::bigint,
   color = $16,
-  bust_inches = $17,
-  waist_inches = $18,
-  hips_inches = $19,
+  bust_cm = $17,
+  waist_cm = $18,
+  hips_cm = $19,
   original_retail_cents = $20,
   alterations_text = $21,
   has_original_receipt = $22,
@@ -588,9 +588,9 @@ export async function updateListing(formData: FormData): Promise<void> {
       f.sleeve_style_id ?? "",
       f.length_id ?? "",
       f.color,
-      f.bust_inches,
-      f.waist_inches,
-      f.hips_inches,
+      f.bust_cm,
+      f.waist_cm,
+      f.hips_cm,
       f.original_retail_cents,
       f.alterations_text,
       f.has_original_receipt,
@@ -647,9 +647,9 @@ export async function updateListing(formData: FormData): Promise<void> {
       sleeveStyleId: f.sleeve_style_id,
       lengthId: f.length_id,
       color: f.color,
-      bustInches: f.bust_inches,
-      waistInches: f.waist_inches,
-      hipsInches: f.hips_inches,
+      bustCm: f.bust_cm,
+      waistCm: f.waist_cm,
+      hipsCm: f.hips_cm,
       originalRetailCents: f.original_retail_cents,
       hasOriginalReceipt: f.has_original_receipt,
       isAuthenticDeclared: f.is_authentic_declared,

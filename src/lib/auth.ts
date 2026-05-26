@@ -19,12 +19,12 @@ export type User = {
   surname: string | null;
   town: string | null;
   postcode: string | null;
-  /** Body measurements in inches — populated when the user has
-   *  entered them on /profile. Feeds the listing-detail fit
+  /** Body measurements in centimetres — populated when the user
+   *  has entered them on /profile. Feeds the listing-detail fit
    *  calculator. */
-  bustInches: number | null;
-  waistInches: number | null;
-  hipsInches: number | null;
+  bustCm: number | null;
+  waistCm: number | null;
+  hipsCm: number | null;
   /** Set when an admin is impersonating this user. The id and email
    *  are of the *original* admin; the rest of the User fields are
    *  the target's. UI uses these to show the 'Acting as X' banner
@@ -94,9 +94,9 @@ export async function getCurrentUser(): Promise<User | null> {
       surname: string | null;
       town: string | null;
       postcode: string | null;
-      bust_inches: string | null;
-      waist_inches: string | null;
-      hips_inches: string | null;
+      bust_cm: string | null;
+      waist_cm: string | null;
+      hips_cm: string | null;
       impersonator_id: string | null;
       impersonator_email: string | null;
     }>(
@@ -109,9 +109,9 @@ export async function getCurrentUser(): Promise<User | null> {
               u.surname,
               u.town,
               u.postcode,
-              u.bust_inches::text  AS bust_inches,
-              u.waist_inches::text AS waist_inches,
-              u.hips_inches::text  AS hips_inches,
+              u.bust_cm::text  AS bust_cm,
+              u.waist_cm::text AS waist_cm,
+              u.hips_cm::text  AS hips_cm,
               s.impersonator_user_id::text AS impersonator_id,
               imp.email                    AS impersonator_email
          FROM sessions s
@@ -125,7 +125,7 @@ export async function getCurrentUser(): Promise<User | null> {
     );
     const row = result.rows[0];
     if (!row) return null;
-    const toInches = (v: string | null): number | null => {
+    const toCm = (v: string | null): number | null => {
       if (v == null) return null;
       const n = Number(v);
       return Number.isFinite(n) ? n : null;
@@ -140,9 +140,9 @@ export async function getCurrentUser(): Promise<User | null> {
       surname: row.surname,
       town: row.town,
       postcode: row.postcode,
-      bustInches: toInches(row.bust_inches),
-      waistInches: toInches(row.waist_inches),
-      hipsInches: toInches(row.hips_inches),
+      bustCm: toCm(row.bust_cm),
+      waistCm: toCm(row.waist_cm),
+      hipsCm: toCm(row.hips_cm),
       impersonatorId: row.impersonator_id,
       impersonatorEmail: row.impersonator_email,
     };

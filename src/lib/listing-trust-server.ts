@@ -16,9 +16,9 @@ type ListingSnapshot = {
   sleeve_style_id: string | null;
   length_id: string | null;
   color: string | null;
-  bust_inches: string | null;
-  waist_inches: string | null;
-  hips_inches: string | null;
+  bust_cm: string | null;
+  waist_cm: string | null;
+  hips_cm: string | null;
   original_retail_cents: number | null;
   has_original_receipt: boolean | null;
   is_authentic_declared: boolean | null;
@@ -65,9 +65,9 @@ export async function recomputeListingTrustStatus(
               dr.sleeve_style_id::text   AS sleeve_style_id,
               dr.length_id::text         AS length_id,
               dr.color                   AS color,
-              dr.bust_inches::text       AS bust_inches,
-              dr.waist_inches::text      AS waist_inches,
-              dr.hips_inches::text       AS hips_inches,
+              dr.bust_cm::text           AS bust_cm,
+              dr.waist_cm::text          AS waist_cm,
+              dr.hips_cm::text           AS hips_cm,
               dr.original_retail_cents   AS original_retail_cents,
               l.has_original_receipt    AS has_original_receipt,
               l.is_authentic_declared   AS is_authentic_declared,
@@ -108,9 +108,9 @@ export async function recomputeListingTrustStatus(
       sleeveStyleId: row.sleeve_style_id,
       lengthId: row.length_id,
       color: row.color,
-      bustInches: num(row.bust_inches),
-      waistInches: num(row.waist_inches),
-      hipsInches: num(row.hips_inches),
+      bustCm: num(row.bust_cm),
+      waistCm: num(row.waist_cm),
+      hipsCm: num(row.hips_cm),
       originalRetailCents: row.original_retail_cents,
       hasOriginalReceipt: !!row.has_original_receipt,
       isAuthenticDeclared: !!row.is_authentic_declared,

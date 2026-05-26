@@ -56,8 +56,7 @@ export const BUYERS_CHECKLIST: ChecklistSection[] = [
       },
       {
         id: "measurements",
-        label:
-          "Bust / waist / hip measurements are listed in cm or inches",
+        label: "Bust / waist / hip measurements are listed in cm",
         why: "Designer label numbers lie — Self-Portrait pre-2018 runs a full size small. Always trust the actual centimetres, not the tag.",
       },
     ],
