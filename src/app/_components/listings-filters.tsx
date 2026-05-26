@@ -1,6 +1,10 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useRef, useTransition } from "react";
 import type { ColorOption, RefOption } from "@/lib/ref-data";
-import { Button, Field, Input } from "./ui";
+import { Field, Input } from "./ui";
 import { LiveFilterCount } from "./live-filter-count";
 
 export type VisibilityFilter = "all" | "published" | "hidden";
@@ -132,14 +136,59 @@ function ColorChipGroup({
 export function ListingsFilters({ active, options, isAdmin }: Props) {
   const count = activeFilterCount(active);
   const visibility: VisibilityFilter = active.visibility ?? "all";
+  const router = useRouter();
+  const formRef = useRef<HTMLFormElement | null>(null);
+  const debounceRef = useRef<number | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function autoApply() {
+    const form = formRef.current;
+    if (!form) return;
+    const fd = new FormData(form);
+    const sp = new URLSearchParams();
+    for (const [k, v] of fd.entries()) {
+      if (typeof v !== "string") continue;
+      if (v.length === 0) continue;
+      sp.append(k, v);
+    }
+    const qs = sp.toString();
+    const href = qs ? `/listings?${qs}` : "/listings";
+    startTransition(() => {
+      router.replace(href, { scroll: false });
+    });
+  }
+
+  function schedule() {
+    if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    debounceRef.current = window.setTimeout(autoApply, 250);
+  }
+
   return (
     <details className="filters" open={count > 0}>
       <summary className="filters-summary">
         <span>Filters & search</span>
         {count > 0 && <span className="filters-count">{count} active</span>}
+        {isPending && (
+          <span
+            className="filters-count"
+            style={{ background: "#fef3c7", color: "#92400e" }}
+          >
+            Updating…
+          </span>
+        )}
       </summary>
 
-      <form method="get" action="/listings" className="filters-form">
+      <form
+        ref={formRef}
+        method="get"
+        action="/listings"
+        className="filters-form"
+        onInput={schedule}
+        onChange={schedule}
+        // Enter in the search box still works without JS — the form
+        // submits to /listings naturally. With JS, autoApply has
+        // already fired on every keystroke.
+      >
         <Field
           label="Search"
           htmlFor="q"
@@ -268,9 +317,6 @@ export function ListingsFilters({ active, options, isAdmin }: Props) {
                 Clear all
               </Link>
             )}
-            <Button type="submit" variant="primary" iconRight="arrow">
-              Apply
-            </Button>
           </div>
         </div>
       </form>
