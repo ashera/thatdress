@@ -13,6 +13,8 @@ export const dynamic = "force-dynamic";
 
 const ERRORS: Record<string, string> = {
   "missing-display": "A name/label is required.",
+  "duplicate-slug":
+    "That slug is already in use by another row. Pick a different one.",
 };
 
 export default async function ReferenceDataTablePage({
@@ -114,7 +116,15 @@ export default async function ReferenceDataTablePage({
                 />
               </div>
               {t.schema === "slug-label" && (
-                <div className="ref-slug">{r.slug}</div>
+                <div>
+                  <Input
+                    name="slug"
+                    defaultValue={r.slug ?? ""}
+                    className="--square"
+                    placeholder="leave blank to keep"
+                    title="Slugs appear in browse URLs — change with care."
+                  />
+                </div>
               )}
               <div>
                 <Input

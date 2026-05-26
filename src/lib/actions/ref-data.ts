@@ -51,11 +51,20 @@ export async function editRefRow(formData: FormData): Promise<void> {
     redirect(`/admin/reference-data/${key}?error=missing-display`);
   }
 
-  await updateRefRow(t, id, {
-    display,
-    sort_order: intFromForm(formData, "sort_order", 0),
-    is_active: formData.get("is_active") === "on",
-  });
+  try {
+    await updateRefRow(t, id, {
+      display,
+      sort_order: intFromForm(formData, "sort_order", 0),
+      is_active: formData.get("is_active") === "on",
+      slug: String(formData.get("slug") ?? ""),
+    });
+  } catch (err) {
+    const code = (err as { code?: string }).code;
+    if (code === "23505") {
+      redirect(`/admin/reference-data/${key}?error=duplicate-slug`);
+    }
+    throw err;
+  }
 
   revalidatePath(`/admin/reference-data/${key}`);
   revalidatePath(`/admin/reference-data`);

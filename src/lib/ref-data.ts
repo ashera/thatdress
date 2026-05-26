@@ -134,13 +134,42 @@ export async function addRefRow(
 export async function updateRefRow(
   t: RefTable,
   id: string,
-  fields: { display: string; sort_order: number; is_active: boolean },
+  fields: {
+    display: string;
+    sort_order: number;
+    is_active: boolean;
+    /** Only used for slug-label tables. If blank, the row's existing
+     *  slug is kept (we don't auto-regenerate from the new label
+     *  because slugs appear in browse URLs and breaking them silently
+     *  on a label edit would invalidate bookmarks). */
+    slug?: string;
+  },
 ): Promise<void> {
   if (!/^\d+$/.test(id)) throw new Error("invalid id");
   const display = fields.display.trim();
   if (!display) throw new Error("display required");
 
   const displayCol = t.schema === "name" ? "name" : "label";
+
+  if (t.schema === "slug-label") {
+    const slugRaw = fields.slug?.trim() ?? "";
+    if (slugRaw) {
+      const slug = slugify(slugRaw);
+      if (!slug) throw new Error("slug required");
+      await query(
+        `UPDATE ${t.table}
+            SET ${displayCol} = $1,
+                slug = $2,
+                sort_order = $3,
+                is_active = $4
+          WHERE id = $5::bigint`,
+        [display, slug, fields.sort_order, fields.is_active, id],
+      );
+      return;
+    }
+    // Slug input was empty — leave the existing slug as-is.
+  }
+
   await query(
     `UPDATE ${t.table}
         SET ${displayCol} = $1,
