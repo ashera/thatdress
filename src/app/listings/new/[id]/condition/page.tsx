@@ -73,7 +73,7 @@ export default async function WizardConditionPage({
         </section>
 
         <section className="form-card">
-          <h2 className="card-heading">Provenance</h2>
+          <h2 className="card-heading">Authenticity</h2>
           <p className="card-sub">Optional but reassuring — original receipts massively help with authenticity.</p>
 
           <label className="check-row">
