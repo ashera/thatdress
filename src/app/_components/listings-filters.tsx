@@ -87,6 +87,31 @@ function ChipGroup({
   );
 }
 
+function FilterGroup({
+  label,
+  activeCount,
+  children,
+}: {
+  label: string;
+  activeCount: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <details className="filter-group" open={activeCount > 0}>
+      <summary className="filter-group-summary">
+        <span className="filter-group-label">{label}</span>
+        {activeCount > 0 && (
+          <span className="filter-group-count">{activeCount}</span>
+        )}
+        <span aria-hidden className="filter-group-chev">
+          ▾
+        </span>
+      </summary>
+      <div className="filter-group-body">{children}</div>
+    </details>
+  );
+}
+
 function ColorChipGroup({
   name,
   options,
@@ -204,87 +229,113 @@ export function ListingsFilters({ active, options, isAdmin }: Props) {
           />
         </Field>
 
-        <fieldset className="filter-fieldset">
-          <legend>Designer</legend>
-          <ChipGroup
-            name="designer_id"
-            options={options.designers}
-            selected={active.designer_id}
-          />
-        </fieldset>
+        <div className="filter-groups">
+          <FilterGroup
+            label="Designer"
+            activeCount={active.designer_id?.length ?? 0}
+          >
+            <ChipGroup
+              name="designer_id"
+              options={options.designers}
+              selected={active.designer_id}
+            />
+          </FilterGroup>
 
-        <fieldset className="filter-fieldset">
-          <legend>Occasion</legend>
-          <ChipGroup
-            name="occasion_id"
-            options={options.occasions}
-            selected={active.occasion_id}
-          />
-        </fieldset>
+          <FilterGroup
+            label="Occasion"
+            activeCount={active.occasion_id?.length ?? 0}
+          >
+            <ChipGroup
+              name="occasion_id"
+              options={options.occasions}
+              selected={active.occasion_id}
+            />
+          </FilterGroup>
 
-        <fieldset className="filter-fieldset">
-          <legend>Style</legend>
-          <ChipGroup
-            name="silhouette_id"
-            options={options.silhouettes}
-            selected={active.silhouette_id}
-          />
-        </fieldset>
+          <FilterGroup
+            label="Style"
+            activeCount={active.silhouette_id?.length ?? 0}
+          >
+            <ChipGroup
+              name="silhouette_id"
+              options={options.silhouettes}
+              selected={active.silhouette_id}
+            />
+          </FilterGroup>
 
-        <fieldset className="filter-fieldset">
-          <legend>Size</legend>
-          <ChipGroup
-            name="size_id"
-            options={options.sizes}
-            selected={active.size_id}
-          />
-        </fieldset>
+          <FilterGroup
+            label="Size"
+            activeCount={active.size_id?.length ?? 0}
+          >
+            <ChipGroup
+              name="size_id"
+              options={options.sizes}
+              selected={active.size_id}
+            />
+          </FilterGroup>
 
-        <fieldset className="filter-fieldset">
-          <legend>Length</legend>
-          <ChipGroup
-            name="length_id"
-            options={options.lengths}
-            selected={active.length_id}
-          />
-        </fieldset>
+          <FilterGroup
+            label="Length"
+            activeCount={active.length_id?.length ?? 0}
+          >
+            <ChipGroup
+              name="length_id"
+              options={options.lengths}
+              selected={active.length_id}
+            />
+          </FilterGroup>
 
-        <fieldset className="filter-fieldset">
-          <legend>Colour</legend>
-          <ColorChipGroup
-            name="color"
-            options={options.colors}
-            selected={active.color}
-          />
-        </fieldset>
+          <FilterGroup
+            label="Colour"
+            activeCount={active.color?.length ?? 0}
+          >
+            <ColorChipGroup
+              name="color"
+              options={options.colors}
+              selected={active.color}
+            />
+          </FilterGroup>
 
-        <fieldset className="filter-fieldset">
-          <legend>Condition</legend>
-          <ChipGroup
-            name="condition_id"
-            options={options.conditions}
-            selected={active.condition_id}
-          />
-        </fieldset>
+          <FilterGroup
+            label="Condition"
+            activeCount={active.condition_id?.length ?? 0}
+          >
+            <ChipGroup
+              name="condition_id"
+              options={options.conditions}
+              selected={active.condition_id}
+            />
+          </FilterGroup>
 
-        {isAdmin && (
-          <fieldset className="filter-fieldset">
-            <legend>Visibility (admin)</legend>
-            <div className="chip-group">
-              {(["all", "published", "hidden"] as const).map((v) => (
-                <label key={v} className="chip-check">
-                  <input
-                    type="radio"
-                    name="visibility"
-                    value={v}
-                    defaultChecked={visibility === v}
-                  />
-                  <span>{v === "all" ? "All" : v === "published" ? "Published" : "Hidden"}</span>
-                </label>
-              ))}
-            </div>
-          </fieldset>
-        )}
+          {isAdmin && (
+            <FilterGroup
+              label="Visibility (admin)"
+              activeCount={
+                active.visibility && active.visibility !== "all" ? 1 : 0
+              }
+            >
+              <div className="chip-group">
+                {(["all", "published", "hidden"] as const).map((v) => (
+                  <label key={v} className="chip-check">
+                    <input
+                      type="radio"
+                      name="visibility"
+                      value={v}
+                      defaultChecked={visibility === v}
+                    />
+                    <span>
+                      {v === "all"
+                        ? "All"
+                        : v === "published"
+                          ? "Published"
+                          : "Hidden"}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </FilterGroup>
+          )}
+        </div>
 
         <div className="filters-grid">
           <Field label="Min price ($)" htmlFor="min_price">
