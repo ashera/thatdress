@@ -52,7 +52,7 @@ export default async function WizardBasicsPage({
         <section className="form-card">
           <h2 className="card-heading">Dress basics</h2>
           <p className="card-sub">
-            Designer and style name are required. Year is optional but
+            Designer and dress name are required. Year is optional but
             helps buyers tell which season&rsquo;s collection you have.
           </p>
 
@@ -63,7 +63,7 @@ export default async function WizardBasicsPage({
 
           <div className="grid-2">
             <Field
-              label="Style name / model"
+              label="Dress Name"
               htmlFor="model"
               help='Free text — e.g. "Hayley", "Daphne", or the SKU.'
             >
@@ -78,7 +78,7 @@ export default async function WizardBasicsPage({
             <Field
               label="Year (optional)"
               htmlFor="year"
-              help="Season or year released, if known."
+              help="Year Released, If Known"
             >
               <Input
                 id="year"

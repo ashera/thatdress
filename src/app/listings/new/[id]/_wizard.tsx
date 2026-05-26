@@ -792,7 +792,7 @@ export const STEP_ERRORS: Record<string, string> = {
   "invalid-designer": "Pick a designer, or type one in the box below.",
   "designer-name-required":
     "Type the designer's name when 'My designer isn't listed' is selected.",
-  "invalid-model": "Style name or model is required.",
+  "invalid-model": "Dress Name is required.",
   "invalid-year": "Year must be between 1990 and next year.",
   "invalid-occasion": "Pick an occasion.",
   "invalid-condition": "Pick a condition.",
