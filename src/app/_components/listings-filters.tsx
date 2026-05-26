@@ -151,6 +151,12 @@ export function ListingsFilters({ active, options, isAdmin }: Props) {
     const href = qs ? `/listings?${qs}` : "/listings";
     startTransition(() => {
       router.replace(href, { scroll: false });
+      // Force the RSC payload to be re-fetched. Without this, Next's
+      // client-side segment cache can hand back the previously-rendered
+      // payload for the new URL (e.g. when un-checking a chip returns
+      // you to /listings that you visited earlier in the session) and
+      // the listing cards stay frozen at their stale state.
+      router.refresh();
     });
   }
 
