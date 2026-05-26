@@ -1470,9 +1470,9 @@ export default async function ListingDetailPage({
                     const p = fitPalette(a.status);
                     const diffLabel =
                       a.diff > 0
-                        ? `+${a.diff}" room`
+                        ? `+${a.diff} cm room`
                         : a.diff < 0
-                          ? `${a.diff}" short`
+                          ? `${a.diff} cm short`
                           : "exact match";
                     return (
                       <li
