@@ -186,6 +186,24 @@ export async function deleteRefRow(t: RefTable, id: string): Promise<void> {
   await query(`DELETE FROM ${t.table} WHERE id = $1::bigint`, [id]);
 }
 
+/** Number of listings/dresses currently using this ref row. Used by
+ *  the edit/delete guards in the admin actions so an in-use label
+ *  can't be renamed or removed out from under live data. */
+export async function countRefUsage(
+  t: RefTable,
+  id: string,
+): Promise<number> {
+  if (!t.usage) return 0;
+  if (!/^\d+$/.test(id)) return 0;
+  const r = await query<{ c: string }>(
+    `SELECT COUNT(*)::text AS c
+       FROM ${t.usage.table}
+      WHERE ${t.usage.column} = $1::bigint`,
+    [id],
+  );
+  return Number(r.rows[0]?.c ?? 0);
+}
+
 export type ListingRefOptions = {
   designers: RefOption[];
   occasions: RefOption[];

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth";
 import {
   addRefRow,
+  countRefUsage,
   deleteRefRow,
   findRefTable,
   updateRefRow,
@@ -51,6 +52,15 @@ export async function editRefRow(formData: FormData): Promise<void> {
     redirect(`/admin/reference-data/${key}?error=missing-display`);
   }
 
+  // Defensive — the UI disables Save when in_use > 0, but a request
+  // could still arrive (tab past the disabled attr, replay, etc.).
+  // Renaming or re-slugging a row that's bound to live dresses /
+  // listings would silently change what those buyers see.
+  const inUse = await countRefUsage(t, id);
+  if (inUse > 0) {
+    redirect(`/admin/reference-data/${key}?error=in-use`);
+  }
+
   try {
     await updateRefRow(t, id, {
       display,
@@ -77,6 +87,11 @@ export async function removeRefRow(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "");
   const t = findRefTable(key);
   if (!t) redirect("/admin/reference-data");
+
+  const inUse = await countRefUsage(t, id);
+  if (inUse > 0) {
+    redirect(`/admin/reference-data/${key}?error=in-use`);
+  }
 
   await deleteRefRow(t, id);
 

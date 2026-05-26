@@ -15,6 +15,8 @@ const ERRORS: Record<string, string> = {
   "missing-display": "A name/label is required.",
   "duplicate-slug":
     "That slug is already in use by another row. Pick a different one.",
+  "in-use":
+    "That row is currently in use by one or more dresses/listings — reassign them to another value first, then edit or delete.",
 };
 
 export default async function ReferenceDataTablePage({
@@ -99,7 +101,12 @@ export default async function ReferenceDataTablePage({
             <div>In use</div>
             <div></div>
           </div>
-          {rows.map((r) => (
+          {rows.map((r) => {
+            const locked = r.in_use > 0;
+            const lockTitle = locked
+              ? `${r.in_use} ${r.in_use === 1 ? "item uses" : "items use"} this — reassign them before editing or deleting.`
+              : undefined;
+            return (
             <form
               key={r.id}
               action={editRefRow}
@@ -152,7 +159,13 @@ export default async function ReferenceDataTablePage({
                 )}
               </div>
               <div className="ref-actions">
-                <Button type="submit" variant="ghost" size="sm">
+                <Button
+                  type="submit"
+                  variant="ghost"
+                  size="sm"
+                  disabled={locked}
+                  title={lockTitle ?? "Save changes"}
+                >
                   Save
                 </Button>
                 <Button
@@ -160,13 +173,15 @@ export default async function ReferenceDataTablePage({
                   formAction={removeRefRow}
                   variant="ghost"
                   size="sm"
-                  title="Delete"
+                  disabled={locked}
+                  title={lockTitle ?? "Delete"}
                 >
                   ✕
                 </Button>
               </div>
             </form>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
