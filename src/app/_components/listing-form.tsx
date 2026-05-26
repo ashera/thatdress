@@ -253,13 +253,26 @@ export function ListingForm({
               defaultValue={defaults.fabric_id}
             />
           </Field>
-          <Field label="Color" htmlFor="color">
-            <Input
+          <Field label="Main Colour" htmlFor="color">
+            <select
               id="color"
+              className="input"
               name="color"
-              maxLength={32}
               defaultValue={defaults.color ?? ""}
-            />
+            >
+              <option value="">—</option>
+              {refs.colors.map((o) => (
+                <option key={o.id} value={o.label}>
+                  {o.label}
+                </option>
+              ))}
+              {defaults.color &&
+                !refs.colors.some((o) => o.label === defaults.color) && (
+                  <option value={defaults.color}>
+                    {defaults.color} (legacy)
+                  </option>
+                )}
+            </select>
           </Field>
         </div>
 

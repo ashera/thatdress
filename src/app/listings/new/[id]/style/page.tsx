@@ -122,13 +122,26 @@ export default async function WizardStylePage({
                 defaultValue={d.fabric_id}
               />
             </Field>
-            <Field label="Color" htmlFor="color">
-              <Input
+            <Field label="Main Colour" htmlFor="color">
+              <select
                 id="color"
+                className="input"
                 name="color"
-                maxLength={32}
                 defaultValue={d.color ?? ""}
-              />
+              >
+                <option value="">—</option>
+                {refs.colors.map((o) => (
+                  <option key={o.id} value={o.label}>
+                    {o.label}
+                  </option>
+                ))}
+                {/* Surface legacy free-text values that aren't in the
+                    curated list so they don't silently flip to empty. */}
+                {d.color &&
+                  !refs.colors.some((o) => o.label === d.color) && (
+                    <option value={d.color}>{d.color} (legacy)</option>
+                  )}
+              </select>
             </Field>
           </div>
 

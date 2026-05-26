@@ -313,6 +313,17 @@ CREATE TABLE IF NOT EXISTS condition_grades (
   is_active   BOOLEAN      NOT NULL DEFAULT TRUE
 );
 
+-- Curated list of dress colours surfaced as a dropdown on the style
+-- step. Stored as free text on dresses.color (label, not FK) so
+-- legacy free-text values continue to render unchanged.
+CREATE TABLE IF NOT EXISTS colors (
+  id          BIGSERIAL    PRIMARY KEY,
+  slug        TEXT         UNIQUE NOT NULL,
+  label       TEXT         NOT NULL,
+  sort_order  INTEGER      NOT NULL DEFAULT 0,
+  is_active   BOOLEAN      NOT NULL DEFAULT TRUE
+);
+
 -- =========================================================
 -- Dresses — first-class entity. A dress is a physical garment that
 -- can be listed multiple times by different owners over its life.
@@ -648,6 +659,58 @@ INSERT INTO condition_grades (slug, label, sort_order) VALUES
   ('excellent',     'Excellent',     30),
   ('good',          'Good',          40),
   ('fair',          'Fair',          50)
+ON CONFLICT (slug) DO NOTHING;
+
+-- Common formal-dress colours. Ordered alphabetically at read time;
+-- the sort_order here is no-op once the picker reads via
+-- listActiveRefOptions which orders by LOWER(label).
+INSERT INTO colors (slug, label) VALUES
+  ('black',       'Black'),
+  ('white',       'White'),
+  ('ivory',       'Ivory'),
+  ('cream',       'Cream'),
+  ('champagne',   'Champagne'),
+  ('blush',       'Blush'),
+  ('pink',        'Pink'),
+  ('rose-gold',   'Rose gold'),
+  ('red',         'Red'),
+  ('burgundy',    'Burgundy'),
+  ('wine',        'Wine'),
+  ('coral',       'Coral'),
+  ('orange',      'Orange'),
+  ('peach',       'Peach'),
+  ('yellow',      'Yellow'),
+  ('gold',        'Gold'),
+  ('mustard',     'Mustard'),
+  ('olive',       'Olive'),
+  ('sage',        'Sage'),
+  ('green',       'Green'),
+  ('emerald',     'Emerald'),
+  ('forest',      'Forest green'),
+  ('teal',        'Teal'),
+  ('turquoise',   'Turquoise'),
+  ('mint',        'Mint'),
+  ('sky-blue',    'Sky blue'),
+  ('blue',        'Blue'),
+  ('royal-blue',  'Royal blue'),
+  ('navy',        'Navy'),
+  ('powder-blue', 'Powder blue'),
+  ('lilac',       'Lilac'),
+  ('lavender',    'Lavender'),
+  ('purple',      'Purple'),
+  ('plum',        'Plum'),
+  ('mauve',       'Mauve'),
+  ('grey',        'Grey'),
+  ('silver',      'Silver'),
+  ('charcoal',    'Charcoal'),
+  ('beige',       'Beige'),
+  ('nude',        'Nude'),
+  ('tan',         'Tan'),
+  ('brown',       'Brown'),
+  ('chocolate',   'Chocolate'),
+  ('multi',       'Multicolour'),
+  ('print',       'Printed / patterned'),
+  ('metallic',    'Metallic')
 ON CONFLICT (slug) DO NOTHING;
 
 -- =========================================================

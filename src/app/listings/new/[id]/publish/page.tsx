@@ -329,7 +329,7 @@ export default async function WizardPublishPage({
         <section className="form-card">
           <h2 className="card-heading">Trust &amp; authenticity</h2>
           <p className="card-sub">
-            Tick both to qualify for the public Verified badge. Buyers
+            Tick below to qualify for the public Verified badge. Buyers
             see the badge on your listing card and detail page; listings
             with it sell faster.
           </p>

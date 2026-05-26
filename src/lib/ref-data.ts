@@ -37,6 +37,12 @@ export const REF_TABLES: ReadonlyArray<RefTable> = [
   { key: "sleeve-styles",    table: "sleeve_styles",    label: "Sleeve styles",    singular: "sleeve",     schema: "slug-label", usage: { table: "dresses",  column: "sleeve_style_id" } },
   { key: "dress-lengths",    table: "dress_lengths",    label: "Lengths",          singular: "length",     schema: "slug-label", usage: { table: "dresses",  column: "length_id" } },
   { key: "condition-grades", table: "condition_grades", label: "Condition grades", singular: "grade",      schema: "slug-label", usage: { table: "listings", column: "condition_id" } },
+  // Colours are stored as the raw label string on dresses.color
+  // (text, not FK), so the in-use count would need a label match
+  // instead of an FK join. We omit `usage` here — renaming or
+  // deleting a colour in admin doesn't break historical listings
+  // (they keep the literal string they were saved with).
+  { key: "colors",           table: "colors",           label: "Colours",          singular: "colour",     schema: "slug-label" },
 ];
 
 export function findRefTable(key: string): RefTable | null {
@@ -204,6 +210,7 @@ export type ListingRefOptions = {
   sleeveStyles: RefOption[];
   lengths: RefOption[];
   conditions: RefOption[];
+  colors: RefOption[];
   regions: RefOption[];
 };
 
@@ -225,6 +232,7 @@ export async function loadListingRefOptions(): Promise<ListingRefOptions> {
     sleeveStyles,
     lengths,
     conditions,
+    colors,
     regionRows,
   ] = await Promise.all([
     get("designers"),
@@ -236,6 +244,7 @@ export async function loadListingRefOptions(): Promise<ListingRefOptions> {
     get("sleeve-styles"),
     get("dress-lengths"),
     get("condition-grades"),
+    get("colors"),
     listActiveRegions(),
   ]);
   return {
@@ -248,6 +257,7 @@ export async function loadListingRefOptions(): Promise<ListingRefOptions> {
     sleeveStyles,
     lengths,
     conditions,
+    colors,
     regions: regionRows.map((r) => ({ id: r.id, label: r.label })),
   };
 }
