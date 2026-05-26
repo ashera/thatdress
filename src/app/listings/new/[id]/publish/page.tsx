@@ -303,7 +303,7 @@ export default async function WizardPublishPage({
           <p className="card-sub">Optional but recommended.</p>
           <WizardTip>
             Two short paragraphs is the sweet spot: why you&rsquo;re selling,
-            and how it wears. Skip the spec dump — you already filled that in.
+            how it wears and any distinguishing features of the dress.
           </WizardTip>
 
           <Field label="Description" htmlFor="description">
