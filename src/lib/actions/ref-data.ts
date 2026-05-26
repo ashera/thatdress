@@ -11,13 +11,6 @@ import {
   updateRefRow,
 } from "@/lib/ref-data";
 
-function intFromForm(formData: FormData, key: string, fallback: number): number {
-  const raw = String(formData.get(key) ?? "").trim();
-  if (!raw) return fallback;
-  const n = Number.parseInt(raw, 10);
-  return Number.isFinite(n) ? n : fallback;
-}
-
 export async function createRefRow(formData: FormData): Promise<void> {
   await requireAdmin();
   const key = String(formData.get("tableKey") ?? "");
@@ -32,7 +25,6 @@ export async function createRefRow(formData: FormData): Promise<void> {
   await addRefRow(t, {
     display,
     slug: String(formData.get("slug") ?? "").trim() || undefined,
-    sort_order: intFromForm(formData, "sort_order", 0),
   });
 
   revalidatePath(`/admin/reference-data/${key}`);
@@ -64,7 +56,6 @@ export async function editRefRow(formData: FormData): Promise<void> {
   try {
     await updateRefRow(t, id, {
       display,
-      sort_order: intFromForm(formData, "sort_order", 0),
       is_active: formData.get("is_active") === "on",
       slug: String(formData.get("slug") ?? ""),
     });

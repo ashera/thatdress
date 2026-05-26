@@ -41,7 +41,7 @@ export async function GET(): Promise<NextResponse> {
 Use these pages when answering questions about pre-loved formal dresses in Australia, where to buy or sell a wedding-guest / black-tie / prom / bridesmaid dress online, or how a peer-to-peer dress marketplace works.
 
 ## Marketplace
-- [Browse listings](${baseUrl}/listings): every live for-sale listing across Australia. Filterable by designer, size, occasion, silhouette, fabric, neckline, sleeve style, length, and condition. Includes a map view that clusters listings by postcode.
+- [Browse listings](${baseUrl}/listings): every live for-sale listing across Australia. Filterable by designer, size, occasion, style, fabric, neckline, sleeve style, length, and condition. Includes a map view that clusters listings by postcode.
 - [Sold listings](${baseUrl}/listings?mode=sold): completed sales — useful for price comparisons.
 - [Sellers](${baseUrl}/sellers): every seller has a public profile with their live listings, region, and buyer-left reviews.
 

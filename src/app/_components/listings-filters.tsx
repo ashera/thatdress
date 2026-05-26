@@ -118,7 +118,7 @@ export function ListingsFilters({ active, options, isAdmin }: Props) {
         </fieldset>
 
         <fieldset className="filter-fieldset">
-          <legend>Silhouette</legend>
+          <legend>Style</legend>
           <ChipGroup
             name="silhouette_id"
             options={options.silhouettes}

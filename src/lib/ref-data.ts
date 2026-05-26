@@ -49,7 +49,6 @@ export type RefRow = {
   slug: string | null;
   name: string | null;
   label: string | null;
-  sort_order: number;
   is_active: boolean;
   in_use: number;
 };
@@ -69,11 +68,10 @@ export async function listRefRows(t: RefTable): Promise<RefRow[]> {
             ${slugCol} AS slug,
             ${nameCol} AS name,
             ${labelCol} AS label,
-            r.sort_order,
             r.is_active,
             ${inUseSql} AS in_use
        FROM ${t.table} r
-       ORDER BY r.sort_order, r.id`,
+       ORDER BY LOWER(${displaySql}), r.id`,
   );
   return result.rows;
 }
@@ -81,19 +79,14 @@ export async function listRefRows(t: RefTable): Promise<RefRow[]> {
 export type RefOption = { id: string; label: string };
 
 export async function listActiveRefOptions(t: RefTable): Promise<RefOption[]> {
+  // Every dropdown is alphabetical now — the admin doesn't curate
+  // an order any more.
   const displaySql = t.schema === "name" ? "name" : "label";
-  // Name-schema tables (designers) sort alphabetically — that's how
-  // sellers and buyers expect to scan a brand list. Slug-label tables
-  // (occasions, silhouettes, condition grades, etc.) carry deliberate
-  // admin-curated sort_order so the picker presents them in a logical
-  // order (e.g. condition grades New → Excellent → Good → …).
-  const orderBy =
-    t.schema === "name" ? `LOWER(${displaySql}), id` : "sort_order, id";
   const result = await query<{ id: string; label: string }>(
     `SELECT id::text, ${displaySql} AS label
        FROM ${t.table}
       WHERE is_active = TRUE
-      ORDER BY ${orderBy}`,
+      ORDER BY LOWER(${displaySql}), id`,
   );
   return result.rows;
 }
@@ -109,24 +102,24 @@ function slugify(input: string): string {
 
 export async function addRefRow(
   t: RefTable,
-  fields: { display: string; slug?: string; sort_order: number },
+  fields: { display: string; slug?: string },
 ): Promise<void> {
   const display = fields.display.trim();
   if (!display) throw new Error("display required");
 
   if (t.schema === "name") {
     await query(
-      `INSERT INTO ${t.table} (name, sort_order) VALUES ($1, $2)
+      `INSERT INTO ${t.table} (name) VALUES ($1)
        ON CONFLICT (name) DO NOTHING`,
-      [display, fields.sort_order],
+      [display],
     );
   } else {
     const slug = (fields.slug?.trim() || slugify(display)) || slugify(display);
     if (!slug) throw new Error("slug required");
     await query(
-      `INSERT INTO ${t.table} (slug, label, sort_order) VALUES ($1, $2, $3)
+      `INSERT INTO ${t.table} (slug, label) VALUES ($1, $2)
        ON CONFLICT (slug) DO NOTHING`,
-      [slug, display, fields.sort_order],
+      [slug, display],
     );
   }
 }
@@ -136,7 +129,6 @@ export async function updateRefRow(
   id: string,
   fields: {
     display: string;
-    sort_order: number;
     is_active: boolean;
     /** Only used for slug-label tables. If blank, the row's existing
      *  slug is kept (we don't auto-regenerate from the new label
@@ -160,10 +152,9 @@ export async function updateRefRow(
         `UPDATE ${t.table}
             SET ${displayCol} = $1,
                 slug = $2,
-                sort_order = $3,
-                is_active = $4
-          WHERE id = $5::bigint`,
-        [display, slug, fields.sort_order, fields.is_active, id],
+                is_active = $3
+          WHERE id = $4::bigint`,
+        [display, slug, fields.is_active, id],
       );
       return;
     }
@@ -173,10 +164,9 @@ export async function updateRefRow(
   await query(
     `UPDATE ${t.table}
         SET ${displayCol} = $1,
-            sort_order = $2,
-            is_active = $3
-      WHERE id = $4::bigint`,
-    [display, fields.sort_order, fields.is_active, id],
+            is_active = $2
+      WHERE id = $3::bigint`,
+    [display, fields.is_active, id],
   );
 }
 

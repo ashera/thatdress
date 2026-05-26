@@ -77,9 +77,6 @@ export default async function ReferenceDataTablePage({
               <Input id="slug" name="slug" placeholder="auto" />
             </Field>
           )}
-          <Field label="Sort" htmlFor="sort_order">
-            <Input id="sort_order" name="sort_order" type="number" defaultValue={0} />
-          </Field>
           <Button type="submit" variant="primary">
             Add
           </Button>
@@ -93,10 +90,9 @@ export default async function ReferenceDataTablePage({
         </div>
       ) : (
         <div className="ref-table">
-          <div className="ref-row ref-head">
+          <div className={`ref-row ref-head ${t.schema === "name" ? "ref-row--name" : ""}`}>
             <div>{fieldLabel}</div>
             {t.schema === "slug-label" && <div>Slug</div>}
-            <div>Sort</div>
             <div>Active</div>
             <div>In use</div>
             <div></div>
@@ -110,7 +106,7 @@ export default async function ReferenceDataTablePage({
             <form
               key={r.id}
               action={editRefRow}
-              className={`ref-row ${r.is_active ? "" : "is-inactive"}`}
+              className={`ref-row ${t.schema === "name" ? "ref-row--name" : ""} ${r.is_active ? "" : "is-inactive"}`}
             >
               <input type="hidden" name="tableKey" value={t.key} />
               <input type="hidden" name="id" value={r.id} />
@@ -133,14 +129,6 @@ export default async function ReferenceDataTablePage({
                   />
                 </div>
               )}
-              <div>
-                <Input
-                  name="sort_order"
-                  type="number"
-                  defaultValue={r.sort_order}
-                  className="--square"
-                />
-              </div>
               <div>
                 <label className="ref-toggle">
                   <input

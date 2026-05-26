@@ -47,7 +47,7 @@ const BUYER_STEPS = [
   {
     n: "02",
     title: "Browse and filter",
-    body: "Filter by designer, size, occasion, condition grade, length, fabric, even silhouette. Save searches you keep coming back to and we'll email you when matching listings drop.",
+    body: "Filter by designer, size, occasion, condition grade, length, fabric, even style. Save searches you keep coming back to and we'll email you when matching listings drop.",
   },
   {
     n: "03",

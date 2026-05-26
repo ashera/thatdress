@@ -32,7 +32,7 @@ const TABLE_DESCRIPTIONS: Record<string, TableMeta> = {
   // Marketplace
   dresses: {
     group: "Marketplace",
-    desc: "First-class entity — one physical garment, persistent across owners. Holds designer / silhouette / measurements / colour / retail and the lifecycle fields (current_owner_user_id, disposition, next_relist_nudge_at).",
+    desc: "First-class entity — one physical garment, persistent across owners. Holds designer / style / measurements / colour / retail and the lifecycle fields (current_owner_user_id, disposition, next_relist_nudge_at).",
   },
   dress_ownership_events: {
     group: "Marketplace",
