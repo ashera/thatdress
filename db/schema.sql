@@ -452,57 +452,61 @@ ALTER TABLE listings DROP COLUMN IF EXISTS hips_inches;
 ALTER TABLE listings DROP COLUMN IF EXISTS original_retail_cents;
 
 -- =========================================================
--- One-time inches → cm conversion. Renames the columns in
--- place and multiplies any non-null values by 2.54, rounding
--- to 1 decimal place so the existing NUMERIC(4,1) shape keeps
--- working. Guarded on the old column name so it's idempotent
+-- One-time inches → cm conversion. Handles three deploy states:
+--   1. Fresh install — neither column exists yet; the surrounding
+--      ALTER TABLE / CREATE TABLE blocks create *_cm directly.
+--   2. Pre-migration — only *_inches exists; rename it and
+--      multiply the values by 2.54.
+--   3. Half-migrated (a previous deploy created *_cm via the
+--      ADD COLUMN IF NOT EXISTS block above but the RENAME never
+--      ran because of an unrelated failure) — both columns exist;
+--      copy from *_inches into *_cm (multiplying), then drop the
+--      old column.
+-- Guarded on the existence of the old column so it's idempotent
 -- across redeploys.
 -- =========================================================
 
 DO $$
+DECLARE
+  tbl TEXT;
+  axis TEXT;
 BEGIN
-  IF EXISTS (
-    SELECT 1 FROM information_schema.columns
-     WHERE table_name = 'users' AND column_name = 'bust_inches'
-  ) THEN
-    ALTER TABLE users RENAME COLUMN bust_inches TO bust_cm;
-    UPDATE users SET bust_cm  = ROUND((bust_cm  * 2.54)::numeric, 1) WHERE bust_cm  IS NOT NULL;
-  END IF;
-  IF EXISTS (
-    SELECT 1 FROM information_schema.columns
-     WHERE table_name = 'users' AND column_name = 'waist_inches'
-  ) THEN
-    ALTER TABLE users RENAME COLUMN waist_inches TO waist_cm;
-    UPDATE users SET waist_cm = ROUND((waist_cm * 2.54)::numeric, 1) WHERE waist_cm IS NOT NULL;
-  END IF;
-  IF EXISTS (
-    SELECT 1 FROM information_schema.columns
-     WHERE table_name = 'users' AND column_name = 'hips_inches'
-  ) THEN
-    ALTER TABLE users RENAME COLUMN hips_inches TO hips_cm;
-    UPDATE users SET hips_cm  = ROUND((hips_cm  * 2.54)::numeric, 1) WHERE hips_cm  IS NOT NULL;
-  END IF;
-  IF EXISTS (
-    SELECT 1 FROM information_schema.columns
-     WHERE table_name = 'dresses' AND column_name = 'bust_inches'
-  ) THEN
-    ALTER TABLE dresses RENAME COLUMN bust_inches TO bust_cm;
-    UPDATE dresses SET bust_cm  = ROUND((bust_cm  * 2.54)::numeric, 1) WHERE bust_cm  IS NOT NULL;
-  END IF;
-  IF EXISTS (
-    SELECT 1 FROM information_schema.columns
-     WHERE table_name = 'dresses' AND column_name = 'waist_inches'
-  ) THEN
-    ALTER TABLE dresses RENAME COLUMN waist_inches TO waist_cm;
-    UPDATE dresses SET waist_cm = ROUND((waist_cm * 2.54)::numeric, 1) WHERE waist_cm IS NOT NULL;
-  END IF;
-  IF EXISTS (
-    SELECT 1 FROM information_schema.columns
-     WHERE table_name = 'dresses' AND column_name = 'hips_inches'
-  ) THEN
-    ALTER TABLE dresses RENAME COLUMN hips_inches TO hips_cm;
-    UPDATE dresses SET hips_cm  = ROUND((hips_cm  * 2.54)::numeric, 1) WHERE hips_cm  IS NOT NULL;
-  END IF;
+  FOREACH tbl IN ARRAY ARRAY['users', 'dresses'] LOOP
+    FOREACH axis IN ARRAY ARRAY['bust', 'waist', 'hips'] LOOP
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+         WHERE table_name = tbl
+           AND column_name = axis || '_inches'
+      ) THEN
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns
+           WHERE table_name = tbl
+             AND column_name = axis || '_cm'
+        ) THEN
+          -- Both columns exist: copy data over (only where the new
+          -- column is still null so a re-run doesn't double-convert),
+          -- then drop the old column.
+          EXECUTE format(
+            'UPDATE %I SET %I = ROUND((%I * 2.54)::numeric, 1) '
+            'WHERE %I IS NULL AND %I IS NOT NULL',
+            tbl, axis || '_cm', axis || '_inches',
+            axis || '_cm', axis || '_inches'
+          );
+          EXECUTE format('ALTER TABLE %I DROP COLUMN %I',
+            tbl, axis || '_inches');
+        ELSE
+          -- Clean rename + in-place conversion.
+          EXECUTE format('ALTER TABLE %I RENAME COLUMN %I TO %I',
+            tbl, axis || '_inches', axis || '_cm');
+          EXECUTE format(
+            'UPDATE %I SET %I = ROUND((%I * 2.54)::numeric, 1) '
+            'WHERE %I IS NOT NULL',
+            tbl, axis || '_cm', axis || '_cm', axis || '_cm'
+          );
+        END IF;
+      END IF;
+    END LOOP;
+  END LOOP;
 END $$;
 
 ALTER TABLE listings
