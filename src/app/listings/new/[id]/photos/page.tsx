@@ -13,6 +13,44 @@ import {
   WizardShell,
 } from "../_wizard";
 import { SlotUploadButton } from "./_slot-upload-button";
+import {
+  PhotoExamplesDialog,
+  type PhotoExampleSource,
+} from "./_photo-examples-dialog";
+
+/** Listing id used to source the four real-dress example photos in
+ *  the "Show me an example" dialog. Picked because it has all four
+ *  roles uploaded with the right framing — front, back, label,
+ *  lining. If we ever take it down or replace it, swap the id here
+ *  and the dialog updates everywhere. */
+const PHOTO_EXAMPLE_LISTING_ID = "23";
+
+async function loadPhotoExampleSource(): Promise<PhotoExampleSource | null> {
+  try {
+    const r = await query<{ id: string; role: string | null }>(
+      `SELECT id::text, role
+         FROM listing_images
+        WHERE listing_id = $1::bigint
+          AND role IN ('front', 'back', 'label', 'lining')`,
+      [PHOTO_EXAMPLE_LISTING_ID],
+    );
+    const images: PhotoExampleSource["images"] = {};
+    for (const row of r.rows) {
+      if (
+        row.role === "front" ||
+        row.role === "back" ||
+        row.role === "label" ||
+        row.role === "lining"
+      ) {
+        images[row.role] = row.id;
+      }
+    }
+    if (Object.keys(images).length === 0) return null;
+    return { listingId: PHOTO_EXAMPLE_LISTING_ID, images };
+  } catch {
+    return null;
+  }
+}
 
 export const dynamic = "force-dynamic";
 
@@ -78,7 +116,10 @@ export default async function WizardPhotosPage({
   const { error } = await searchParams;
   const errorMessage = error ? STEP_ERRORS[error] ?? null : null;
 
-  const { draft } = await loadDraft(id, "photos");
+  const [{ draft }, photoExampleSource] = await Promise.all([
+    loadDraft(id, "photos"),
+    loadPhotoExampleSource(),
+  ]);
   const images = await fetchDraftImages(draft.id);
 
   const imageByRole = new Map<SlotRole, DraftImageRow>();
@@ -101,11 +142,24 @@ export default async function WizardPhotosPage({
         className="form-card"
         style={{ marginBottom: "var(--s-5)" }}
       >
-        <h2 className="card-heading">The four shots that matter most</h2>
-        <p className="card-sub">
-          Cover all four and your listing crosses every photo-related
-          Verified-badge requirement.
-        </p>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            gap: 12,
+            flexWrap: "wrap",
+          }}
+        >
+          <div style={{ flex: "1 1 280px", minWidth: 0 }}>
+            <h2 className="card-heading">The four shots that matter most</h2>
+            <p className="card-sub">
+              Cover all four and your listing crosses every photo-related
+              Verified-badge requirement.
+            </p>
+          </div>
+          <PhotoExamplesDialog source={photoExampleSource} />
+        </div>
 
         <div
           style={{
