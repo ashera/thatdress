@@ -91,7 +91,7 @@ export default async function WizardConditionPage({
           <p className="card-sub">Optional.</p>
           <WizardTip>
             Note any tailoring — hem shortened by 5&nbsp;cm, bust taken in,
-            straps added. It&rsquo;s the first question every buyer asks.
+            straps added.
           </WizardTip>
 
           <Field label="Alterations &amp; tailoring notes" htmlFor="alterations_text">
