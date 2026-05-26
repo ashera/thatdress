@@ -3,12 +3,14 @@ import { redirect } from "next/navigation";
 import { register } from "@/lib/actions/auth";
 import { getCurrentUser } from "@/lib/auth";
 import { Button, Field, Input } from "../_components/ui";
+import { PasswordRules } from "../_components/password-rules";
+import { PASSWORD_RULES_SUMMARY } from "@/lib/password-rules";
 
 export const dynamic = "force-dynamic";
 
 const ERRORS: Record<string, string> = {
   "invalid-email": "Please enter a valid email address.",
-  "weak-password": "Password must be at least 8 characters.",
+  "weak-password": PASSWORD_RULES_SUMMARY,
   "long-password": "Password must be 72 characters or fewer.",
   "email-taken": "An account with that email already exists.",
 };
@@ -55,11 +57,7 @@ export default async function RegisterPage({
               />
             </Field>
 
-            <Field
-              label="Password"
-              htmlFor="password"
-              help="At least 8 characters."
-            >
+            <Field label="Password" htmlFor="password">
               <Input
                 id="password"
                 type="password"
@@ -70,6 +68,7 @@ export default async function RegisterPage({
                 autoComplete="new-password"
               />
             </Field>
+            <PasswordRules inputId="password" />
 
             {errorMessage && <p className="form-error">{errorMessage}</p>}
 

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { query, withTransaction } from "@/lib/db";
 import { hashPassword, requireAdmin } from "@/lib/auth";
+import { passwordMeetsRules } from "@/lib/password-rules";
 import {
   emailLayout,
   escapeHtml,
@@ -19,19 +20,41 @@ function hashToken(token: string): string {
 }
 
 // Readable alphabet — drops chars that look alike on a phone screen
-// (0/O, 1/I/l). 54 symbols × 12 chars ≈ 69 bits of entropy, more
-// than enough for a single-use temp password.
-const TEMP_PASSWORD_ALPHABET =
-  "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+// (0/O, 1/I/l). Composed from three buckets so we can guarantee the
+// generated password contains at least one capital + one digit, the
+// same complexity we enforce on user-chosen passwords.
+const TEMP_UPPER = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+const TEMP_LOWER = "abcdefghjkmnpqrstuvwxyz";
+const TEMP_DIGIT = "23456789";
+const TEMP_ALPHABET = TEMP_UPPER + TEMP_LOWER + TEMP_DIGIT;
+
+function pickFrom(alphabet: string, byte: number): string {
+  return alphabet[byte % alphabet.length];
+}
 
 function generateTempPassword(): string {
   const len = 12;
-  const bytes = randomBytes(len);
-  let out = "";
-  for (let i = 0; i < len; i++) {
-    out += TEMP_PASSWORD_ALPHABET[bytes[i] % TEMP_PASSWORD_ALPHABET.length];
+  const bytes = randomBytes(len + 3);
+  // Seed one of each required class first, then fill the rest from
+  // the union; finally shuffle so the required chars aren't always
+  // in the same positions.
+  const required = [
+    pickFrom(TEMP_UPPER, bytes[0]),
+    pickFrom(TEMP_LOWER, bytes[1]),
+    pickFrom(TEMP_DIGIT, bytes[2]),
+  ];
+  const filler: string[] = [];
+  for (let i = 0; i < len - required.length; i++) {
+    filler.push(pickFrom(TEMP_ALPHABET, bytes[3 + i]));
   }
-  return out;
+  const all = [...required, ...filler];
+  // Fisher-Yates shuffle using a fresh random byte stream.
+  const shuffleBytes = randomBytes(all.length);
+  for (let i = all.length - 1; i > 0; i--) {
+    const j = shuffleBytes[i] % (i + 1);
+    [all[i], all[j]] = [all[j], all[i]];
+  }
+  return all.join("");
 }
 
 export async function requestPasswordReset(formData: FormData): Promise<void> {
@@ -105,7 +128,7 @@ export async function resetPassword(formData: FormData): Promise<void> {
   const password = String(formData.get("password") ?? "");
 
   if (!token) redirect("/forgot");
-  if (password.length < 8 || password.length > 72) {
+  if (!passwordMeetsRules(password)) {
     redirect(`/reset/${token}?error=weak-password`);
   }
 

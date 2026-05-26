@@ -12,6 +12,7 @@ import {
   verifyPassword,
 } from "@/lib/auth";
 import { dispatchVerificationEmail } from "@/lib/email-verify";
+import { passwordMeetsRules } from "@/lib/password-rules";
 import {
   ensureReferralCode,
   findReferrerByCode,
@@ -46,6 +47,12 @@ export async function register(formData: FormData): Promise<void> {
   const { email, password, error } = parseCredentials(formData);
   if (error) {
     redirect(`/register?error=${error}`);
+  }
+  // Stricter complexity than login's parseCredentials (length-only).
+  // Login stays permissive so users registered before this rule
+  // existed can still sign in; only *setting* a password is gated.
+  if (!passwordMeetsRules(password)) {
+    redirect(`/register?error=weak-password`);
   }
 
   const password_hash = await hashPassword(password);

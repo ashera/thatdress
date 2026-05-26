@@ -8,6 +8,8 @@ import { query } from "@/lib/db";
 import { countFriendsListed } from "@/lib/referral";
 import { currentReferralTier } from "@/lib/referral-tiers";
 import { Button, Field, Input } from "../_components/ui";
+import { PasswordRules } from "../_components/password-rules";
+import { PASSWORD_RULES_SUMMARY } from "@/lib/password-rules";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +30,7 @@ const DELETE_ERRORS: Record<string, string> = {
 
 const PASSWORD_ERRORS: Record<string, string> = {
   current: "Your current password didn't match.",
-  weak: "New password must be between 8 and 72 characters.",
+  weak: PASSWORD_RULES_SUMMARY,
   mismatch: "New password and confirmation don't match.",
   same: "New password is the same as your current one — pick a different one.",
 };
@@ -619,6 +621,7 @@ export default async function ProfilePage({
                 maxLength={72}
               />
             </Field>
+            <PasswordRules inputId="new_password" />
             <Field label="Confirm new password" htmlFor="confirm_password">
               <Input
                 id="confirm_password"

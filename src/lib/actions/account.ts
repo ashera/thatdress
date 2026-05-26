@@ -10,6 +10,7 @@ import {
   verifyPassword,
 } from "@/lib/auth";
 import { query, withTransaction } from "@/lib/db";
+import { passwordMeetsRules } from "@/lib/password-rules";
 
 const CONFIRM_PHRASE = "DELETE";
 
@@ -61,7 +62,7 @@ export async function changePassword(formData: FormData): Promise<void> {
   const next = String(formData.get("new_password") ?? "");
   const confirm = String(formData.get("confirm_password") ?? "");
 
-  if (next.length < 8 || next.length > 72) {
+  if (!passwordMeetsRules(next)) {
     redirect("/profile?password_error=weak");
   }
   if (next !== confirm) {

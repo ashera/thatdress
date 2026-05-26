@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { resetPassword } from "@/lib/actions/password-reset";
 import { Button, Field, Input } from "../../_components/ui";
+import { PasswordRules } from "../../_components/password-rules";
+import { PASSWORD_RULES_SUMMARY } from "@/lib/password-rules";
 
 export const dynamic = "force-dynamic";
 
 const ERRORS: Record<string, string> = {
-  "weak-password": "Password must be 8–72 characters.",
+  "weak-password": PASSWORD_RULES_SUMMARY,
   invalid:
     "This reset link is invalid or has expired. Request a new one and try again.",
 };
@@ -54,11 +56,7 @@ export default async function ResetPage({
               }}
             >
               <input type="hidden" name="token" value={token} />
-              <Field
-                label="New password"
-                htmlFor="password"
-                help="At least 8 characters."
-              >
+              <Field label="New password" htmlFor="password">
                 <Input
                   id="password"
                   type="password"
@@ -69,6 +67,7 @@ export default async function ResetPage({
                   autoComplete="new-password"
                 />
               </Field>
+              <PasswordRules inputId="password" />
               {errorMessage && <p className="form-error">{errorMessage}</p>}
               <Button
                 type="submit"
