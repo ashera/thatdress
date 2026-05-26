@@ -30,7 +30,7 @@ export type RefTable = {
 export const REF_TABLES: ReadonlyArray<RefTable> = [
   { key: "designers",        table: "designers",        label: "Designers",        singular: "designer",   schema: "name",       usage: { table: "dresses",  column: "designer_id" } },
   { key: "occasions",        table: "occasions",        label: "Occasions",        singular: "occasion",   schema: "slug-label", usage: { table: "listings", column: "occasion_id" } },
-  { key: "silhouettes",      table: "silhouettes",      label: "Silhouettes",      singular: "silhouette", schema: "slug-label", usage: { table: "dresses",  column: "silhouette_id" } },
+  { key: "silhouettes",      table: "silhouettes",      label: "Styles",           singular: "style",      schema: "slug-label", usage: { table: "dresses",  column: "silhouette_id" } },
   { key: "fabrics",          table: "fabrics",          label: "Fabrics",          singular: "fabric",     schema: "slug-label", usage: { table: "dresses",  column: "fabric_id" } },
   { key: "dress-sizes",      table: "dress_sizes",      label: "Sizes",            singular: "size",       schema: "slug-label", usage: { table: "dresses",  column: "size_id" } },
   { key: "necklines",        table: "necklines",        label: "Necklines",        singular: "neckline",   schema: "slug-label", usage: { table: "dresses",  column: "neckline_id" } },

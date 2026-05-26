@@ -98,7 +98,7 @@ export default async function WizardStylePage({
           <p className="card-sub">All optional — fill in what you know.</p>
 
           <div className="grid-2">
-            <Field label="Silhouette" htmlFor="silhouette_id">
+            <Field label="Style" htmlFor="silhouette_id">
               <Select
                 name="silhouette_id"
                 options={refs.silhouettes}

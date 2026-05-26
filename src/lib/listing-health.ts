@@ -108,7 +108,7 @@ export function computeHealth(input: HealthInput): HealthResult {
   // --- Style details: 12 (2 each) ---
   award({
     earned: input.silhouetteId ? 2 : 0,
-    suggestion: { points: 2, text: "Pick a silhouette", step: "style" },
+    suggestion: { points: 2, text: "Pick a style", step: "style" },
   });
   award({
     earned: input.fabricId ? 2 : 0,
