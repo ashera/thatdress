@@ -145,24 +145,20 @@ export default async function ReferenceDataTablePage({
                 <Button type="submit" variant="ghost" size="sm">
                   Save
                 </Button>
-                <DeleteForm id={r.id} tableKey={t.key} />
+                <Button
+                  type="submit"
+                  formAction={removeRefRow}
+                  variant="ghost"
+                  size="sm"
+                  title="Delete"
+                >
+                  ✕
+                </Button>
               </div>
             </form>
           ))}
         </div>
       )}
     </div>
-  );
-}
-
-function DeleteForm({ id, tableKey }: { id: string; tableKey: string }) {
-  return (
-    <form action={removeRefRow} style={{ display: "inline" }}>
-      <input type="hidden" name="tableKey" value={tableKey} />
-      <input type="hidden" name="id" value={id} />
-      <Button type="submit" variant="ghost" size="sm" title="Delete">
-        ✕
-      </Button>
-    </form>
   );
 }
