@@ -261,15 +261,17 @@ export function ListingsFilters({ active, options, isAdmin }: Props) {
         </div>
 
         <div className="filters-actions">
-          <Button type="submit" variant="primary" iconRight="arrow">
-            Apply
-          </Button>
-          {count > 0 && (
-            <Link href="/listings" className="filters-clear">
-              Clear all
-            </Link>
-          )}
           <LiveFilterCount />
+          <div className="filters-actions-right">
+            {count > 0 && (
+              <Link href="/listings" className="filters-clear">
+                Clear all
+              </Link>
+            )}
+            <Button type="submit" variant="primary" iconRight="arrow">
+              Apply
+            </Button>
+          </div>
         </div>
       </form>
     </details>

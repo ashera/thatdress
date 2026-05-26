@@ -75,23 +75,66 @@ export function LiveFilterCount({ initial }: { initial?: number }) {
     };
   }, []);
 
+  const display =
+    count === null
+      ? null
+      : count.toLocaleString("en-AU");
+  const noun = count === 1 ? "listing" : "listings";
+
   return (
     <span
       ref={wrapRef}
       aria-live="polite"
       style={{
-        fontFamily: "var(--font-mono)",
-        fontSize: 12,
-        color: "var(--ink-3)",
-        opacity: loading ? 0.55 : 1,
+        display: "inline-flex",
+        alignItems: "baseline",
+        gap: 8,
+        padding: "8px 14px",
+        borderRadius: 999,
+        background:
+          count === 0
+            ? "#fee2e2"
+            : "linear-gradient(135deg, #ecfccb 0%, #d9f99d 100%)",
+        border: `1px solid ${count === 0 ? "#fca5a5" : "#bef264"}`,
+        opacity: loading ? 0.7 : 1,
         transition: "opacity 120ms ease",
       }}
     >
-      {count === null
-        ? "Counting…"
-        : `${count.toLocaleString("en-AU")} ${
-            count === 1 ? "listing" : "listings"
-          } match`}
+      {display === null ? (
+        <span
+          style={{
+            fontFamily: "var(--font-mono)",
+            fontSize: 13,
+            color: "var(--ink-3)",
+          }}
+        >
+          Counting…
+        </span>
+      ) : (
+        <>
+          <span
+            style={{
+              fontFamily: "var(--font-display, var(--font-sans))",
+              fontSize: 24,
+              fontWeight: 800,
+              lineHeight: 1,
+              letterSpacing: "-0.02em",
+              color: count === 0 ? "#991b1b" : "#365314",
+            }}
+          >
+            {display}
+          </span>
+          <span
+            style={{
+              fontSize: 13,
+              fontWeight: 600,
+              color: count === 0 ? "#991b1b" : "#3f6212",
+            }}
+          >
+            {noun} match
+          </span>
+        </>
+      )}
     </span>
   );
 }
