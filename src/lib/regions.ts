@@ -66,6 +66,37 @@ export async function getPartnerMarketingRegionIds(
   }
 }
 
+/** Map of region_id → the partner who already markets it, EXCLUDING
+ *  `excludeUserId`. Used by the admin partner editor to grey out regions
+ *  that are already taken (a region can belong to at most one partner). */
+export async function getRegionPartnerOwners(
+  excludeUserId: string,
+): Promise<Record<string, { userId: string; email: string }>> {
+  if (!/^\d+$/.test(excludeUserId)) return {};
+  try {
+    const result = await query<{
+      region_id: string;
+      user_id: string;
+      email: string;
+    }>(
+      `SELECT pmr.region_id::text AS region_id,
+              u.id::text          AS user_id,
+              u.email             AS email
+         FROM partner_marketing_regions pmr
+         JOIN users u ON u.id = pmr.user_id
+        WHERE pmr.user_id <> $1::bigint`,
+      [excludeUserId],
+    );
+    const map: Record<string, { userId: string; email: string }> = {};
+    for (const r of result.rows) {
+      map[r.region_id] = { userId: r.user_id, email: r.email };
+    }
+    return map;
+  } catch {
+    return {};
+  }
+}
+
 export function matchRegion(regions: Region[], ipLocation: string): Region | null {
   if (!ipLocation) return null;
   const lower = ipLocation.toLowerCase();

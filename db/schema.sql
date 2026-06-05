@@ -808,8 +808,12 @@ CREATE TABLE IF NOT EXISTS partner_marketing_regions (
   PRIMARY KEY (user_id, region_id)
 );
 
-CREATE INDEX IF NOT EXISTS partner_marketing_regions_region_idx
-  ON partner_marketing_regions (region_id, user_id);
+-- A region can be marketed by at most one partner, so region_id is
+-- unique across the table (this also serves region → partner lookups).
+-- Supersedes the earlier non-unique (region_id, user_id) index.
+DROP INDEX IF EXISTS partner_marketing_regions_region_idx;
+CREATE UNIQUE INDEX IF NOT EXISTS partner_marketing_regions_region_key
+  ON partner_marketing_regions (region_id);
 
 -- =========================================================
 -- Postcode → centroid lookup. Drives the map view on /listings:

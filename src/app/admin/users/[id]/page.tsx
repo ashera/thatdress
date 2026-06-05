@@ -12,7 +12,11 @@ import {
 } from "@/lib/actions/users";
 import { adminResetUserPassword } from "@/lib/actions/password-reset";
 import { startImpersonation } from "@/lib/actions/impersonation";
-import { listAllRegions, getPartnerMarketingRegionIds } from "@/lib/regions";
+import {
+  listAllRegions,
+  getPartnerMarketingRegionIds,
+  getRegionPartnerOwners,
+} from "@/lib/regions";
 import { listReferredUsers } from "@/lib/referral";
 import { loadSiteSettings } from "@/lib/site-settings";
 import {
@@ -263,6 +267,8 @@ const ERRORS: Record<string, string> = {
     "You can't reset your own password here — use the public /forgot flow.",
   "empty-message": "Message body is empty.",
   "self-impersonate": "You can't impersonate yourself.",
+  "region-taken":
+    "One or more of those regions is already assigned to another partner. Each region can belong to only one partner.",
   "cannot-impersonate-suspended":
     "Suspended accounts can't be impersonated. Unsuspend first.",
 };
@@ -360,6 +366,7 @@ export default async function AdminUserDetailPage({
     conversations,
     allRegions,
     partnerRegionIds,
+    regionOwners,
   ] = await Promise.all([
     listReferredUsers(user.id),
     loadSiteSettings(),
@@ -367,6 +374,7 @@ export default async function AdminUserDetailPage({
     fetchUserConversations(user.id),
     listAllRegions(),
     getPartnerMarketingRegionIds(user.id),
+    getRegionPartnerOwners(user.id),
   ]);
   const partnerRegionSet = new Set(partnerRegionIds);
   const commissionCents = settings.referralCommissionCents;
@@ -610,30 +618,60 @@ export default async function AdminUserDetailPage({
                   gap: "var(--s-2)",
                 }}
               >
-                {allRegions.map((r) => (
-                  <label key={r.id} className="check-row">
-                    <input
-                      type="checkbox"
-                      name="region_id"
-                      value={r.id}
-                      defaultChecked={partnerRegionSet.has(r.id)}
-                    />
-                    <span>
-                      {r.label}
-                      {!r.is_active && (
-                        <span
-                          style={{
-                            color: "var(--ink-4)",
-                            marginLeft: 6,
-                            fontSize: 12,
-                          }}
-                        >
-                          (inactive)
-                        </span>
-                      )}
-                    </span>
-                  </label>
-                ))}
+                {allRegions.map((r) => {
+                  const owner = regionOwners[r.id];
+                  return (
+                    <label
+                      key={r.id}
+                      className="check-row"
+                      style={owner ? { opacity: 0.6 } : undefined}
+                      title={
+                        owner
+                          ? `Already assigned to ${owner.email}. A region can belong to only one partner.`
+                          : undefined
+                      }
+                    >
+                      <input
+                        type="checkbox"
+                        name="region_id"
+                        value={r.id}
+                        defaultChecked={partnerRegionSet.has(r.id)}
+                        disabled={!!owner}
+                      />
+                      <span>
+                        {r.label}
+                        {!r.is_active && (
+                          <span
+                            style={{
+                              color: "var(--ink-4)",
+                              marginLeft: 6,
+                              fontSize: 12,
+                            }}
+                          >
+                            (inactive)
+                          </span>
+                        )}
+                        {owner && (
+                          <span
+                            style={{
+                              color: "var(--ink-4)",
+                              marginLeft: 6,
+                              fontSize: 12,
+                            }}
+                          >
+                            — taken by{" "}
+                            <Link
+                              href={`/admin/users/${owner.userId}`}
+                              style={{ color: "var(--ink-3)" }}
+                            >
+                              {owner.email}
+                            </Link>
+                          </span>
+                        )}
+                      </span>
+                    </label>
+                  );
+                })}
               </div>
               <div style={{ display: "flex", justifyContent: "flex-end" }}>
                 <Button type="submit" variant="primary" iconRight="check">

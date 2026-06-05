@@ -112,6 +112,23 @@ export async function updatePartnerMarketingRegions(
     ),
   );
 
+  // A region can belong to at most one partner. Reject the save (before
+  // touching anything) if any picked region is already another partner's
+  // — the partner_marketing_regions_region_key unique index is the
+  // backstop, but this gives a clean message instead of a 500.
+  if (regionIds.length > 0) {
+    const taken = await query<{ n: string }>(
+      `SELECT COUNT(*)::text AS n
+         FROM partner_marketing_regions
+        WHERE region_id = ANY($1::bigint[])
+          AND user_id <> $2::bigint`,
+      [regionIds, id],
+    );
+    if (Number(taken.rows[0]?.n ?? 0) > 0) {
+      redirect(`/admin/users/${id}?error=region-taken`);
+    }
+  }
+
   await withTransaction(async (client) => {
     await client.query(
       `DELETE FROM partner_marketing_regions WHERE user_id = $1::bigint`,
