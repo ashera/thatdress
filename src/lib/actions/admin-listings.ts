@@ -95,3 +95,27 @@ export async function sendSaleNudge(formData: FormData): Promise<void> {
   revalidatePath("/listings/mine");
   redirect("/admin/listings?nudge=sent");
 }
+
+/**
+ * Admin hard-deletes a single listing. Every table that references
+ * listings(id) does so ON DELETE CASCADE — images, conversations,
+ * messages, offers, reviews, flags — so a plain DELETE tears down the
+ * whole subtree in one statement. The underlying dress row is left
+ * untouched (a listing is one sale event for a dress, not the dress
+ * itself), so the dress simply loses this listing from its history.
+ */
+export async function deleteListing(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const listingId = String(formData.get("listingId") ?? "");
+  if (!/^\d+$/.test(listingId)) {
+    redirect("/admin/listings?deleted=invalid");
+  }
+
+  const r = await query(`DELETE FROM listings WHERE id = $1::bigint`, [
+    listingId,
+  ]);
+
+  revalidatePath("/admin/listings");
+  revalidatePath("/admin/dresses");
+  redirect(`/admin/listings?deleted=${r.rowCount ? "ok" : "not-found"}`);
+}

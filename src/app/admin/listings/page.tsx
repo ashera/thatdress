@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
 import { query } from "@/lib/db";
-import { sendSaleNudge } from "@/lib/actions/admin-listings";
+import { sendSaleNudge, deleteListing } from "@/lib/actions/admin-listings";
+import { DeleteConfirmDialog } from "@/app/_components/delete-confirm-dialog";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "All listings — Admin" };
@@ -21,6 +22,15 @@ const NUDGE_MESSAGES: Record<string, { ok: boolean; text: string }> = {
     ok: false,
     text: "No seller email on this listing — can't send.",
   },
+};
+
+const DELETE_MESSAGES: Record<string, { ok: boolean; text: string }> = {
+  ok: {
+    ok: true,
+    text: "Listing deleted — its images, conversations and offers were removed too.",
+  },
+  invalid: { ok: false, text: "Invalid listing id." },
+  "not-found": { ok: false, text: "Listing not found (already deleted?)." },
 };
 
 const SORT_OPTIONS = [
@@ -64,6 +74,7 @@ type Row = {
   designer_name: string | null;
   seller_email: string | null;
   primary_image_id: string | null;
+  image_count: string;
   conversation_count: string;
   recent_message_count: string;
   last_message_at: string | null;
@@ -130,6 +141,10 @@ async function fetchListings(opts: {
                   ORDER BY li.is_primary DESC, li.position, li.id
                   LIMIT 1
               ) AS primary_image_id,
+              (
+                SELECT COUNT(*)::text FROM listing_images li
+                  WHERE li.listing_id = l.id
+              ) AS image_count,
               (
                 SELECT COUNT(*)::text FROM conversations
                   WHERE listing_id = l.id
@@ -224,12 +239,16 @@ export default async function AdminListingsPage({
     status?: string;
     seller_id?: string;
     nudge?: string;
+    deleted?: string;
   }>;
 }) {
   await requireAdmin();
   const sp = await searchParams;
   const nudgeMessage = sp.nudge
     ? NUDGE_MESSAGES[sp.nudge] ?? null
+    : null;
+  const deleteMessage = sp.deleted
+    ? DELETE_MESSAGES[sp.deleted] ?? null
     : null;
   const search = (sp.q ?? "").slice(0, 200);
   const sellerId =
@@ -290,6 +309,15 @@ export default async function AdminListingsPage({
           style={{ marginBottom: "var(--s-5)" }}
         >
           {nudgeMessage.text}
+        </p>
+      )}
+
+      {deleteMessage && (
+        <p
+          className={deleteMessage.ok ? "form-success" : "form-error"}
+          style={{ marginBottom: "var(--s-5)" }}
+        >
+          {deleteMessage.text}
         </p>
       )}
 
@@ -490,6 +518,7 @@ export default async function AdminListingsPage({
                   💬
                 </th>
                 <th style={thStyle("130px", "left")}>Last activity</th>
+                <th style={thStyle("90px", "right")}></th>
               </tr>
             </thead>
             <tbody>
@@ -503,6 +532,20 @@ export default async function AdminListingsPage({
                 const isVerified = row.trust_status === "verified";
                 const isAuthenticated = row.trust_status === "authenticated";
                 const detailHref = `/listings/${row.id}`;
+                const imageCount = Number(row.image_count ?? 0);
+                const deleteWarnings = [
+                  `The listing “${row.title}”${
+                    imageCount > 0
+                      ? ` and its ${imageCount} photo${imageCount === 1 ? "" : "s"}`
+                      : ""
+                  }`,
+                  ...(convCount > 0
+                    ? [
+                        `${convCount} buyer conversation${convCount === 1 ? "" : "s"} and all their messages`,
+                      ]
+                    : []),
+                  ...(isSold ? ["The sale record (this listing is marked sold)"] : []),
+                ];
                 return (
                   <tr
                     key={row.id}
@@ -709,6 +752,34 @@ export default async function AdminListingsPage({
                           </form>
                         )}
                       </div>
+                    </td>
+                    <td style={{ ...tdStyle, textAlign: "right" }}>
+                      <DeleteConfirmDialog
+                        deleteAction={deleteListing}
+                        idName="listingId"
+                        idValue={row.id}
+                        triggerLabel="Delete"
+                        title="Delete this listing?"
+                        intro="Permanently removes this listing and everything attached to it:"
+                        warnings={[
+                          ...deleteWarnings,
+                          "The dress record itself is kept — only this listing is removed.",
+                        ]}
+                        triggerStyle={{
+                          padding: "3px 10px",
+                          borderRadius: 999,
+                          background: "transparent",
+                          color: "#b91c1c",
+                          border: "1px solid #fca5a5",
+                          fontWeight: 600,
+                          fontSize: 11,
+                          cursor: "pointer",
+                          fontFamily: "var(--font-mono)",
+                          letterSpacing: "0.06em",
+                          textTransform: "uppercase",
+                          whiteSpace: "nowrap",
+                        }}
+                      />
                     </td>
                   </tr>
                 );

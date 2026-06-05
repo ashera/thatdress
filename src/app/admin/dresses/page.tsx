@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
 import { query } from "@/lib/db";
-import { forceRelistNudge } from "@/lib/actions/admin-dresses";
+import { forceRelistNudge, deleteDress } from "@/lib/actions/admin-dresses";
 import { Button } from "../../_components/ui";
+import { DeleteConfirmDialog } from "../../_components/delete-confirm-dialog";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Dresses — Admin" };
@@ -42,6 +43,15 @@ const NUDGE_MESSAGES: Record<string, { ok: boolean; text: string }> = {
   },
 };
 
+const DELETE_MESSAGES: Record<string, { ok: boolean; text: string }> = {
+  ok: {
+    ok: true,
+    text: "Dress deleted — all its listings, photos, conversations and ownership history were removed too.",
+  },
+  invalid: { ok: false, text: "Invalid dress id." },
+  "not-found": { ok: false, text: "Dress not found (already deleted?)." },
+};
+
 type Row = {
   dress_id: string;
   designer_name: string | null;
@@ -65,6 +75,10 @@ type Row = {
   // images yet (drafts pre-photo-step).
   thumb_listing_id: string | null;
   thumb_image_id: string | null;
+  // Counts surfaced in the delete-confirmation dialog so the admin
+  // sees exactly what the cascade will erase.
+  listing_count: string;
+  sold_listing_count: string;
 };
 
 async function fetchDresses(): Promise<Row[]> {
@@ -98,7 +112,15 @@ async function fetchDresses(): Promise<Row[]> {
                  WHERE dress_id = d.id AND event_type = 'sold'
               )                                        AS last_sold_at,
               thumb.listing_id::text                   AS thumb_listing_id,
-              thumb.image_id::text                     AS thumb_image_id
+              thumb.image_id::text                     AS thumb_image_id,
+              (
+                SELECT COUNT(*)::text FROM listings l
+                 WHERE l.dress_id = d.id
+              )                                        AS listing_count,
+              (
+                SELECT COUNT(*)::text FROM listings l
+                 WHERE l.dress_id = d.id AND l.sold_at IS NOT NULL
+              )                                        AS sold_listing_count
          FROM dresses d
          JOIN users u ON u.id = d.current_owner_user_id
          LEFT JOIN designers   des ON des.id = d.designer_id
@@ -255,13 +277,14 @@ function dressLabel(row: Row): string {
 export default async function AdminDressesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ nudge?: string; id?: string }>;
+  searchParams: Promise<{ nudge?: string; id?: string; deleted?: string }>;
 }) {
   await requireAdmin();
   const sp = await searchParams;
   const rows = await fetchDresses();
 
   const flash = sp.nudge ? NUDGE_MESSAGES[sp.nudge] : null;
+  const deleteFlash = sp.deleted ? DELETE_MESSAGES[sp.deleted] : null;
 
   return (
     <div className="page admin-page" style={{ maxWidth: 1080 }}>
@@ -292,6 +315,15 @@ export default async function AdminDressesPage({
         </p>
       )}
 
+      {deleteFlash && (
+        <p
+          className={deleteFlash.ok ? "form-success" : "form-error"}
+          style={{ marginBottom: "var(--s-5)" }}
+        >
+          {deleteFlash.text}
+        </p>
+      )}
+
       {rows.length === 0 ? (
         <div className="empty-state">
           <h3>No owned dresses yet</h3>
@@ -314,6 +346,16 @@ export default async function AdminDressesPage({
           {rows.map((row) => {
             const pill = dispositionPill(row.display_disposition);
             const eligible = row.disposition === "in-use";
+            const listingCount = Number(row.listing_count ?? 0);
+            const soldCount = Number(row.sold_listing_count ?? 0);
+            const deleteWarnings = [
+              `Dress #${row.dress_id} — ${dressLabel(row)} — and its full ownership history`,
+              listingCount > 0
+                ? `${listingCount} listing${listingCount === 1 ? "" : "s"}${
+                    soldCount > 0 ? ` (including ${soldCount} sold)` : ""
+                  }, with every photo and buyer conversation`
+                : "No listings are attached to this dress",
+            ];
             return (
               <li
                 key={row.dress_id}
@@ -472,22 +514,53 @@ export default async function AdminDressesPage({
                     </div>
                   )}
                 </Link>
-                <form action={forceRelistNudge}>
-                  <input type="hidden" name="dressId" value={row.dress_id} />
-                  <Button
-                    type="submit"
-                    variant={eligible ? "primary" : "ghost"}
-                    size="sm"
-                    disabled={!eligible}
-                    title={
-                      eligible
-                        ? "Force-send a relist nudge to the current owner"
-                        : `Not eligible — disposition is '${row.display_disposition}'`
-                    }
-                  >
-                    Send relist nudge
-                  </Button>
-                </form>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 8,
+                    alignItems: "stretch",
+                  }}
+                >
+                  <form action={forceRelistNudge}>
+                    <input type="hidden" name="dressId" value={row.dress_id} />
+                    <Button
+                      type="submit"
+                      variant={eligible ? "primary" : "ghost"}
+                      size="sm"
+                      disabled={!eligible}
+                      title={
+                        eligible
+                          ? "Force-send a relist nudge to the current owner"
+                          : `Not eligible — disposition is '${row.display_disposition}'`
+                      }
+                    >
+                      Send relist nudge
+                    </Button>
+                  </form>
+                  <DeleteConfirmDialog
+                    deleteAction={deleteDress}
+                    idName="dressId"
+                    idValue={row.dress_id}
+                    triggerLabel="Delete dress"
+                    title="Delete this dress?"
+                    intro="This permanently removes the dress and everything attached to it:"
+                    warnings={deleteWarnings}
+                    triggerStyle={{
+                      padding: "6px 14px",
+                      borderRadius: 999,
+                      background: "transparent",
+                      color: "#b91c1c",
+                      border: "1px solid #fca5a5",
+                      fontWeight: 600,
+                      fontSize: 13,
+                      cursor: "pointer",
+                      lineHeight: 1.4,
+                      whiteSpace: "nowrap",
+                      width: "100%",
+                    }}
+                  />
+                </div>
               </li>
             );
           })}
