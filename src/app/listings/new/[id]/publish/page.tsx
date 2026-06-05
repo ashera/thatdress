@@ -1,7 +1,6 @@
 import { loadListingRefOptions } from "@/lib/ref-data";
 import { publishDraftListing } from "@/lib/actions/listing-wizard";
 import { setListingVisibility } from "@/lib/actions/listings";
-import { resolveCurrentRegion } from "@/lib/regions";
 import { query } from "@/lib/db";
 import {
   estimateValue,
@@ -152,15 +151,12 @@ export default async function WizardPublishPage({
     loadListingRefOptions(),
   ]);
 
-  // The region is assigned automatically from the seller's current
-  // region (cookie pick → IP match), so it's shown read-only here.
-  // If we can't resolve a current region, fall back to whatever region
-  // was stamped on the draft when it was created.
-  const resolvedRegion = await resolveCurrentRegion();
+  // The region is assigned automatically when the seller first arrives
+  // on the site and is stamped onto the draft at creation, so here we
+  // just look it up from the regions table by the listing's region_id
+  // and show it read-only — no re-resolving needed.
   const assignedRegion =
-    resolvedRegion.kind === "selected" || resolvedRegion.kind === "auto"
-      ? resolvedRegion.region
-      : refs.regions.find((r) => r.id === draft.region_id) ?? null;
+    refs.regions.find((r) => r.id === draft.region_id) ?? null;
 
   const suggestion = await buildSuggestion(draft);
 
@@ -288,44 +284,26 @@ export default async function WizardPublishPage({
             help={
               assignedRegion
                 ? `Set automatically from where you're browsing — you don't choose this. Your listing will only appear to buyers shopping in ${assignedRegion.label}.`
-                : "We couldn't detect your region, so this listing won't appear in any regional marketplace yet. Set your region to control where it shows."
+                : "Set automatically from where you're browsing — you don't choose this. Your listing will only appear to buyers shopping in your region."
             }
           >
-            {assignedRegion ? (
-              <div
-                aria-readonly="true"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "10px 14px",
-                  background: "var(--surface-sunken)",
-                  border: "1px solid var(--hairline)",
-                  borderRadius: 10,
-                  color: "var(--ink-1)",
-                  fontWeight: 600,
-                }}
-              >
-                <Icon name="location" size="sm" />
-                <span>{assignedRegion.label}</span>
-              </div>
-            ) : (
-              <a
-                href="/regions/pick"
-                className="input"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  color: "var(--ink-1)",
-                  fontWeight: 600,
-                  textDecoration: "none",
-                }}
-              >
-                <Icon name="location" size="sm" />
-                <span>Set your region →</span>
-              </a>
-            )}
+            <div
+              aria-readonly="true"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "10px 14px",
+                background: "var(--surface-sunken)",
+                border: "1px solid var(--hairline)",
+                borderRadius: 10,
+                color: "var(--ink-1)",
+                fontWeight: 600,
+              }}
+            >
+              <Icon name="location" size="sm" />
+              <span>{assignedRegion ? assignedRegion.label : "Your region"}</span>
+            </div>
           </Field>
         </section>
 

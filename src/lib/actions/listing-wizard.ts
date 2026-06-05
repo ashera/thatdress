@@ -771,11 +771,9 @@ export async function publishDraftListing(formData: FormData): Promise<void> {
     trust_status: string | null;
     is_draft: boolean;
     is_published: boolean;
-    region_id: string | null;
     image_count: string;
   }>(
     `SELECT l.title,
-            l.region_id::text          AS region_id,
             dr.designer_id::text       AS designer_id,
             dr.model                   AS model,
             dr.year                    AS year,
@@ -867,27 +865,23 @@ export async function publishDraftListing(formData: FormData): Promise<void> {
     ? ", is_draft = FALSE, is_published = TRUE"
     : "";
 
-  // Region is assigned automatically from the seller's current region
-  // and shown read-only in the wizard, so we never trust a client-sent
-  // value here. Fall back to whatever region is already on the row when
-  // the current region can't be resolved, so a save never wipes it.
-  const regionId = (await getCurrentRegionId()) ?? row.region_id;
+  // Region isn't touched here: it's stamped automatically from the
+  // seller's region when the draft is first created and shown read-only
+  // in the wizard, so publishing/editing never changes it.
   await query(
     `UPDATE listings
         SET description = $2,
             price_cents = $3,
             location_postal = $4,
-            region_id = NULLIF($5, '')::bigint,
-            offers_enabled = $6,
-            is_authentic_declared = $7,
-            trust_status = $8${draftToggleSql}
+            offers_enabled = $5,
+            is_authentic_declared = $6,
+            trust_status = $7${draftToggleSql}
       WHERE id = $1::bigint`,
     [
       listingId,
       nullableString(description),
       priceCents,
       location_postal,
-      regionId ?? "",
       getCheckbox(formData, "offers_enabled"),
       isAuthenticDeclared,
       nextTrust,
