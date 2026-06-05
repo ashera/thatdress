@@ -741,11 +741,6 @@ export async function publishDraftListing(formData: FormData): Promise<void> {
     redirect(`${stepUrl}?error=invalid-location`);
   }
 
-  const formRegionId = String(formData.get("region_id") ?? "").trim();
-  const regionId = /^\d+$/.test(formRegionId)
-    ? formRegionId
-    : await getCurrentRegionId();
-
   const isAuthenticDeclared = getCheckbox(formData, "is_authentic_declared");
   if (!isAuthenticDeclared) {
     redirect(`${stepUrl}?error=authenticity-required`);
@@ -776,9 +771,11 @@ export async function publishDraftListing(formData: FormData): Promise<void> {
     trust_status: string | null;
     is_draft: boolean;
     is_published: boolean;
+    region_id: string | null;
     image_count: string;
   }>(
     `SELECT l.title,
+            l.region_id::text          AS region_id,
             dr.designer_id::text       AS designer_id,
             dr.model                   AS model,
             dr.year                    AS year,
@@ -869,6 +866,12 @@ export async function publishDraftListing(formData: FormData): Promise<void> {
   const draftToggleSql = isPublishingDraft
     ? ", is_draft = FALSE, is_published = TRUE"
     : "";
+
+  // Region is assigned automatically from the seller's current region
+  // and shown read-only in the wizard, so we never trust a client-sent
+  // value here. Fall back to whatever region is already on the row when
+  // the current region can't be resolved, so a save never wipes it.
+  const regionId = (await getCurrentRegionId()) ?? row.region_id;
   await query(
     `UPDATE listings
         SET description = $2,

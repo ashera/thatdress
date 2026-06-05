@@ -1,6 +1,7 @@
 import { loadListingRefOptions } from "@/lib/ref-data";
 import { publishDraftListing } from "@/lib/actions/listing-wizard";
 import { setListingVisibility } from "@/lib/actions/listings";
+import { resolveCurrentRegion } from "@/lib/regions";
 import { query } from "@/lib/db";
 import {
   estimateValue,
@@ -9,7 +10,7 @@ import {
   type ConditionSlug,
   type DesignerTier,
 } from "@/lib/value-estimator";
-import { Button, Field, Input, Textarea } from "../../../../_components/ui";
+import { Button, Field, Icon, Input, Textarea } from "../../../../_components/ui";
 import { PostcodeInput } from "./_postcode-input";
 import {
   isEditMode,
@@ -151,6 +152,16 @@ export default async function WizardPublishPage({
     loadListingRefOptions(),
   ]);
 
+  // The region is assigned automatically from the seller's current
+  // region (cookie pick → IP match), so it's shown read-only here.
+  // If we can't resolve a current region, fall back to whatever region
+  // was stamped on the draft when it was created.
+  const resolvedRegion = await resolveCurrentRegion();
+  const assignedRegion =
+    resolvedRegion.kind === "selected" || resolvedRegion.kind === "auto"
+      ? resolvedRegion.region
+      : refs.regions.find((r) => r.id === draft.region_id) ?? null;
+
   const suggestion = await buildSuggestion(draft);
 
   // Price input default: explicit ?price=... wins (came back from the
@@ -274,27 +285,47 @@ export default async function WizardPublishPage({
 
           <Field
             label="Region"
-            htmlFor="region_id"
-            help="Buyers in this region will see the listing."
+            help={
+              assignedRegion
+                ? `Set automatically from where you're browsing — you don't choose this. Your listing will only appear to buyers shopping in ${assignedRegion.label}.`
+                : "We couldn't detect your region, so this listing won't appear in any regional marketplace yet. Set your region to control where it shows."
+            }
           >
-            <select
-              id="region_id"
-              name="region_id"
-              className="input"
-              defaultValue={draft.region_id ?? ""}
-              required
-            >
-              <option value="">
-                {refs.regions.length === 0
-                  ? "No regions configured"
-                  : "Select a region"}
-              </option>
-              {refs.regions.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
+            {assignedRegion ? (
+              <div
+                aria-readonly="true"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "10px 14px",
+                  background: "var(--surface-sunken)",
+                  border: "1px solid var(--hairline)",
+                  borderRadius: 10,
+                  color: "var(--ink-1)",
+                  fontWeight: 600,
+                }}
+              >
+                <Icon name="location" size="sm" />
+                <span>{assignedRegion.label}</span>
+              </div>
+            ) : (
+              <a
+                href="/regions/pick"
+                className="input"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  color: "var(--ink-1)",
+                  fontWeight: 600,
+                  textDecoration: "none",
+                }}
+              >
+                <Icon name="location" size="sm" />
+                <span>Set your region →</span>
+              </a>
+            )}
           </Field>
         </section>
 
