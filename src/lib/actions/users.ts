@@ -151,6 +151,49 @@ export async function updatePartnerMarketingRegions(
   redirect(`/admin/users/${id}?saved=1`);
 }
 
+/**
+ * Move a single marketing region to this partner, taking it from
+ * whichever partner currently holds it. Used by the "Reassign" buttons
+ * the admin sees for regions already assigned elsewhere. Additive — it
+ * doesn't touch this partner's other regions.
+ */
+export async function reassignMarketingRegion(
+  formData: FormData,
+): Promise<void> {
+  await requireAdmin();
+  const id = getId(formData, "userId");
+  if (!id) redirect("/admin/users");
+  const regionId = getId(formData, "regionId");
+  if (!regionId) redirect(`/admin/users/${id}?error=region-invalid`);
+
+  await withTransaction(async (client) => {
+    // Only reassign to an actual partner and an existing region.
+    const partner = await client.query<{ id: string }>(
+      `SELECT id::text FROM users
+        WHERE id = $1::bigint AND is_partner = TRUE LIMIT 1`,
+      [id],
+    );
+    if (partner.rows.length === 0) return;
+
+    // Take the region from its current owner (the unique index means
+    // there's at most one), then hand it to this partner.
+    await client.query(
+      `DELETE FROM partner_marketing_regions WHERE region_id = $1::bigint`,
+      [regionId],
+    );
+    await client.query(
+      `INSERT INTO partner_marketing_regions (user_id, region_id)
+       SELECT $1::bigint, r.id FROM regions r WHERE r.id = $2::bigint
+       ON CONFLICT (user_id, region_id) DO NOTHING`,
+      [id, regionId],
+    );
+  });
+
+  revalidatePath(`/admin/users/${id}`);
+  revalidatePath("/admin/users");
+  redirect(`/admin/users/${id}?saved=1`);
+}
+
 export async function toggleUserSuspended(formData: FormData): Promise<void> {
   const me = await requireAdmin();
   const id = getId(formData, "userId");

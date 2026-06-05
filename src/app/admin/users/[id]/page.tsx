@@ -7,6 +7,7 @@ import {
   toggleAdminRole,
   togglePartnerRole,
   updatePartnerMarketingRegions,
+  reassignMarketingRegion,
   toggleUserSuspended,
   updateUserAsAdmin,
 } from "@/lib/actions/users";
@@ -269,6 +270,7 @@ const ERRORS: Record<string, string> = {
   "self-impersonate": "You can't impersonate yourself.",
   "region-taken":
     "One or more of those regions is already assigned to another partner. Each region can belong to only one partner.",
+  "region-invalid": "That region no longer exists.",
   "cannot-impersonate-suspended":
     "Suspended accounts can't be impersonated. Unsuspend first.",
 };
@@ -377,6 +379,12 @@ export default async function AdminUserDetailPage({
     getRegionPartnerOwners(user.id),
   ]);
   const partnerRegionSet = new Set(partnerRegionIds);
+  // Split regions into those this partner can freely pick (unassigned or
+  // already theirs) and those held by another partner (reassign-only).
+  const availableRegions = allRegions.filter((r) => !regionOwners[r.id]);
+  const takenRegions = allRegions
+    .filter((r) => regionOwners[r.id])
+    .map((r) => ({ region: r, owner: regionOwners[r.id]! }));
   const commissionCents = settings.referralCommissionCents;
   const verifiedListings = referred.reduce(
     (sum, r) => sum + r.verified_listing_count,
@@ -588,8 +596,8 @@ export default async function AdminUserDetailPage({
         <section className="form-card" style={{ marginBottom: "var(--s-5)" }}>
           <h2 className="card-heading">Partner marketing regions</h2>
           <p className="card-sub">
-            The region(s) this partner promotes. Tick one or more, then
-            save.
+            The region(s) this partner promotes. Each region can belong to
+            only one partner.
           </p>
 
           {allRegions.length === 0 ? (
@@ -601,84 +609,173 @@ export default async function AdminUserDetailPage({
               .
             </p>
           ) : (
-            <form
-              action={updatePartnerMarketingRegions}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "var(--s-4)",
-              }}
-            >
-              <input type="hidden" name="userId" value={user.id} />
-              <div
+            <>
+              {/* Bulk picker for regions that are free or already this
+                  partner's. Taken-by-others regions live in the reassign
+                  list below (kept out of this form so a normal save can
+                  never steal one). */}
+              <form
+                action={updatePartnerMarketingRegions}
                 style={{
-                  display: "grid",
-                  gridTemplateColumns:
-                    "repeat(auto-fill, minmax(220px, 1fr))",
-                  gap: "var(--s-2)",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "var(--s-4)",
                 }}
               >
-                {allRegions.map((r) => {
-                  const owner = regionOwners[r.id];
-                  return (
-                    <label
-                      key={r.id}
-                      className="check-row"
-                      style={owner ? { opacity: 0.6 } : undefined}
-                      title={
-                        owner
-                          ? `Already assigned to ${owner.email}. A region can belong to only one partner.`
-                          : undefined
-                      }
+                <input type="hidden" name="userId" value={user.id} />
+                {availableRegions.length === 0 ? (
+                  <p style={{ color: "var(--ink-3)", margin: 0 }}>
+                    Every region is currently assigned to another partner —
+                    use the reassign list below.
+                  </p>
+                ) : (
+                  <>
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns:
+                          "repeat(auto-fill, minmax(220px, 1fr))",
+                        gap: "var(--s-2)",
+                      }}
                     >
-                      <input
-                        type="checkbox"
-                        name="region_id"
-                        value={r.id}
-                        defaultChecked={partnerRegionSet.has(r.id)}
-                        disabled={!!owner}
-                      />
-                      <span>
-                        {r.label}
-                        {!r.is_active && (
-                          <span
-                            style={{
-                              color: "var(--ink-4)",
-                              marginLeft: 6,
-                              fontSize: 12,
-                            }}
-                          >
-                            (inactive)
+                      {availableRegions.map((r) => (
+                        <label key={r.id} className="check-row">
+                          <input
+                            type="checkbox"
+                            name="region_id"
+                            value={r.id}
+                            defaultChecked={partnerRegionSet.has(r.id)}
+                          />
+                          <span>
+                            {r.label}
+                            {!r.is_active && (
+                              <span
+                                style={{
+                                  color: "var(--ink-4)",
+                                  marginLeft: 6,
+                                  fontSize: 12,
+                                }}
+                              >
+                                (inactive)
+                              </span>
+                            )}
                           </span>
-                        )}
-                        {owner && (
+                        </label>
+                      ))}
+                    </div>
+                    <div
+                      style={{ display: "flex", justifyContent: "flex-end" }}
+                    >
+                      <Button
+                        type="submit"
+                        variant="primary"
+                        iconRight="check"
+                      >
+                        Save marketing regions
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </form>
+
+              {takenRegions.length > 0 && (
+                <div style={{ marginTop: "var(--s-5)" }}>
+                  <h3
+                    style={{
+                      fontFamily: "var(--font-mono)",
+                      fontSize: 11,
+                      letterSpacing: "0.12em",
+                      textTransform: "uppercase",
+                      color: "var(--ink-3)",
+                      margin: "0 0 var(--s-2)",
+                    }}
+                  >
+                    Assigned to other partners
+                  </h3>
+                  <p
+                    className="card-sub"
+                    style={{ marginTop: 0, marginBottom: "var(--s-3)" }}
+                  >
+                    Reassigning moves the region to this partner and removes
+                    it from the current one.
+                  </p>
+                  <ul
+                    style={{
+                      listStyle: "none",
+                      padding: 0,
+                      margin: 0,
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "var(--s-2)",
+                    }}
+                  >
+                    {takenRegions.map(({ region, owner }) => (
+                      <li
+                        key={region.id}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          gap: "var(--s-3)",
+                          padding: "var(--s-3)",
+                          border: "1px solid var(--hairline)",
+                          borderRadius: 10,
+                          background: "var(--surface-sunken)",
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <span style={{ minWidth: 0 }}>
+                          <strong style={{ color: "var(--ink-1)" }}>
+                            {region.label}
+                          </strong>
+                          {!region.is_active && (
+                            <span
+                              style={{
+                                color: "var(--ink-4)",
+                                marginLeft: 6,
+                                fontSize: 12,
+                              }}
+                            >
+                              (inactive)
+                            </span>
+                          )}
                           <span
                             style={{
-                              color: "var(--ink-4)",
+                              color: "var(--ink-3)",
                               marginLeft: 6,
-                              fontSize: 12,
+                              fontSize: 13,
                             }}
                           >
-                            — taken by{" "}
+                            — held by{" "}
                             <Link
                               href={`/admin/users/${owner.userId}`}
-                              style={{ color: "var(--ink-3)" }}
+                              style={{ color: "var(--ink-2)" }}
                             >
                               {owner.email}
                             </Link>
                           </span>
-                        )}
-                      </span>
-                    </label>
-                  );
-                })}
-              </div>
-              <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                <Button type="submit" variant="primary" iconRight="check">
-                  Save marketing regions
-                </Button>
-              </div>
-            </form>
+                        </span>
+                        <form action={reassignMarketingRegion}>
+                          <input
+                            type="hidden"
+                            name="userId"
+                            value={user.id}
+                          />
+                          <input
+                            type="hidden"
+                            name="regionId"
+                            value={region.id}
+                          />
+                          <Button type="submit" variant="ghost" size="sm">
+                            Reassign to this partner
+                          </Button>
+                        </form>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </>
           )}
         </section>
       )}
