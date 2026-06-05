@@ -1,6 +1,8 @@
 import { requirePartner } from "@/lib/auth";
 import { query } from "@/lib/db";
-import { getPartnerMarketingRegionIds } from "@/lib/regions";
+import { getPartnerRegions } from "@/lib/regions";
+import { updatePartnerListingFees } from "@/lib/actions/partner";
+import { Button } from "../_components/ui";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Partner dashboard" };
@@ -75,9 +77,25 @@ async function fetchRegionBreakdown(
   }
 }
 
-export default async function PartnerDashboardPage() {
+function centsToInput(cents: number): string {
+  if (!cents || cents <= 0) return "";
+  const dollars = cents / 100;
+  return Number.isInteger(dollars) ? String(dollars) : dollars.toFixed(2);
+}
+
+export default async function PartnerDashboardPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ saved?: string; error?: string }>;
+}) {
   const user = await requirePartner();
-  const regionIds = await getPartnerMarketingRegionIds(user.id);
+  const sp = searchParams ? await searchParams : {};
+  const feeError =
+    sp.error === "invalid-fee"
+      ? "Enter a valid amount (e.g. 5 or 12.50), or leave blank for free."
+      : null;
+  const partnerRegions = await getPartnerRegions(user.id);
+  const regionIds = partnerRegions.map((r) => r.id);
 
   if (regionIds.length === 0) {
     return (
@@ -198,6 +216,17 @@ export default async function PartnerDashboardPage() {
         </p>
       </header>
 
+      {sp.saved && !feeError && (
+        <p className="form-success" style={{ marginBottom: "var(--s-5)" }}>
+          Listing fees saved.
+        </p>
+      )}
+      {feeError && (
+        <p className="form-error" style={{ marginBottom: "var(--s-5)" }}>
+          {feeError}
+        </p>
+      )}
+
       <div
         style={{
           display: "grid",
@@ -210,6 +239,87 @@ export default async function PartnerDashboardPage() {
           <StatCard key={t.label} tile={t} />
         ))}
       </div>
+
+      <section
+        className="form-card"
+        style={{ padding: "var(--s-5)", marginBottom: "var(--s-6)" }}
+      >
+        <h2 className="card-heading" style={{ marginTop: 0 }}>
+          Listing fees
+        </h2>
+        <p className="card-sub" style={{ marginTop: 0 }}>
+          Set what sellers pay to list a dress in each of your regions.
+          Leave blank (or 0) to keep a region free.
+        </p>
+        <form
+          action={updatePartnerListingFees}
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "var(--s-3)",
+          }}
+        >
+          {partnerRegions.map((r) => (
+            <div
+              key={r.id}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "var(--s-4)",
+                flexWrap: "wrap",
+              }}
+            >
+              <label
+                htmlFor={`fee_${r.id}`}
+                style={{ fontWeight: 600, color: "var(--ink-1)" }}
+              >
+                {r.label}
+                <span
+                  style={{
+                    marginLeft: 8,
+                    fontSize: 12,
+                    color: "var(--ink-3)",
+                    fontWeight: 400,
+                  }}
+                >
+                  currently{" "}
+                  {r.listingFeeCents > 0
+                    ? priceFormat(r.listingFeeCents)
+                    : "Free"}
+                </span>
+              </label>
+              <div
+                style={{ display: "flex", alignItems: "center", gap: 6 }}
+              >
+                <span style={{ color: "var(--ink-3)" }}>$</span>
+                <input
+                  id={`fee_${r.id}`}
+                  name={`fee_${r.id}`}
+                  type="text"
+                  inputMode="decimal"
+                  pattern="^\d+(\.\d{1,2})?$"
+                  className="input"
+                  defaultValue={centsToInput(r.listingFeeCents)}
+                  placeholder="0.00 (free)"
+                  style={{ width: 150 }}
+                />
+              </div>
+            </div>
+          ))}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              marginTop: "var(--s-2)",
+            }}
+          >
+            <Button type="submit" variant="primary" iconRight="check">
+              Save listing fees
+            </Button>
+          </div>
+        </form>
+      </section>
 
       {breakdown.length > 1 && (
         <section

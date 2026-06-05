@@ -66,6 +66,44 @@ export async function getPartnerMarketingRegionIds(
   }
 }
 
+export type PartnerRegion = {
+  id: string;
+  label: string;
+  /** Listing fee in cents the partner charges in this region; 0 = free. */
+  listingFeeCents: number;
+};
+
+/** A partner's assigned marketing regions with their configured listing
+ *  fee, ordered for display. Empty for non-partners. */
+export async function getPartnerRegions(
+  userId: string,
+): Promise<PartnerRegion[]> {
+  if (!/^\d+$/.test(userId)) return [];
+  try {
+    const result = await query<{
+      id: string;
+      label: string;
+      listing_fee_cents: number;
+    }>(
+      `SELECT r.id::text          AS id,
+              r.label             AS label,
+              pmr.listing_fee_cents
+         FROM partner_marketing_regions pmr
+         JOIN regions r ON r.id = pmr.region_id
+        WHERE pmr.user_id = $1::bigint
+        ORDER BY r.sort_order, r.id`,
+      [userId],
+    );
+    return result.rows.map((r) => ({
+      id: r.id,
+      label: r.label,
+      listingFeeCents: Number(r.listing_fee_cents ?? 0),
+    }));
+  } catch {
+    return [];
+  }
+}
+
 /** Map of region_id → the partner who already markets it, EXCLUDING
  *  `excludeUserId`. Used by the admin partner editor to grey out regions
  *  that are already taken (a region can belong to at most one partner). */

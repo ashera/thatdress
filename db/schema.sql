@@ -808,6 +808,12 @@ CREATE TABLE IF NOT EXISTS partner_marketing_regions (
   PRIMARY KEY (user_id, region_id)
 );
 
+-- Listing fee the partner charges sellers in this region, in cents.
+-- 0 means the region is free to list in. Set by the partner from their
+-- dashboard.
+ALTER TABLE partner_marketing_regions
+  ADD COLUMN IF NOT EXISTS listing_fee_cents INTEGER NOT NULL DEFAULT 0;
+
 -- A region can be marketed by at most one partner, so region_id is
 -- unique across the table (this also serves region → partner lookups).
 -- Supersedes the earlier non-unique (region_id, user_id) index.
