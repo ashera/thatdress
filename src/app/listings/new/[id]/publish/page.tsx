@@ -4,6 +4,7 @@ import {
   changeListingRegion,
 } from "@/lib/actions/listing-wizard";
 import { setListingVisibility } from "@/lib/actions/listings";
+import { getRegionListingFeeCents } from "@/lib/regions";
 import { query } from "@/lib/db";
 import {
   estimateValue,
@@ -173,6 +174,13 @@ export default async function WizardPublishPage({
 
   const editMode = isEditMode(draft);
 
+  // Listing fee the region's partner charges. Shown only when publishing
+  // a new listing (the fee is snapshotted onto the listing at publish);
+  // an already-published edit doesn't re-charge, so we don't surface it.
+  const listingFeeCents = editMode
+    ? 0
+    : await getRegionListingFeeCents(draft.region_id ?? null);
+
   return (
     <WizardShell
       step="publish"
@@ -306,6 +314,20 @@ export default async function WizardPublishPage({
               />
             </RegionSwitchDialog>
           </Field>
+
+          {listingFeeCents > 0 && (
+            <p
+              className="card-sub"
+              style={{ marginTop: "var(--s-4)", marginBottom: 0 }}
+            >
+              A listing fee of{" "}
+              <strong style={{ color: "var(--ink-1)" }}>
+                {fmtAud(listingFeeCents)}
+              </strong>{" "}
+              applies in {assignedRegion?.label ?? "this region"} when you
+              publish.
+            </p>
+          )}
         </section>
 
         <section className="form-card">

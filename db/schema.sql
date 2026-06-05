@@ -167,6 +167,16 @@ ALTER TABLE listings
 CREATE INDEX IF NOT EXISTS listings_sold_to_idx
   ON listings (sold_to_user_id) WHERE sold_to_user_id IS NOT NULL;
 
+-- Listing fee owed for this listing, in cents. Snapshotted at publish
+-- time from the partner's per-region listing_fee_cents (see
+-- partner_marketing_regions) so a later fee change doesn't retroactively
+-- alter what an already-published seller owes. 0 = free (no partner, or
+-- partner set the region free). Records the amount only — collecting it
+-- is a separate step.
+ALTER TABLE listings
+  ADD COLUMN IF NOT EXISTS listing_fee_cents INTEGER NOT NULL DEFAULT 0
+    CHECK (listing_fee_cents >= 0);
+
 -- Admin-curated 'Featured' slot. At most one featured listing per
 -- region; the partial unique index enforces that at the DB layer
 -- so the application can't accidentally double-feature.

@@ -5,7 +5,11 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { query } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { getCurrentRegionId, REGION_COOKIE } from "@/lib/regions";
+import {
+  getCurrentRegionId,
+  getRegionListingFeeCents,
+  REGION_COOKIE,
+} from "@/lib/regions";
 import { deriveTrustStatus, isTrustStatus } from "@/lib/listing-trust";
 import { recomputeListingTrustStatus } from "@/lib/listing-trust-server";
 import { loadSiteSettings } from "@/lib/site-settings";
@@ -823,9 +827,11 @@ export async function publishDraftListing(formData: FormData): Promise<void> {
     trust_status: string | null;
     is_draft: boolean;
     is_published: boolean;
+    region_id: string | null;
     image_count: string;
   }>(
     `SELECT l.title,
+            l.region_id::text         AS region_id,
             dr.designer_id::text       AS designer_id,
             dr.model                   AS model,
             dr.year                    AS year,
@@ -913,9 +919,19 @@ export async function publishDraftListing(formData: FormData): Promise<void> {
   //  - already-published edit: leave is_draft / is_published alone so
   //    a previously hidden listing stays hidden after a save.
   const isPublishingDraft = row.is_draft;
-  const draftToggleSql = isPublishingDraft
-    ? ", is_draft = FALSE, is_published = TRUE"
-    : "";
+
+  // Snapshot the listing fee on first publish only. We freeze the
+  // partner's current per-region fee onto the listing so a later fee
+  // change doesn't retroactively alter what this seller owes. Edits to
+  // an already-published listing leave the recorded fee untouched.
+  let feeToggleSql = "";
+  const feeParams: number[] = [];
+  let draftToggleSql = "";
+  if (isPublishingDraft) {
+    draftToggleSql = ", is_draft = FALSE, is_published = TRUE";
+    feeToggleSql = ", listing_fee_cents = $8";
+    feeParams.push(await getRegionListingFeeCents(row.region_id));
+  }
 
   // Region isn't touched here: it's stamped automatically from the
   // seller's region when the draft is first created and shown read-only
@@ -927,7 +943,7 @@ export async function publishDraftListing(formData: FormData): Promise<void> {
             location_postal = $4,
             offers_enabled = $5,
             is_authentic_declared = $6,
-            trust_status = $7${draftToggleSql}
+            trust_status = $7${draftToggleSql}${feeToggleSql}
       WHERE id = $1::bigint`,
     [
       listingId,
@@ -937,6 +953,7 @@ export async function publishDraftListing(formData: FormData): Promise<void> {
       getCheckbox(formData, "offers_enabled"),
       isAuthenticDeclared,
       nextTrust,
+      ...feeParams,
     ],
   );
 

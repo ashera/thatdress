@@ -104,6 +104,29 @@ export async function getPartnerRegions(
   }
 }
 
+/** The listing fee (in cents) the partner who markets `regionId` charges
+ *  sellers there. Returns 0 when no partner markets the region, the
+ *  partner left it free, or on any lookup error — i.e. "no fee owed" is
+ *  the safe default. region_id is unique in partner_marketing_regions, so
+ *  at most one row matches. */
+export async function getRegionListingFeeCents(
+  regionId: string | null,
+): Promise<number> {
+  if (!regionId || !/^\d+$/.test(regionId)) return 0;
+  try {
+    const result = await query<{ listing_fee_cents: number }>(
+      `SELECT listing_fee_cents
+         FROM partner_marketing_regions
+        WHERE region_id = $1::bigint
+        LIMIT 1`,
+      [regionId],
+    );
+    return Number(result.rows[0]?.listing_fee_cents ?? 0);
+  } catch {
+    return 0;
+  }
+}
+
 /** Map of region_id → the partner who already markets it, EXCLUDING
  *  `excludeUserId`. Used by the admin partner editor to grey out regions
  *  that are already taken (a region can belong to at most one partner). */
