@@ -69,6 +69,10 @@ CREATE TABLE IF NOT EXISTS users (
 
 ALTER TABLE users
   ADD COLUMN IF NOT EXISTS is_admin          BOOLEAN NOT NULL DEFAULT FALSE,
+  -- Partner accounts are marketing collaborators. A partner is scoped
+  -- to one or more 'marketing regions' (see partner_marketing_regions)
+  -- that they promote. Set by an admin from the user detail page.
+  ADD COLUMN IF NOT EXISTS is_partner        BOOLEAN NOT NULL DEFAULT FALSE,
   ADD COLUMN IF NOT EXISTS location          TEXT,
   ADD COLUMN IF NOT EXISTS title             TEXT,
   ADD COLUMN IF NOT EXISTS first_name        TEXT,
@@ -793,6 +797,19 @@ CREATE TABLE IF NOT EXISTS regions (
 
 ALTER TABLE regions
   ADD COLUMN IF NOT EXISTS short_name TEXT;
+
+-- Marketing regions for partner accounts (users.is_partner). A partner
+-- can be assigned one or more regions they promote; deleting either the
+-- user or the region drops the link.
+CREATE TABLE IF NOT EXISTS partner_marketing_regions (
+  user_id     BIGINT       NOT NULL REFERENCES users(id)   ON DELETE CASCADE,
+  region_id   BIGINT       NOT NULL REFERENCES regions(id) ON DELETE CASCADE,
+  created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (user_id, region_id)
+);
+
+CREATE INDEX IF NOT EXISTS partner_marketing_regions_region_idx
+  ON partner_marketing_regions (region_id, user_id);
 
 -- =========================================================
 -- Postcode → centroid lookup. Drives the map view on /listings:

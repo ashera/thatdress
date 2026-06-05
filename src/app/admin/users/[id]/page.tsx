@@ -5,11 +5,14 @@ import { query } from "@/lib/db";
 import {
   sendAdminMessage,
   toggleAdminRole,
+  togglePartnerRole,
+  updatePartnerMarketingRegions,
   toggleUserSuspended,
   updateUserAsAdmin,
 } from "@/lib/actions/users";
 import { adminResetUserPassword } from "@/lib/actions/password-reset";
 import { startImpersonation } from "@/lib/actions/impersonation";
+import { listAllRegions, getPartnerMarketingRegionIds } from "@/lib/regions";
 import { listReferredUsers } from "@/lib/referral";
 import { loadSiteSettings } from "@/lib/site-settings";
 import {
@@ -268,6 +271,7 @@ type UserRow = {
   id: string;
   email: string;
   is_admin: boolean;
+  is_partner: boolean;
   email_verified_at: string | null;
   suspended_at: string | null;
   created_at: string;
@@ -321,6 +325,7 @@ export default async function AdminUserDetailPage({
     `SELECT u.id::text,
             u.email,
             u.is_admin,
+            u.is_partner,
             u.email_verified_at::text,
             u.suspended_at::text,
             u.created_at::text,
@@ -348,12 +353,22 @@ export default async function AdminUserDetailPage({
   // Referral programme info — both who they were referred by, and who
   // they've referred. Loaded in parallel with site settings so we can
   // multiply through to per-row earnings.
-  const [referred, settings, reviewHistory, conversations] = await Promise.all([
+  const [
+    referred,
+    settings,
+    reviewHistory,
+    conversations,
+    allRegions,
+    partnerRegionIds,
+  ] = await Promise.all([
     listReferredUsers(user.id),
     loadSiteSettings(),
     fetchAdminSellerReviews(user.id),
     fetchUserConversations(user.id),
+    listAllRegions(),
+    getPartnerMarketingRegionIds(user.id),
   ]);
+  const partnerRegionSet = new Set(partnerRegionIds);
   const commissionCents = settings.referralCommissionCents;
   const verifiedListings = referred.reduce(
     (sum, r) => sum + r.verified_listing_count,
@@ -408,6 +423,7 @@ export default async function AdminUserDetailPage({
                 : ""}
               {isSuspended ? ` · Suspended ${formatDate(user.suspended_at)}` : ""}
               {user.is_admin ? " · Admin" : ""}
+              {user.is_partner ? " · Partner" : ""}
               {isMe ? " · This is you" : ""}
             </p>
           </header>
@@ -501,6 +517,20 @@ export default async function AdminUserDetailPage({
               {user.is_admin ? "Revoke admin role" : "Make admin"}
             </Button>
           </form>
+          <form action={togglePartnerRole}>
+            <input type="hidden" name="userId" value={user.id} />
+            <Button
+              type="submit"
+              variant="ghost"
+              title={
+                user.is_partner
+                  ? "Remove partner status and clear their marketing regions."
+                  : "Flag as a partner account, then set their marketing regions below."
+              }
+            >
+              {user.is_partner ? "Remove partner" : "Make partner"}
+            </Button>
+          </form>
           <form action={toggleUserSuspended}>
             <input type="hidden" name="userId" value={user.id} />
             <Button
@@ -545,6 +575,75 @@ export default async function AdminUserDetailPage({
           </form>
         </div>
       </section>
+
+      {user.is_partner && (
+        <section className="form-card" style={{ marginBottom: "var(--s-5)" }}>
+          <h2 className="card-heading">Partner marketing regions</h2>
+          <p className="card-sub">
+            The region(s) this partner promotes. Tick one or more, then
+            save.
+          </p>
+
+          {allRegions.length === 0 ? (
+            <p style={{ color: "var(--ink-3)", margin: 0 }}>
+              No regions configured yet — add one under{" "}
+              <Link href="/admin/regions" style={{ color: "var(--ink-1)" }}>
+                /admin/regions
+              </Link>
+              .
+            </p>
+          ) : (
+            <form
+              action={updatePartnerMarketingRegions}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "var(--s-4)",
+              }}
+            >
+              <input type="hidden" name="userId" value={user.id} />
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns:
+                    "repeat(auto-fill, minmax(220px, 1fr))",
+                  gap: "var(--s-2)",
+                }}
+              >
+                {allRegions.map((r) => (
+                  <label key={r.id} className="check-row">
+                    <input
+                      type="checkbox"
+                      name="region_id"
+                      value={r.id}
+                      defaultChecked={partnerRegionSet.has(r.id)}
+                    />
+                    <span>
+                      {r.label}
+                      {!r.is_active && (
+                        <span
+                          style={{
+                            color: "var(--ink-4)",
+                            marginLeft: 6,
+                            fontSize: 12,
+                          }}
+                        >
+                          (inactive)
+                        </span>
+                      )}
+                    </span>
+                  </label>
+                ))}
+              </div>
+              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                <Button type="submit" variant="primary" iconRight="check">
+                  Save marketing regions
+                </Button>
+              </div>
+            </form>
+          )}
+        </section>
+      )}
 
       <section className="form-card" style={{ marginBottom: "var(--s-5)" }}>
         <h2 className="card-heading">Profile</h2>

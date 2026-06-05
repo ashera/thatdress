@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { query } from "@/lib/db";
+import { query, withTransaction } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 import { notifyMessageRecipient } from "@/lib/notifications";
 
@@ -64,6 +64,73 @@ export async function toggleAdminRole(formData: FormData): Promise<void> {
 
   revalidatePath(`/admin/users/${id}`);
   revalidatePath("/admin/users");
+  redirect(`/admin/users/${id}?saved=1`);
+}
+
+export async function togglePartnerRole(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const id = getId(formData, "userId");
+  if (!id) redirect("/admin/users");
+
+  // Flip the flag; when demoting a partner, drop their marketing
+  // regions too so the junction doesn't keep stale links around.
+  await withTransaction(async (client) => {
+    const r = await client.query<{ is_partner: boolean }>(
+      `UPDATE users SET is_partner = NOT is_partner
+        WHERE id = $1::bigint
+        RETURNING is_partner`,
+      [id],
+    );
+    if (!r.rows[0]?.is_partner) {
+      await client.query(
+        `DELETE FROM partner_marketing_regions WHERE user_id = $1::bigint`,
+        [id],
+      );
+    }
+  });
+
+  revalidatePath(`/admin/users/${id}`);
+  revalidatePath("/admin/users");
+  redirect(`/admin/users/${id}?saved=1`);
+}
+
+export async function updatePartnerMarketingRegions(
+  formData: FormData,
+): Promise<void> {
+  await requireAdmin();
+  const id = getId(formData, "userId");
+  if (!id) redirect("/admin/users");
+
+  // Multiple region_id checkboxes — keep only well-formed numeric ids,
+  // de-duped. The INSERT re-validates each against the regions table.
+  const regionIds = Array.from(
+    new Set(
+      formData
+        .getAll("region_id")
+        .map((v) => String(v).trim())
+        .filter((v) => /^\d+$/.test(v)),
+    ),
+  );
+
+  await withTransaction(async (client) => {
+    await client.query(
+      `DELETE FROM partner_marketing_regions WHERE user_id = $1::bigint`,
+      [id],
+    );
+    if (regionIds.length > 0) {
+      // Insert only ids that exist in regions; ON CONFLICT guards the PK.
+      await client.query(
+        `INSERT INTO partner_marketing_regions (user_id, region_id)
+         SELECT $1::bigint, r.id
+           FROM regions r
+          WHERE r.id = ANY($2::bigint[])
+         ON CONFLICT (user_id, region_id) DO NOTHING`,
+        [id, regionIds],
+      );
+    }
+  });
+
+  revalidatePath(`/admin/users/${id}`);
   redirect(`/admin/users/${id}?saved=1`);
 }
 

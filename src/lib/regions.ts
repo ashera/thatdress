@@ -47,6 +47,25 @@ export async function listAllRegions(): Promise<Region[]> {
   }
 }
 
+/** Region ids assigned as 'marketing regions' to a partner account.
+ *  Empty for non-partners or partners with none set yet. */
+export async function getPartnerMarketingRegionIds(
+  userId: string,
+): Promise<string[]> {
+  if (!/^\d+$/.test(userId)) return [];
+  try {
+    const result = await query<{ region_id: string }>(
+      `SELECT region_id::text AS region_id
+         FROM partner_marketing_regions
+        WHERE user_id = $1::bigint`,
+      [userId],
+    );
+    return result.rows.map((r) => r.region_id);
+  } catch {
+    return [];
+  }
+}
+
 export function matchRegion(regions: Region[], ipLocation: string): Region | null {
   if (!ipLocation) return null;
   const lower = ipLocation.toLowerCase();

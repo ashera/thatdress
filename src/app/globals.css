@@ -1968,6 +1968,7 @@ textarea.input {
   font-weight: 600;
 }
 .users-tag.--admin { background: var(--volt-100); color: var(--volt-800); }
+.users-tag.--partner { background: #e0e7ff; color: #3730a3; }
 .users-tag.--ok { background: var(--ok-100); color: oklch(38% 0.12 150); }
 .users-tag.--susp { background: var(--danger-100); color: oklch(38% 0.13 25); }
 @media (max-width: 760px) {

@@ -13,6 +13,9 @@ export type User = {
   id: string;
   email: string;
   isAdmin: boolean;
+  /** Partner accounts are marketing collaborators scoped to one or more
+   *  regions (see partner_marketing_regions). Admin-assigned. */
+  isPartner: boolean;
   emailVerified: boolean;
   title: string | null;
   firstName: string | null;
@@ -88,6 +91,7 @@ export async function getCurrentUser(): Promise<User | null> {
       id: string;
       email: string;
       is_admin: boolean;
+      is_partner: boolean;
       email_verified_at: string | null;
       title: string | null;
       first_name: string | null;
@@ -103,6 +107,7 @@ export async function getCurrentUser(): Promise<User | null> {
       `SELECT u.id::text AS id,
               u.email,
               u.is_admin,
+              u.is_partner,
               u.email_verified_at::text,
               u.title,
               u.first_name,
@@ -134,6 +139,7 @@ export async function getCurrentUser(): Promise<User | null> {
       id: row.id,
       email: row.email,
       isAdmin: row.is_admin,
+      isPartner: row.is_partner,
       emailVerified: !!row.email_verified_at,
       title: row.title,
       firstName: row.first_name,
