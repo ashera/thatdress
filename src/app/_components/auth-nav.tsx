@@ -185,11 +185,6 @@ export async function AuthNav() {
                 )}
               </Link>
             )}
-            {user?.isPartner && (
-              <Link href="/partner" className="nav-partner">
-                Partner Dashboard
-              </Link>
-            )}
             {user?.isAdmin && (
               <Link href="/admin" className="nav-admin">
                 Admin
@@ -221,6 +216,9 @@ export async function AuthNav() {
                   tierLabel={tier?.label ?? null}
                 >
                   <Link href="/listings/mine">My Wardrobe</Link>
+                  {user.isPartner && (
+                    <Link href="/partner">Partner Dashboard</Link>
+                  )}
                   <Link href="/alerts">Saved searches</Link>
                   <Link href="/profile/refer">Refer &amp; earn</Link>
                   <Link href="/profile">Profile</Link>

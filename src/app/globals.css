@@ -254,21 +254,6 @@ input, select, textarea { font: inherit; color: inherit; }
   background: var(--volt-500);
 }
 .topbar nav .nav-admin:hover { color: var(--volt-800); }
-.topbar nav .nav-partner {
-  color: #4338ca;
-  font-weight: 600;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.topbar nav .nav-partner::before {
-  content: "";
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #6366f1;
-}
-.topbar nav .nav-partner:hover { color: #3730a3; }
 .topbar nav .nav-messages {
   position: relative;
   display: inline-flex;
