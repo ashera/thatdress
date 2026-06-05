@@ -185,6 +185,11 @@ export async function AuthNav() {
                 )}
               </Link>
             )}
+            {user?.isPartner && (
+              <Link href="/partner" className="nav-partner">
+                Partner Dashboard
+              </Link>
+            )}
             {user?.isAdmin && (
               <Link href="/admin" className="nav-admin">
                 Admin

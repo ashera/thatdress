@@ -228,3 +228,12 @@ export async function requireAdmin(): Promise<User> {
   if (!user.isAdmin) redirect("/");
   return user;
 }
+
+/** Gate for the partner area. Admins who aren't also partners don't get
+ *  in — they have the full admin console instead. */
+export async function requirePartner(): Promise<User> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+  if (!user.isPartner) redirect("/");
+  return user;
+}
