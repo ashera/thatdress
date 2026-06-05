@@ -26,6 +26,7 @@ export const dynamic = "force-dynamic";
 
 type Row = ListingCardRow & {
   is_published: boolean;
+  region_label: string | null;
   view_count: string;
   view_count_7d: string;
   /** Triggers the sale-nudge banner on a listing card. True when the
@@ -282,6 +283,7 @@ async function fetchOwnListings(
               l.price_cents,
               u.email AS seller_email,
               l.is_published,
+              rg.label AS region_label,
               (
                 SELECT li.id::text FROM listing_images li
                   WHERE li.listing_id = l.id
@@ -355,6 +357,7 @@ async function fetchOwnListings(
          LEFT JOIN necklines        n   ON n.id   = dr.neckline_id
          LEFT JOIN sleeve_styles    ss  ON ss.id  = dr.sleeve_style_id
          LEFT JOIN dress_lengths    dl  ON dl.id  = dr.length_id
+         LEFT JOIN regions          rg  ON rg.id  = l.region_id
         WHERE l.seller_id = $1::bigint
           AND l.is_draft = FALSE
         ORDER BY l.is_published DESC, l.created_at DESC
@@ -653,6 +656,9 @@ export default async function MyListingsPage({
                 )}
               />
               <div className="my-listing-stats">
+                <span title="Region this dress is listed in — only buyers here see it">
+                  📍 <strong>{row.region_label ?? "No region"}</strong>
+                </span>
                 <span>
                   <strong>{row.view_count}</strong> view
                   {row.view_count === "1" ? "" : "s"}

@@ -29,6 +29,7 @@ import {
   type MapPostcodeBucket,
 } from "../_components/listings-map";
 import { saveSearch } from "@/lib/actions/saved-searches";
+import { setRegion } from "@/lib/actions/regions";
 import { loadSiteSettings } from "@/lib/site-settings";
 
 // 60s ISR — see /page.tsx note. Filtered URLs (?designer_id=...) get
@@ -408,6 +409,41 @@ async function loadFilterOptions({
   return { designers, occasions, silhouettes, sizes, conditions, lengths, colors };
 }
 
+/**
+ * Live listings the viewer has posted in regions OTHER than the one
+ * they're currently browsing — these are filtered out of the grid by
+ * the region scope, so we surface a banner letting the seller know (and
+ * jump to that region). Grouped by region with counts.
+ */
+async function fetchSellerOtherRegionListings(
+  userId: string,
+  currentRegionId: string,
+): Promise<{ regionId: string; label: string; count: number }[]> {
+  if (!/^\d+$/.test(userId) || !/^\d+$/.test(currentRegionId)) return [];
+  try {
+    const r = await query<{ region_id: string; label: string; n: string }>(
+      `SELECT rg.id::text AS region_id, rg.label AS label, COUNT(*)::text AS n
+         FROM listings l
+         JOIN regions rg ON rg.id = l.region_id
+        WHERE l.seller_id = $1::bigint
+          AND l.is_draft = FALSE
+          AND l.is_published = TRUE
+          AND l.sold_at IS NULL
+          AND l.region_id <> $2::bigint
+        GROUP BY rg.id, rg.label
+        ORDER BY rg.label`,
+      [userId, currentRegionId],
+    );
+    return r.rows.map((x) => ({
+      regionId: x.region_id,
+      label: x.label,
+      count: Number(x.n),
+    }));
+  } catch {
+    return [];
+  }
+}
+
 export default async function ListingsPage({
   searchParams,
 }: {
@@ -454,6 +490,14 @@ export default async function ListingsPage({
   const count = result.ok ? result.listings.length : 0;
   const filterCount = activeFilterCount(active);
 
+  // Heads-up banner: the seller has live listings parked in other
+  // regions that this region-scoped view hides. Only relevant to a
+  // logged-in non-admin browsing a resolved region in the for-sale view.
+  const otherRegionListings =
+    user && !isAdmin && regionId && mode === "for-sale"
+      ? await fetchSellerOtherRegionListings(user.id, regionId)
+      : [];
+
   return (
     <div className="page page--pad">
       <div className="mode-toggle" role="group" aria-label="Browse mode">
@@ -479,6 +523,73 @@ export default async function ListingsPage({
           Favourites
         </Link>
       </div>
+
+      {otherRegionListings.length > 0 && (
+        <div
+          role="status"
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            gap: "var(--s-3)",
+            margin: "0 0 var(--s-5)",
+            padding: "var(--s-4) var(--s-5)",
+            background: "var(--volt-50)",
+            border: "1px solid var(--volt-100)",
+            borderRadius: 12,
+          }}
+        >
+          <span style={{ flex: "1 1 280px", color: "var(--ink-2)", fontSize: 14, lineHeight: 1.5 }}>
+            <span aria-hidden>📍 </span>
+            You have{" "}
+            <strong style={{ color: "var(--ink-1)" }}>
+              {otherRegionListings.reduce((sum, r) => sum + r.count, 0)}
+            </strong>{" "}
+            live listing
+            {otherRegionListings.reduce((sum, r) => sum + r.count, 0) === 1
+              ? ""
+              : "s"}{" "}
+            in other regions. They&rsquo;re hidden here because buyers only see
+            listings in their own region. Switch region to view them:
+          </span>
+          <span style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {otherRegionListings.map((r) => (
+              <form key={r.regionId} action={setRegion}>
+                <input type="hidden" name="region_id" value={r.regionId} />
+                <input type="hidden" name="next" value="/listings" />
+                <button
+                  type="submit"
+                  style={{
+                    padding: "6px 14px",
+                    borderRadius: 999,
+                    background: "var(--surface)",
+                    color: "var(--ink-1)",
+                    border: "1px solid var(--hairline-strong)",
+                    fontWeight: 600,
+                    fontSize: 13,
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {r.label} ({r.count})
+                </button>
+              </form>
+            ))}
+            <Link
+              href="/listings/mine"
+              style={{
+                alignSelf: "center",
+                fontSize: 13,
+                color: "var(--ink-2)",
+                textDecoration: "underline",
+                textUnderlineOffset: 3,
+              }}
+            >
+              Manage all →
+            </Link>
+          </span>
+        </div>
+      )}
 
       <div className="browse-toolbar">
         <div className="left">
