@@ -2,9 +2,10 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { query } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { getCurrentRegionId } from "@/lib/regions";
+import { getCurrentRegionId, REGION_COOKIE } from "@/lib/regions";
 import { deriveTrustStatus, isTrustStatus } from "@/lib/listing-trust";
 import { recomputeListingTrustStatus } from "@/lib/listing-trust-server";
 import { loadSiteSettings } from "@/lib/site-settings";
@@ -90,6 +91,57 @@ async function ensureWizardOwnership(
   // The wizard now serves both new (is_draft=TRUE) and edit (is_draft=FALSE)
   // flows; ownership is the only gate.
   return user.isAdmin || row.seller_id === user.id;
+}
+
+const REGION_COOKIE_MAX_AGE = 30 * 24 * 60 * 60; // 30 days
+
+/**
+ * Switch a listing's region from inside the wizard. Unlike the global
+ * region pill (which just sets the cookie and navigates), this also
+ * stamps the listing's region_id, then redirects back to the publish
+ * step so the seller stays in the wizard. Setting the same cookie the
+ * pill uses means the seller is now in the new region everywhere else
+ * in the app too.
+ */
+export async function changeListingRegion(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const listingId = String(formData.get("listingId") ?? "");
+  if (!(await ensureWizardOwnership(listingId, user))) {
+    redirect("/listings/mine");
+  }
+  const stepUrl = `/listings/new/${listingId}/publish`;
+
+  const regionId = String(formData.get("region_id") ?? "").trim();
+  if (!/^\d+$/.test(regionId)) redirect(stepUrl);
+
+  // The region must exist and be active before we point anything at it.
+  const r = await query<{ id: string }>(
+    `SELECT id::text FROM regions
+      WHERE id = $1::bigint AND is_active = TRUE LIMIT 1`,
+    [regionId],
+  );
+  if (r.rows.length === 0) redirect(stepUrl);
+
+  await query(
+    `UPDATE listings SET region_id = $2::bigint WHERE id = $1::bigint`,
+    [listingId, regionId],
+  );
+
+  const jar = await cookies();
+  jar.set(REGION_COOKIE, regionId, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: REGION_COOKIE_MAX_AGE,
+  });
+
+  // Layout-level revalidate so the menu-bar region pill and listing
+  // counts reflect the switch immediately.
+  revalidatePath("/", "layout");
+  redirect(stepUrl);
 }
 
 /** Look up an existing designer by case-insensitive name, or create

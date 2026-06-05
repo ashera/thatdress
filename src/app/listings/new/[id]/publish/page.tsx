@@ -1,5 +1,8 @@
 import { loadListingRefOptions } from "@/lib/ref-data";
-import { publishDraftListing } from "@/lib/actions/listing-wizard";
+import {
+  publishDraftListing,
+  changeListingRegion,
+} from "@/lib/actions/listing-wizard";
 import { setListingVisibility } from "@/lib/actions/listings";
 import { query } from "@/lib/db";
 import {
@@ -9,7 +12,9 @@ import {
   type ConditionSlug,
   type DesignerTier,
 } from "@/lib/value-estimator";
-import { Button, Field, Icon, Input, Textarea } from "../../../../_components/ui";
+import { Button, Field, Input, Textarea } from "../../../../_components/ui";
+import { RegionPicker } from "../../../../_components/region-picker";
+import { RegionSwitchDialog } from "../../../../_components/region-switch-dialog";
 import { PostcodeInput } from "./_postcode-input";
 import {
   isEditMode,
@@ -283,27 +288,22 @@ export default async function WizardPublishPage({
             label="Region"
             help={
               assignedRegion
-                ? `Set automatically from where you're browsing — you don't choose this. Your listing will only appear to buyers shopping in ${assignedRegion.label}.`
-                : "Set automatically from where you're browsing — you don't choose this. Your listing will only appear to buyers shopping in your region."
+                ? `Assigned automatically from where you're browsing. Your listing only appears to buyers shopping in ${assignedRegion.label}. Use “Change region” to move it — that also switches the region you see across frockd.`
+                : "Assigned automatically from where you're browsing. Your listing only appears to buyers shopping in your region. Use “Change region” to move it — that also switches the region you see across frockd."
             }
           >
-            <div
-              aria-readonly="true"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "10px 14px",
-                background: "var(--surface-sunken)",
-                border: "1px solid var(--hairline)",
-                borderRadius: 10,
-                color: "var(--ink-1)",
-                fontWeight: 600,
-              }}
-            >
-              <Icon name="location" size="sm" />
-              <span>{assignedRegion ? assignedRegion.label : "Your region"}</span>
-            </div>
+            <RegionSwitchDialog currentLabel={assignedRegion?.label ?? null}>
+              <RegionPicker
+                variant="bare"
+                regions={refs.regions}
+                action={changeListingRegion}
+                hiddenFields={[{ name: "listingId", value: draft.id }]}
+                showDetected={false}
+                eyebrow="Listing region"
+                title="Change region"
+                prompt="Pick the region this listing belongs to. This also switches the region you'll see across frockd from now on."
+              />
+            </RegionSwitchDialog>
           </Field>
         </section>
 
