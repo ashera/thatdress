@@ -26,6 +26,9 @@ type Props = {
   /** Show the "we detected your location" box. Off in the wizard, where
    *  the user is deliberately switching rather than being detected. */
   showDetected?: boolean;
+  /** Region the user is currently in — highlighted in the list so it's
+   *  clear which one is active when the picker opens. */
+  currentRegionId?: string | null;
 };
 
 export function RegionPicker({
@@ -39,6 +42,7 @@ export function RegionPicker({
   title = "Pick your region",
   prompt,
   showDetected = true,
+  currentRegionId = null,
 }: Props) {
   const card = (
     <div className="region-gate-card">
@@ -78,30 +82,35 @@ export function RegionPicker({
           </p>
 
           <ul className="region-gate-list">
-            {regions.map((r) => (
-              <li key={r.id}>
-                <form action={action}>
-                  <input type="hidden" name="region_id" value={r.id} />
-                  <input type="hidden" name="next" value={next} />
-                  {hiddenFields?.map((h) => (
-                    <input
-                      key={h.name}
-                      type="hidden"
-                      name={h.name}
-                      value={h.value}
-                    />
-                  ))}
-                  <Button
-                    type="submit"
-                    variant="ghost"
-                    block
-                    iconRight="arrow"
-                  >
-                    {r.label}
-                  </Button>
-                </form>
-              </li>
-            ))}
+            {regions.map((r) => {
+              const isCurrent =
+                currentRegionId != null && r.id === currentRegionId;
+              return (
+                <li key={r.id}>
+                  <form action={action}>
+                    <input type="hidden" name="region_id" value={r.id} />
+                    <input type="hidden" name="next" value={next} />
+                    {hiddenFields?.map((h) => (
+                      <input
+                        key={h.name}
+                        type="hidden"
+                        name={h.name}
+                        value={h.value}
+                      />
+                    ))}
+                    <Button
+                      type="submit"
+                      variant={isCurrent ? "dark" : "ghost"}
+                      block
+                      iconRight={isCurrent ? "check" : "arrow"}
+                    >
+                      {r.label}
+                      {isCurrent ? " · Current region" : ""}
+                    </Button>
+                  </form>
+                </li>
+              );
+            })}
           </ul>
         </>
       )}

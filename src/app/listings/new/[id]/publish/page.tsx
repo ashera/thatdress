@@ -302,6 +302,7 @@ export default async function WizardPublishPage({
                 eyebrow="Listing region"
                 title="Change region"
                 prompt="Pick the region this listing belongs to. This also switches the region you'll see across frockd from now on."
+                currentRegionId={draft.region_id ?? null}
               />
             </RegionSwitchDialog>
           </Field>
