@@ -40,6 +40,10 @@ export type ListingCardData = {
    *  site_settings.reviews_display_threshold by the consumer page.
    *  Defaults to 3 if unset. */
   reviewsDisplayThreshold?: number;
+  /** When the viewer is the seller and this listing belongs to a
+   *  different region than the one they're browsing, the listing's own
+   *  region label — used to tell them where it's actually listed. */
+  listedInRegionLabel?: string | null;
 };
 
 export type ListingCardRow = {
@@ -71,6 +75,8 @@ export type ListingCardRow = {
   is_featured?: boolean | null;
   is_published?: boolean | null;
   sold_at?: string | null;
+  region_id?: string | null;
+  region_label?: string | null;
   conversation_count?: string | number | null;
   /** Seller's average rating (1-5) and count of public reviews —
    *  used to render the ★ 4.8 (12) line on the card. NULL when the
@@ -139,11 +145,22 @@ export function listingFromRow(
   currentUserId?: string | null,
   shortlistedIds?: Set<string> | null,
   reviewsDisplayThreshold = 3,
+  currentRegionId?: string | null,
 ): ListingCardData {
   const isOwn =
     currentUserId != null &&
     row.seller_id != null &&
     row.seller_id === currentUserId;
+  // Only sellers see their own out-of-region listings in browse (the
+  // region scope keeps them out for everyone else), so this note only
+  // ever shows on the seller's own cards.
+  const listedInRegionLabel =
+    isOwn &&
+    row.region_id != null &&
+    currentRegionId != null &&
+    row.region_id !== currentRegionId
+      ? row.region_label ?? null
+      : null;
   const isShortlisted =
     shortlistedIds != null && shortlistedIds.has(row.id);
   // Only show the toggle when logged in and not the owner.
@@ -183,7 +200,31 @@ export function listingFromRow(
         ? Number(row.seller_rating_count)
         : 0,
     reviewsDisplayThreshold,
+    listedInRegionLabel,
   };
+}
+
+/** Small "you listed this in another region" note shown under the title
+ *  on the seller's own out-of-region cards in browse. */
+function ListedInRegionNote({ label }: { label: string }) {
+  return (
+    <div
+      title={`This is your listing, posted in ${label}. Buyers only see it when browsing that region.`}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 4,
+        marginTop: 2,
+        fontSize: 12,
+        color: "var(--ink-3)",
+      }}
+    >
+      <span aria-hidden>📍</span>
+      <span>
+        Listed in <strong style={{ color: "var(--ink-2)" }}>{label}</strong>
+      </span>
+    </div>
+  );
 }
 
 /** Inline ★ 4.8 (12) chip used by both card layouts. Renders nothing
@@ -304,6 +345,9 @@ export function ListingRow({ data }: { data: ListingCardData }) {
 
       <div className="listing-row-info">
         <h3 className="listing-row-title">{data.title}</h3>
+        {data.listedInRegionLabel && (
+          <ListedInRegionNote label={data.listedInRegionLabel} />
+        )}
         {data.trustStatus && data.trustStatus !== "self-declared" && (
           <div style={{ marginTop: 2 }}>
             <TrustBadge status={data.trustStatus} />
@@ -404,6 +448,9 @@ export function ListingCard({ data }: { data: ListingCardData }) {
             </div>
           )}
         </div>
+        {data.listedInRegionLabel && (
+          <ListedInRegionNote label={data.listedInRegionLabel} />
+        )}
       </div>
 
       <div className="listing-photo">

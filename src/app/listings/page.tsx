@@ -267,6 +267,8 @@ async function fetchListings(
               l.is_published,
               l.sold_at::text,
               l.is_featured,
+              l.region_id::text AS region_id,
+              rg.label AS region_label,
               (
                 SELECT COUNT(DISTINCT buyer_id)::text FROM conversations
                   WHERE listing_id = l.id
@@ -294,6 +296,7 @@ async function fetchListings(
          LEFT JOIN necklines        n   ON n.id   = dr.neckline_id
          LEFT JOIN sleeve_styles    ss  ON ss.id  = dr.sleeve_style_id
          LEFT JOIN dress_lengths    dl  ON dl.id  = dr.length_id
+         LEFT JOIN regions          rg  ON rg.id  = l.region_id
          ${whereSql}
          ORDER BY l.is_featured DESC, ${orderBy}
          LIMIT 50`,
@@ -739,7 +742,7 @@ export default async function ListingsPage({
       ) : view === "grid" ? (
         <div className="results-rows">
           {result.listings.map((row) => (
-            <ListingRow key={row.id} data={listingFromRow(row, user?.id, shortlistedIds, reviewsThreshold)} />
+            <ListingRow key={row.id} data={listingFromRow(row, user?.id, shortlistedIds, reviewsThreshold, regionId)} />
           ))}
         </div>
       ) : view === "map" && mapData ? (
@@ -750,7 +753,7 @@ export default async function ListingsPage({
       ) : (
         <div className="results-grid">
           {result.listings.map((row) => (
-            <ListingCard key={row.id} data={listingFromRow(row, user?.id, shortlistedIds, reviewsThreshold)} />
+            <ListingCard key={row.id} data={listingFromRow(row, user?.id, shortlistedIds, reviewsThreshold, regionId)} />
           ))}
         </div>
       )}
