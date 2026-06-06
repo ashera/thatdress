@@ -211,7 +211,7 @@ export async function AuthNav() {
                 </ButtonLink>
                 <AvatarMenu
                   email={user.email}
-                  name={user.firstName}
+                  name={[user.firstName, user.surname].filter(Boolean).join(" ") || null}
                   tierEmoji={tier?.emoji ?? null}
                   tierLabel={tier?.label ?? null}
                 >
