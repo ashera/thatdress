@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { login } from "@/lib/actions/auth";
+import { devLoginAs } from "@/lib/actions/dev-login";
 import { getCurrentUser } from "@/lib/auth";
-import { Button, Field, Input } from "../_components/ui";
+import { devLoginEnabled, listDevUsers } from "@/lib/dev-login";
+import { Badge, Button, Field, Input } from "../_components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +24,8 @@ export default async function LoginPage({
 
   const { error, reset } = await searchParams;
   const errorMessage = error ? ERRORS[error] ?? "Something went wrong." : null;
+
+  const devUsers = devLoginEnabled() ? await listDevUsers() : [];
 
   return (
     <div className="page auth-page">
@@ -80,6 +84,95 @@ export default async function LoginPage({
             </p>
           </form>
         </div>
+
+        {devUsers.length > 0 && (
+          <div
+            className="form-card"
+            style={{
+              marginTop: "var(--s-4)",
+              background: "#fff7ed",
+              borderColor: "#fed7aa",
+            }}
+          >
+            <div style={{ marginBottom: "var(--s-3)" }}>
+              <span
+                style={{
+                  fontFamily: "var(--font-mono)",
+                  fontSize: 11,
+                  letterSpacing: "0.14em",
+                  textTransform: "uppercase",
+                  color: "#9a3412",
+                  fontWeight: 700,
+                }}
+              >
+                Dev login
+              </span>
+              <p
+                className="card-sub"
+                style={{ margin: "2px 0 0", color: "#9a3412" }}
+              >
+                One-click sign-in (local only, password bypassed). Set via{" "}
+                <code style={{ fontFamily: "var(--font-mono)", fontSize: 12 }}>
+                  DEV_LOGIN=1
+                </code>
+                .
+              </p>
+            </div>
+            <ul
+              style={{
+                listStyle: "none",
+                margin: 0,
+                padding: 0,
+                maxHeight: 320,
+                overflowY: "auto",
+                display: "flex",
+                flexDirection: "column",
+                gap: 4,
+              }}
+            >
+              {devUsers.map((u) => (
+                <li key={u.id}>
+                  <form action={devLoginAs}>
+                    <input type="hidden" name="userId" value={u.id} />
+                    <button
+                      type="submit"
+                      style={{
+                        width: "100%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 8,
+                        padding: "8px 10px",
+                        borderRadius: 8,
+                        border: "1px solid var(--hairline)",
+                        background: "#fff",
+                        cursor: "pointer",
+                        textAlign: "left",
+                        fontSize: "var(--t-body-s)",
+                      }}
+                    >
+                      <span
+                        style={{
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                          color: u.suspended ? "var(--ink-3)" : "var(--ink-1)",
+                          textDecoration: u.suspended ? "line-through" : "none",
+                        }}
+                      >
+                        {u.email}
+                      </span>
+                      <span style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+                        {u.is_admin && <Badge variant="ink">admin</Badge>}
+                        {u.is_partner && <Badge variant="info">partner</Badge>}
+                      </span>
+                    </button>
+                  </form>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </main>
     </div>
   );
