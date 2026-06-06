@@ -129,7 +129,15 @@ const ADMIN_LINKS: Array<{ href: string; title: string; desc: string }> = [
     title: "Captured Emails",
     desc: "Local inbox of outbound email captured when running with EMAIL_CAPTURE=1 — read messages and click their links to action the flow.",
   },
+  {
+    href: "/admin/sample-data",
+    title: "Sample Data",
+    desc: "Seed or clean up realistic demo content for local testing — sample users, listings, offers, messages, a sale + review. Dev only.",
+  },
 ];
+
+// Tiles that only make sense on a non-production (local) build.
+const DEV_ONLY_HREFS = new Set(["/admin/sample-data"]);
 
 export default async function AdminHomePage() {
   await requireAdmin();
@@ -276,7 +284,10 @@ export default async function AdminHomePage() {
       </section>
 
       <ul className="admin-list">
-        {ADMIN_LINKS.map((l) => (
+        {ADMIN_LINKS.filter(
+          (l) =>
+            !DEV_ONLY_HREFS.has(l.href) || process.env.NODE_ENV !== "production",
+        ).map((l) => (
           <li key={l.href}>
             <Link href={l.href} className="admin-tile">
               <div className="admin-tile-body">
