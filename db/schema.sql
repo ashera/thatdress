@@ -1551,3 +1551,19 @@ CREATE INDEX IF NOT EXISTS test_results_key_recent_idx
   ON test_results (test_key, created_at DESC);
 CREATE INDEX IF NOT EXISTS test_runs_started_idx
   ON test_runs (started_at DESC);
+
+-- =========================================================
+-- Captured outbound email. When EMAIL_CAPTURE is set (local/test only),
+-- sendEmail() records each message here instead of calling Resend, so
+-- the test suite can assert on what would have been sent. Never written
+-- in production (RESEND_API_KEY path is used there).
+-- =========================================================
+CREATE TABLE IF NOT EXISTS sent_emails (
+  id         BIGSERIAL   PRIMARY KEY,
+  to_email   TEXT        NOT NULL,
+  subject    TEXT        NOT NULL,
+  html       TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS sent_emails_to_recent_idx
+  ON sent_emails (to_email, created_at DESC);

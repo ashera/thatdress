@@ -236,7 +236,32 @@ export async function cleanupUsers(userIds: string[]): Promise<void> {
       [ids],
     );
     await c.query(`DELETE FROM sessions WHERE user_id = ANY($1::bigint[])`, [ids]);
+    // Captured emails sent TO the test users, plus any test-triggered
+    // notifications sent to real users (e.g. admin ticket alerts) — those
+    // carry the 'E2E' marker from the test-generated subject/content.
+    await c.query(
+      `DELETE FROM sent_emails
+        WHERE to_email IN (SELECT email FROM users WHERE id = ANY($1::bigint[]))
+           OR subject LIKE '%E2E%'`,
+      [ids],
+    );
     await c.query(`DELETE FROM users WHERE id = ANY($1::bigint[])`, [ids]);
+  });
+}
+
+/** The most recent captured email sent to an address (requires the app
+ *  to run with EMAIL_CAPTURE=1). Returns null if none. */
+export async function getLastEmailTo(
+  email: string,
+): Promise<{ subject: string; html: string } | null> {
+  return withDb(async (c) => {
+    const r = await c.query<{ subject: string; html: string }>(
+      `SELECT subject, html FROM sent_emails
+        WHERE to_email LIKE '%' || $1 || '%'
+        ORDER BY created_at DESC LIMIT 1`,
+      [email],
+    );
+    return r.rows[0] ?? null;
   });
 }
 

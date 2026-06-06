@@ -1,5 +1,6 @@
 import "server-only";
 import { headers } from "next/headers";
+import { query } from "@/lib/db";
 
 const FROM_DEFAULT = "frockd <noreply@frockd.com.au>";
 
@@ -11,6 +12,21 @@ export async function sendEmail(opts: {
   html: string;
   text?: string;
 }): Promise<SendEmailResult> {
+  // Local/test capture: record the message instead of sending it, so the
+  // test suite can assert on outbound email. Gated on EMAIL_CAPTURE so
+  // production (which sets RESEND_API_KEY, not EMAIL_CAPTURE) is untouched.
+  if (process.env.EMAIL_CAPTURE) {
+    try {
+      await query(
+        `INSERT INTO sent_emails (to_email, subject, html) VALUES ($1, $2, $3)`,
+        [Array.isArray(opts.to) ? opts.to.join(",") : opts.to, opts.subject, opts.html],
+      );
+    } catch {
+      /* capture is best-effort — never break the calling flow */
+    }
+    return { ok: true };
+  }
+
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     // Don't crash callers when email isn't configured (dev / preview).
