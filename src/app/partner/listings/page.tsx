@@ -74,6 +74,8 @@ const filterField: React.CSSProperties = {
   gap: 4,
   fontSize: 12,
   color: "var(--ink-3)",
+  flex: "1 1 150px",
+  minWidth: 140,
 };
 
 export default async function PartnerListingsPage({
@@ -241,6 +243,7 @@ export default async function PartnerListingsPage({
         className="form-card"
         style={{
           display: "flex",
+          flexDirection: "row",
           flexWrap: "wrap",
           gap: "var(--s-3)",
           alignItems: "flex-end",
@@ -248,7 +251,7 @@ export default async function PartnerListingsPage({
           padding: "var(--s-4)",
         }}
       >
-        <label style={{ ...filterField, flex: "2 1 200px" }}>
+        <label style={{ ...filterField, flex: "2 1 240px" }}>
           Search
           <Input
             type="text"
