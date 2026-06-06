@@ -90,6 +90,11 @@ const ADMIN_LINKS: Array<{ href: string; title: string; desc: string }> = [
     desc: "Configure which geographical regions the site is available in.",
   },
   {
+    href: "/admin/partner-applications",
+    title: "Partner Applications",
+    desc: "Review applications to run a region; approve to activate a partner and start their 12-month free window.",
+  },
+  {
     href: "/admin/postcodes",
     title: "Postcodes",
     desc: "Import the GeoNames AU dataset to power the listings map view. Tracks coverage of live listings against centroid lookups.",

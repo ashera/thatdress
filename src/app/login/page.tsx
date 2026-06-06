@@ -16,13 +16,16 @@ const ERRORS: Record<string, string> = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; reset?: string }>;
+  searchParams: Promise<{ error?: string; reset?: string; next?: string }>;
 }) {
+  const { error, reset, next } = await searchParams;
+  const safeNext =
+    next && next.startsWith("/") && !next.startsWith("//") ? next : null;
+
   if (await getCurrentUser()) {
-    redirect("/");
+    redirect(safeNext ?? "/");
   }
 
-  const { error, reset } = await searchParams;
   const errorMessage = error ? ERRORS[error] ?? "Something went wrong." : null;
 
   const devUsers = devLoginEnabled() ? await listDevUsers() : [];
@@ -36,7 +39,13 @@ export default async function LoginPage({
             <p className="eyebrow">Welcome back</p>
             <h1>Log in</h1>
             <p className="sub" style={{ marginTop: 8 }}>
-              Need an account? <Link href="/register">Register</Link>.
+              Need an account?{" "}
+              <Link
+                href={`/register${safeNext ? `?next=${encodeURIComponent(safeNext)}` : ""}`}
+              >
+                Register
+              </Link>
+              .
             </p>
           </div>
 
@@ -50,6 +59,7 @@ export default async function LoginPage({
             action={login}
             style={{ display: "flex", flexDirection: "column", gap: "var(--s-4)" }}
           >
+            {safeNext && <input type="hidden" name="next" value={safeNext} />}
             <Field label="Email" htmlFor="email">
               <Input
                 id="email"

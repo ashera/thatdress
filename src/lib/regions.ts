@@ -71,10 +71,14 @@ export type PartnerRegion = {
   label: string;
   /** Listing fee in cents the partner charges in this region; 0 = free. */
   listingFeeCents: number;
+  /** End of the free window (ISO), null for legacy rows. */
+  freeUntil: string | null;
+  /** Platform-fee % that applies after the free window. */
+  platformFeePct: number;
 };
 
 /** A partner's assigned marketing regions with their configured listing
- *  fee, ordered for display. Empty for non-partners. */
+ *  fee and free-period info, ordered for display. Empty for non-partners. */
 export async function getPartnerRegions(
   userId: string,
 ): Promise<PartnerRegion[]> {
@@ -84,10 +88,14 @@ export async function getPartnerRegions(
       id: string;
       label: string;
       listing_fee_cents: number;
+      free_until: string | null;
+      platform_fee_pct: string | null;
     }>(
       `SELECT r.id::text          AS id,
               r.label             AS label,
-              pmr.listing_fee_cents
+              pmr.listing_fee_cents,
+              pmr.free_until::text AS free_until,
+              pmr.platform_fee_pct
          FROM partner_marketing_regions pmr
          JOIN regions r ON r.id = pmr.region_id
         WHERE pmr.user_id = $1::bigint
@@ -98,6 +106,8 @@ export async function getPartnerRegions(
       id: r.id,
       label: r.label,
       listingFeeCents: Number(r.listing_fee_cents ?? 0),
+      freeUntil: r.free_until,
+      platformFeePct: Number(r.platform_fee_pct ?? 0),
     }));
   } catch {
     return [];

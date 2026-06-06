@@ -823,12 +823,54 @@ CREATE TABLE IF NOT EXISTS partner_marketing_regions (
 ALTER TABLE partner_marketing_regions
   ADD COLUMN IF NOT EXISTS listing_fee_cents INTEGER NOT NULL DEFAULT 0;
 
+-- Partner Programme lifecycle. A region is free to run for the first 12
+-- months from activation; after that a platform fee (a percentage of the
+-- listing fees the partner collects) applies. platform_fee_pct is
+-- snapshotted at activation so a later rate change doesn't retroactively
+-- alter existing partners.
+ALTER TABLE partner_marketing_regions
+  ADD COLUMN IF NOT EXISTS activated_at     TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS free_until       TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS platform_fee_pct NUMERIC(5,2) NOT NULL DEFAULT 0;
+
+-- Backfill existing rows: treat them as activated at creation with a
+-- 12-month free window from then.
+UPDATE partner_marketing_regions
+   SET activated_at = COALESCE(activated_at, created_at),
+       free_until   = COALESCE(free_until, created_at + INTERVAL '12 months');
+
 -- A region can be marketed by at most one partner, so region_id is
 -- unique across the table (this also serves region → partner lookups).
 -- Supersedes the earlier non-unique (region_id, user_id) index.
 DROP INDEX IF EXISTS partner_marketing_regions_region_idx;
 CREATE UNIQUE INDEX IF NOT EXISTS partner_marketing_regions_region_key
   ON partner_marketing_regions (region_id);
+
+-- =========================================================
+-- Partner Programme applications. Prospective partners apply to run a
+-- region (one region per application); an admin reviews and, on approval,
+-- activates them (grants the region + starts the 12-month free window).
+-- =========================================================
+CREATE TABLE IF NOT EXISTS partner_applications (
+  id                 BIGSERIAL   PRIMARY KEY,
+  user_id            BIGINT      NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  region_id          BIGINT      NOT NULL REFERENCES regions(id) ON DELETE CASCADE,
+  status             TEXT        NOT NULL DEFAULT 'pending',
+  business_name      TEXT,
+  pitch              TEXT,
+  expected_inventory TEXT,
+  created_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  decided_at         TIMESTAMPTZ,
+  decided_by_user_id BIGINT      REFERENCES users(id) ON DELETE SET NULL,
+  decision_note      TEXT
+);
+
+-- A user can have at most one PENDING application per region (re-applying
+-- after a decision is fine).
+CREATE UNIQUE INDEX IF NOT EXISTS partner_applications_pending_key
+  ON partner_applications (user_id, region_id) WHERE status = 'pending';
+CREATE INDEX IF NOT EXISTS partner_applications_status_idx
+  ON partner_applications (status, created_at DESC);
 
 -- =========================================================
 -- Postcode → centroid lookup. Drives the map view on /listings:

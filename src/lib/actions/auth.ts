@@ -43,6 +43,14 @@ function parseCredentials(formData: FormData): {
   return { email, password };
 }
 
+/** A post-auth redirect target from the form, restricted to a safe
+ *  relative path (no protocol-relative // or absolute URLs) so it can't
+ *  be used as an open redirect. Defaults to the home page. */
+function safeNext(formData: FormData): string {
+  const n = String(formData.get("next") ?? "");
+  return n.startsWith("/") && !n.startsWith("//") ? n : "/";
+}
+
 export async function register(formData: FormData): Promise<void> {
   const { email, password, error } = parseCredentials(formData);
   if (error) {
@@ -95,7 +103,7 @@ export async function register(formData: FormData): Promise<void> {
   await createSession(userId);
   // Fire-and-forget — don't block signup if Resend is down or unset.
   await dispatchVerificationEmail(userId, email);
-  redirect("/");
+  redirect(safeNext(formData));
 }
 
 const TITLES = new Set(["Mr", "Mrs", "Ms", "Mx", "Dr", "Prof"]);
@@ -189,7 +197,7 @@ export async function login(formData: FormData): Promise<void> {
   }
 
   await createSession(user.id);
-  redirect("/");
+  redirect(safeNext(formData));
 }
 
 export async function logout(): Promise<void> {

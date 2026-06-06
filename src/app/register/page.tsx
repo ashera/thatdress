@@ -18,13 +18,16 @@ const ERRORS: Record<string, string> = {
 export default async function RegisterPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; next?: string }>;
 }) {
+  const { error, next } = await searchParams;
+  const safeNext =
+    next && next.startsWith("/") && !next.startsWith("//") ? next : null;
+
   if (await getCurrentUser()) {
-    redirect("/");
+    redirect(safeNext ?? "/");
   }
 
-  const { error } = await searchParams;
   const errorMessage = error ? ERRORS[error] ?? "Something went wrong." : null;
 
   return (
@@ -35,7 +38,13 @@ export default async function RegisterPage({
             <p className="eyebrow">Join frockd</p>
             <h1>Create your account</h1>
             <p className="sub" style={{ marginTop: 8 }}>
-              Already have one? <Link href="/login">Log in</Link>.
+              Already have one?{" "}
+              <Link
+                href={`/login${safeNext ? `?next=${encodeURIComponent(safeNext)}` : ""}`}
+              >
+                Log in
+              </Link>
+              .
             </p>
           </div>
 
@@ -47,6 +56,7 @@ export default async function RegisterPage({
               gap: "var(--s-4)",
             }}
           >
+            {safeNext && <input type="hidden" name="next" value={safeNext} />}
             <Field label="Email" htmlFor="email">
               <Input
                 id="email"

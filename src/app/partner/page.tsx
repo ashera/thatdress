@@ -39,6 +39,23 @@ function numberFormat(n: number): string {
   return new Intl.NumberFormat("en-AU").format(n);
 }
 
+/** Human note about a region's free window / platform fee. */
+function freePeriodNote(freeUntil: string | null, pct: number): string {
+  if (!freeUntil) return "";
+  const end = new Date(freeUntil);
+  const date = end.toLocaleDateString("en-AU", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+  const now = Date.now();
+  if (end.getTime() > now) {
+    const days = Math.ceil((end.getTime() - now) / 86_400_000);
+    return `Free until ${date} (${days} day${days === 1 ? "" : "s"} left), then a ${pct}% platform fee`;
+  }
+  return `Free period ended ${date} — ${pct}% platform fee applies`;
+}
+
 type RegionBreakdown = {
   region_id: string;
   label: string;
@@ -298,6 +315,17 @@ export default async function PartnerDashboardPage({
                   {r.listingFeeCents > 0
                     ? priceFormat(r.listingFeeCents)
                     : "Free"}
+                </span>
+                <span
+                  style={{
+                    display: "block",
+                    fontSize: 12,
+                    fontWeight: 400,
+                    color: "var(--ink-3)",
+                    marginTop: 2,
+                  }}
+                >
+                  {freePeriodNote(r.freeUntil, r.platformFeePct)}
                 </span>
               </label>
               <div

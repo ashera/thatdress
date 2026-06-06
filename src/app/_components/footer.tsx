@@ -29,6 +29,10 @@ export async function Footer() {
               <span aria-hidden>·</span>
             </>
           )}
+          <Link href="/partners" style={{ color: "inherit" }}>
+            Become a partner
+          </Link>
+          <span aria-hidden>·</span>
           <Link href="/privacy" style={{ color: "inherit" }}>
             Privacy
           </Link>
