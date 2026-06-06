@@ -65,11 +65,13 @@ test("seller can mark a listing as sold", async ({ page }) => {
 
   const dialogForm = page.locator('form:has(input[name="_mode"][value="elsewhere"])');
   await dialogForm.locator('input[name="_mode"][value="elsewhere"]').check();
-  await Promise.all([
-    page.waitForLoadState("networkidle"),
-    dialogForm.locator('button[type="submit"]').click(),
-  ]);
+  await dialogForm.locator('button[type="submit"]').click();
 
-  const row = await getListing(listingId);
-  expect(row?.sold_at).toBeTruthy();
+  // The server action writes sold_at then redirects. Poll the DB for the
+  // real outcome — a bare waitForLoadState("networkidle") resolves
+  // instantly here (the page was already idle from the goto), so the read
+  // would race the write and flake under parallel load.
+  await expect
+    .poll(async () => (await getListing(listingId))?.sold_at, { timeout: 15_000 })
+    .toBeTruthy();
 });

@@ -31,10 +31,11 @@ test("partner can set a listing fee for their region", async ({ context, page })
 
   await page.goto("/partner", { waitUntil: "domcontentloaded" });
   await page.fill(`input[name="fee_${PARTNER_REGION}"]`, "15.00");
-  await Promise.all([
-    page.waitForLoadState("networkidle"),
-    page.getByRole("button", { name: /Save listing fees/i }).click(),
-  ]);
+  await page.getByRole("button", { name: /Save listing fees/i }).click();
 
-  expect(await getRegionFeeCents(PARTNER_REGION)).toBe(1500);
+  // Poll for the persisted fee rather than racing an already-settled
+  // networkidle wait against the server action's write.
+  await expect
+    .poll(async () => getRegionFeeCents(PARTNER_REGION), { timeout: 15_000 })
+    .toBe(1500);
 });
