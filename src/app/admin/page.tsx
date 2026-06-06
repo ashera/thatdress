@@ -119,6 +119,11 @@ const ADMIN_LINKS: Array<{ href: string; title: string; desc: string }> = [
     title: "Workflow Diagrams",
     desc: "Rendered Mermaid diagrams covering the major user journeys and system flows.",
   },
+  {
+    href: "/admin/test-management",
+    title: "Test Management",
+    desc: "Trigger Playwright suites and monitor results — smoke tests against production, write-flow tests against your local app.",
+  },
 ];
 
 export default async function AdminHomePage() {

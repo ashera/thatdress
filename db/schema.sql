@@ -1491,3 +1491,63 @@ CREATE INDEX IF NOT EXISTS backlinks_source_domain_idx
   ON backlinks (source_domain);
 CREATE INDEX IF NOT EXISTS backlinks_discovered_idx
   ON backlinks (discovered_at DESC);
+
+-- =========================================================
+-- Test management — Playwright suite results, surfaced in
+-- /admin/test-management. Tests run locally (triggered manually
+-- from the admin UI) and the Playwright DB reporter writes results
+-- straight into these tables. 'smoke' tests hit production
+-- read-only; 'local' tests hit the local app + DB.
+-- =========================================================
+
+-- Catalog of known tests, auto-upserted by the reporter on each run
+-- (keyed by test_key = Playwright titlePath). Lets the admin list a
+-- test even between runs and attach a human description.
+CREATE TABLE IF NOT EXISTS tests (
+  id          BIGSERIAL   PRIMARY KEY,
+  test_key    TEXT        NOT NULL UNIQUE,
+  title       TEXT        NOT NULL,
+  suite       TEXT        NOT NULL DEFAULT 'smoke',
+  file        TEXT,
+  description TEXT,
+  is_active   BOOLEAN     NOT NULL DEFAULT TRUE,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- One row per suite execution.
+CREATE TABLE IF NOT EXISTS test_runs (
+  id          BIGSERIAL   PRIMARY KEY,
+  suite       TEXT        NOT NULL,
+  target      TEXT,
+  trigger     TEXT        NOT NULL DEFAULT 'manual',
+  status      TEXT        NOT NULL DEFAULT 'running',
+  total       INTEGER     NOT NULL DEFAULT 0,
+  passed      INTEGER     NOT NULL DEFAULT 0,
+  failed      INTEGER     NOT NULL DEFAULT 0,
+  skipped     INTEGER     NOT NULL DEFAULT 0,
+  commit_sha  TEXT,
+  started_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  finished_at TIMESTAMPTZ
+);
+
+-- One row per test per run.
+CREATE TABLE IF NOT EXISTS test_results (
+  id          BIGSERIAL   PRIMARY KEY,
+  run_id      BIGINT      NOT NULL REFERENCES test_runs(id) ON DELETE CASCADE,
+  test_key    TEXT        NOT NULL,
+  title       TEXT        NOT NULL,
+  suite       TEXT        NOT NULL DEFAULT 'smoke',
+  status      TEXT        NOT NULL,
+  duration_ms INTEGER     NOT NULL DEFAULT 0,
+  error       TEXT,
+  retries     INTEGER     NOT NULL DEFAULT 0,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS test_results_run_idx
+  ON test_results (run_id);
+-- Drives the "latest result per test" view on the admin page.
+CREATE INDEX IF NOT EXISTS test_results_key_recent_idx
+  ON test_results (test_key, created_at DESC);
+CREATE INDEX IF NOT EXISTS test_runs_started_idx
+  ON test_runs (started_at DESC);

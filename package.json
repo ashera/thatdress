@@ -7,6 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "playwright test",
+    "test:smoke": "playwright test --project=smoke",
+    "test:local": "playwright test --project=local",
     "db:setup": "node scripts/db-setup.mjs",
     "prepare": "git config core.hooksPath .githooks 2>/dev/null || true"
   },
@@ -26,6 +29,7 @@
     "react-dom": "19.2.4"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@tailwindcss/postcss": "^4",
     "@types/adm-zip": "^0.5.8",
     "@types/bcryptjs": "^2.4.6",
