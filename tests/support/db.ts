@@ -146,6 +146,27 @@ export async function createPartnerApplication(
   });
 }
 
+/** Create a sandbox/test region owned by `ownerUserId` (is_test = TRUE,
+ *  is_active = FALSE). Mirrors what provisioning sets for the isolation
+ *  surface; pair with seedListing({ regionId }) to put stock inside it.
+ *  cleanupSandboxFor(ownerUserId) tears it back down. */
+export async function createSandboxRegion(
+  ownerUserId: string,
+  opts: { label?: string } = {},
+): Promise<{ regionId: string; label: string }> {
+  const slug = `sandbox-e2e-${Date.now()}-${randomBytes(2).toString("hex")}`;
+  const label = opts.label ?? "E2E Sandbox";
+  return withDb(async (c) => {
+    const r = await c.query<{ id: string }>(
+      `INSERT INTO regions (slug, label, is_active, is_test, sandbox_user_id, sort_order)
+         VALUES ($1, $2, FALSE, TRUE, $3::bigint, 9999)
+       RETURNING id::text`,
+      [slug, label, ownerUserId],
+    );
+    return { regionId: r.rows[0]!.id, label };
+  });
+}
+
 /** The sandbox/test region provisioned for a user, if any. */
 export async function getSandboxRegion(
   userId: string,
