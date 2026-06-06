@@ -1370,20 +1370,20 @@ textarea.input {
   position: absolute;
   top: 0;
   right: 0;
-  width: 200px;
-  height: 200px;
+  width: 210px;
+  height: 210px;
   overflow: hidden;
   z-index: 2;
   pointer-events: none;
 }
 .hero-ribbon-band {
   position: absolute;
-  top: 64px;
-  right: -50px;
-  width: 240px;
+  top: 39px;
+  right: -75px;
+  width: 300px;
   transform: rotate(45deg);
   text-align: center;
-  padding: 8px 0;
+  padding: 10px 0;
   /* Default (free): soft brand rose so a "Free to list" badge stays
      calm. The fee variant below swaps in the bright gold. */
   background: linear-gradient(135deg, var(--volt-300), var(--volt-500));
@@ -1404,13 +1404,13 @@ textarea.input {
 }
 @media (max-width: 760px) {
   .hero-ribbon {
-    width: 144px;
-    height: 144px;
+    width: 150px;
+    height: 150px;
   }
   .hero-ribbon-band {
-    top: 38px;
-    right: -46px;
-    width: 188px;
+    top: 28px;
+    right: -53px;
+    width: 214px;
     font-size: 10px;
     padding: 6px 0;
   }
