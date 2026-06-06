@@ -1370,17 +1370,17 @@ textarea.input {
   position: absolute;
   top: 0;
   right: 0;
-  width: 140px;
-  height: 140px;
+  width: 200px;
+  height: 200px;
   overflow: hidden;
   z-index: 2;
   pointer-events: none;
 }
 .hero-ribbon-band {
   position: absolute;
-  top: 26px;
+  top: 64px;
   right: -50px;
-  width: 200px;
+  width: 240px;
   transform: rotate(45deg);
   text-align: center;
   padding: 8px 0;
@@ -1404,13 +1404,13 @@ textarea.input {
 }
 @media (max-width: 760px) {
   .hero-ribbon {
-    width: 112px;
-    height: 112px;
+    width: 144px;
+    height: 144px;
   }
   .hero-ribbon-band {
-    top: 20px;
+    top: 38px;
     right: -46px;
-    width: 164px;
+    width: 188px;
     font-size: 10px;
     padding: 6px 0;
   }
