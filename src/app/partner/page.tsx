@@ -2,7 +2,7 @@ import { requirePartner } from "@/lib/auth";
 import { query } from "@/lib/db";
 import { getPartnerRegions } from "@/lib/regions";
 import { updatePartnerListingFees } from "@/lib/actions/partner";
-import { Button } from "../_components/ui";
+import { Button, ButtonLink } from "../_components/ui";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Partner dashboard" };
@@ -214,6 +214,17 @@ export default async function PartnerDashboardPage({
           Marketplace activity across your marketing region
           {breakdown.length === 1 ? "" : "s"}: {regionNames}.
         </p>
+        <div style={{ marginTop: "var(--s-3)" }}>
+          <ButtonLink
+            href="/partner/listings"
+            variant="primary"
+            size="sm"
+            iconRight="arrow"
+          >
+            View all listings in your region
+            {breakdown.length === 1 ? "" : "s"}
+          </ButtonLink>
+        </div>
       </header>
 
       {sp.saved && !feeError && (
