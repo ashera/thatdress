@@ -113,6 +113,66 @@ export async function seedListing(
   });
 }
 
+/** Create a throwaway ACTIVE, unclaimed region so the partner-application
+ *  funnel has something to apply for (the seeded active regions are all
+ *  taken). Deleting it cascades any applications / grants for it. */
+export async function createTestRegion(): Promise<{ id: string; label: string }> {
+  const slug = `e2e-region-${Date.now()}-${randomBytes(2).toString("hex")}`;
+  const label = "E2E Test Region";
+  return withDb(async (c) => {
+    const r = await c.query<{ id: string }>(
+      `INSERT INTO regions (slug, label, is_active) VALUES ($1, $2, TRUE)
+       RETURNING id::text`,
+      [slug, label],
+    );
+    return { id: r.rows[0]!.id, label };
+  });
+}
+
+export async function deleteTestRegions(ids: string[]): Promise<void> {
+  const valid = ids.filter((id) => /^\d+$/.test(id));
+  if (valid.length === 0) return;
+  await withDb((c) =>
+    c.query(`DELETE FROM regions WHERE id = ANY($1::bigint[])`, [valid]),
+  );
+}
+
+/** Partner activation state for a user+region (for funnel assertions). */
+export async function getPartnerActivation(
+  userId: string,
+  regionId: string,
+): Promise<{
+  isPartner: boolean;
+  appStatus: string | null;
+  platformFeePct: number | null;
+  freeInFuture: boolean;
+}> {
+  return withDb(async (c) => {
+    const u = await c.query<{ is_partner: boolean }>(
+      `SELECT is_partner FROM users WHERE id = $1::bigint`,
+      [userId],
+    );
+    const pmr = await c.query<{ pct: string; free_future: boolean }>(
+      `SELECT platform_fee_pct::text AS pct, (free_until > NOW()) AS free_future
+         FROM partner_marketing_regions
+        WHERE user_id = $1::bigint AND region_id = $2::bigint LIMIT 1`,
+      [userId, regionId],
+    );
+    const app = await c.query<{ status: string }>(
+      `SELECT status FROM partner_applications
+        WHERE user_id = $1::bigint AND region_id = $2::bigint
+        ORDER BY id DESC LIMIT 1`,
+      [userId, regionId],
+    );
+    return {
+      isPartner: u.rows[0]?.is_partner === true,
+      appStatus: app.rows[0]?.status ?? null,
+      platformFeePct: pmr.rows[0] ? Number(pmr.rows[0].pct) : null,
+      freeInFuture: pmr.rows[0]?.free_future === true,
+    };
+  });
+}
+
 /** Give a partner user a marketing region (so the partner dashboard has
  *  a region to configure fees for). Pick a region not already taken. */
 export async function assignPartnerRegion(
