@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { randomBytes } from "node:crypto";
+import bcrypt from "bcryptjs";
 import pg from "pg";
 
 /**
@@ -35,26 +36,108 @@ async function withDb<T>(fn: (c: pg.Client) => Promise<T>): Promise<T> {
   }
 }
 
-// A bcrypt-shaped placeholder; tests that authenticate use a minted
-// session, not password login, so this never needs to verify.
+// A bcrypt-shaped placeholder; session-authed tests never verify it.
 const DISABLED_HASH = "$2a$12$0000000000000000000000000000000000000000000000000000";
 
-export type TestUser = { id: string; email: string };
+export type TestUser = { id: string; email: string; password: string };
 
 /** Create a verified throwaway user. Email is namespaced so cleanup and
- *  human eyeballing are easy. */
+ *  human eyeballing are easy. Pass `password` when the test logs in or
+ *  changes it through the UI (otherwise a non-verifying placeholder is
+ *  stored and you authenticate via mintSession). */
 export async function createTestUser(
-  opts: { isPartner?: boolean; isAdmin?: boolean } = {},
+  opts: { isPartner?: boolean; isAdmin?: boolean; password?: string } = {},
 ): Promise<TestUser> {
   const email = `e2e-${Date.now()}-${randomBytes(3).toString("hex")}@frockd.test`;
+  const password = opts.password ?? "";
+  const hash = password ? await bcrypt.hash(password, 10) : DISABLED_HASH;
   return withDb(async (c) => {
     const r = await c.query<{ id: string }>(
       `INSERT INTO users (email, password_hash, email_verified_at, is_partner, is_admin)
          VALUES ($1, $2, NOW(), $3, $4)
          RETURNING id::text`,
-      [email, DISABLED_HASH, !!opts.isPartner, !!opts.isAdmin],
+      [email, hash, !!opts.isPartner, !!opts.isAdmin],
     );
-    return { id: r.rows[0]!.id, email };
+    return { id: r.rows[0]!.id, email, password };
+  });
+}
+
+/** Insert a published, ready-to-buy listing owned by `sellerId` (dress +
+ *  ownership event + listing). Used to set up buyer/seller flows without
+ *  walking the wizard each time. Returns the new ids. */
+export async function seedListing(
+  sellerId: string,
+  opts: {
+    regionId?: string;
+    priceCents?: number;
+    offersEnabled?: boolean;
+    title?: string;
+  } = {},
+): Promise<{ listingId: string; dressId: string }> {
+  const regionId = opts.regionId ?? "1";
+  const priceCents = opts.priceCents ?? 20000;
+  const offersEnabled = opts.offersEnabled ?? true;
+  const title = opts.title ?? "E2E Seed Dress";
+  return withDb(async (c) => {
+    // Populate designer/model/occasion/condition so the listing is
+    // "complete" — required for the wizard's edit→save path to work.
+    const d = await c.query<{ id: string }>(
+      `INSERT INTO dresses
+         (created_by_user_id, current_owner_user_id, disposition,
+          designer_id, model)
+       VALUES ($1::bigint, $1::bigint, 'available',
+          (SELECT id FROM designers ORDER BY id LIMIT 1), 'E2E Model')
+       RETURNING id::text`,
+      [sellerId],
+    );
+    const dressId = d.rows[0]!.id;
+    await c.query(
+      `INSERT INTO dress_ownership_events (dress_id, to_user_id, event_type)
+         VALUES ($1::bigint, $2::bigint, 'created')`,
+      [dressId, sellerId],
+    );
+    const l = await c.query<{ id: string }>(
+      `INSERT INTO listings
+         (dress_id, title, price_cents, seller_id, is_draft, is_published,
+          region_id, offers_enabled, trust_status, occasion_id, condition_id,
+          location_postal)
+       VALUES ($1::bigint, $2, $3, $4::bigint, FALSE, TRUE, $5::bigint, $6,
+               'self-declared',
+               (SELECT id FROM occasions ORDER BY id LIMIT 1),
+               (SELECT id FROM condition_grades ORDER BY id LIMIT 1),
+               '3000')
+       RETURNING id::text`,
+      [dressId, title, priceCents, sellerId, regionId, offersEnabled],
+    );
+    return { listingId: l.rows[0]!.id, dressId };
+  });
+}
+
+/** Give a partner user a marketing region (so the partner dashboard has
+ *  a region to configure fees for). Pick a region not already taken. */
+export async function assignPartnerRegion(
+  userId: string,
+  regionId: string,
+): Promise<void> {
+  await withDb((c) =>
+    c.query(
+      `INSERT INTO partner_marketing_regions (user_id, region_id, listing_fee_cents)
+         VALUES ($1::bigint, $2::bigint, 0)
+       ON CONFLICT (region_id) DO UPDATE SET user_id = EXCLUDED.user_id`,
+      [userId, regionId],
+    ),
+  );
+}
+
+/** The fee a partner has set for a region, in cents (for assertions). */
+export async function getRegionFeeCents(regionId: string): Promise<number> {
+  return withDb(async (c) => {
+    const r = await c.query<{ listing_fee_cents: number }>(
+      `SELECT listing_fee_cents FROM partner_marketing_regions
+        WHERE region_id = $1::bigint LIMIT 1`,
+      [regionId],
+    );
+    return Number(r.rows[0]?.listing_fee_cents ?? 0);
   });
 }
 
@@ -69,6 +152,46 @@ export async function mintSession(userId: string): Promise<string> {
     ),
   );
   return sid;
+}
+
+/** Fetch a listing's mutable fields (for assertions). */
+export async function getListing(
+  listingId: string,
+): Promise<{ price_cents: number; sold_at: string | null; description: string | null } | null> {
+  return withDb(async (c) => {
+    const r = await c.query<{
+      price_cents: number;
+      sold_at: string | null;
+      description: string | null;
+    }>(
+      `SELECT price_cents, sold_at::text, description FROM listings
+        WHERE id = $1::bigint LIMIT 1`,
+      [listingId],
+    );
+    return r.rows[0] ?? null;
+  });
+}
+
+/** Rows a buyer has shortlisted (for assertions). */
+export async function countShortlist(userId: string): Promise<number> {
+  return withDb(async (c) => {
+    const r = await c.query<{ n: string }>(
+      `SELECT COUNT(*)::text AS n FROM shortlists WHERE user_id = $1::bigint`,
+      [userId],
+    );
+    return Number(r.rows[0]?.n ?? 0);
+  });
+}
+
+/** Offers a buyer has made (for assertions). */
+export async function countOffersByBuyer(userId: string): Promise<number> {
+  return withDb(async (c) => {
+    const r = await c.query<{ n: string }>(
+      `SELECT COUNT(*)::text AS n FROM offers WHERE buyer_id = $1::bigint`,
+      [userId],
+    );
+    return Number(r.rows[0]?.n ?? 0);
+  });
 }
 
 /** Count a seller's published (non-draft) listings — handy for asserts. */
