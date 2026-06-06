@@ -1360,15 +1360,16 @@ textarea.input {
   }
 }
 
-/* Hero corner ribbon — a diagonal "splash" pinned across the top-left
-   corner of the hero, announcing the current region's listing fee. The
+/* Hero corner ribbon — a diagonal "splash" pinned across the top-right
+   corner of the hero, announcing the current region's listing fee. Sits
+   over the dress illustration (and the right edge of the headline). The
    .hero section is position:relative + overflow:hidden, so the ribbon's
    overhang is clipped to a clean corner. Decorative: pointer-events off
    so it never intercepts clicks on the headline beneath it. */
 .hero-ribbon {
   position: absolute;
   top: 0;
-  left: 0;
+  right: 0;
   width: 140px;
   height: 140px;
   overflow: hidden;
@@ -1378,9 +1379,9 @@ textarea.input {
 .hero-ribbon-band {
   position: absolute;
   top: 26px;
-  left: -50px;
+  right: -50px;
   width: 200px;
-  transform: rotate(-45deg);
+  transform: rotate(45deg);
   text-align: center;
   padding: 8px 0;
   /* Default (free): soft brand rose so a "Free to list" badge stays
@@ -1408,7 +1409,7 @@ textarea.input {
   }
   .hero-ribbon-band {
     top: 20px;
-    left: -46px;
+    right: -46px;
     width: 164px;
     font-size: 10px;
     padding: 6px 0;
@@ -1419,9 +1420,6 @@ textarea.input {
   grid-template-columns: minmax(0, 1.2fr);
   gap: var(--s-9);
   align-items: end;
-  /* Clear the top-left corner ribbon so it never overlaps the eyebrow
-     or headline's first line. */
-  padding-top: var(--s-6);
 }
 .hero h1 {
   font-family: var(--font-display);
@@ -1443,11 +1441,7 @@ textarea.input {
   font-weight: 600;
 }
 @media (max-width: 768px) {
-  /* The hero's top padding shrinks on mobile, so push the text column
-     further down to clear the corner ribbon. Scoped as `.hero .hero-grid`
-     (specificity 0,2,0) so it always beats the base `.hero-grid` rule
-     regardless of stylesheet injection order. */
-  .hero .hero-grid { gap: var(--s-7); padding-top: var(--s-10); }
+  .hero-grid { gap: var(--s-7); }
 }
 
 /* Hide the dress-sketch decoration on the start-listing card on
