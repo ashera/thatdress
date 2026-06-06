@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import {
@@ -43,18 +44,40 @@ export default async function PartnerApplyPage({
   );
 
   return (
-    <div className="page page--pad" style={{ maxWidth: 760, margin: "0 auto" }}>
-      <header style={{ marginBottom: "var(--s-5)" }}>
-        <p className="eyebrow">Partner programme</p>
-        <h1>Apply to run a region</h1>
-        <p className="sub">
-          Pick a region and tell us a little about you. We review every
-          application and activate your region once approved — your first{" "}
-          {PARTNER_FREE_MONTHS} months are free.
-        </p>
-      </header>
+    <div className="page">
+      <section className="hero">
+        <div className="hero-sketch">
+          <Image
+            src="/dress-sketch-tr-back.png"
+            alt="Illustration of a pre-loved formal dress on a hanger"
+            fill
+            priority
+            sizes="(max-width: 900px) 100vw, 50vw"
+          />
+        </div>
+        <div className="hero-grid">
+          <div>
+            <p className="eyebrow">Partner programme</p>
+            <h1>
+              Apply to run a <span className="accent">region.</span>
+            </h1>
+            <p className="sub">
+              Pick a region and tell us a little about you. We review every
+              application and activate your region once approved — your first{" "}
+              {PARTNER_FREE_MONTHS} months are free.
+            </p>
+          </div>
+        </div>
+      </section>
 
-      {submitted && (
+      <div
+        style={{
+          maxWidth: 760,
+          margin: "0 auto",
+          padding: "var(--s-7) 0 var(--s-9)",
+        }}
+      >
+        {submitted && (
         <p className="form-success" style={{ marginBottom: "var(--s-4)" }}>
           Application received — we&rsquo;ll review it and be in touch. You can
           track its status below.
@@ -223,10 +246,12 @@ export default async function PartnerApplyPage({
         </section>
       )}
 
-      <p className="card-sub" style={{ marginTop: "var(--s-5)" }}>
-        After your free year, a {PARTNER_PLATFORM_FEE_PCT}% platform fee applies
-        to the listing fees you collect. <Link href="/partners">How it works →</Link>
-      </p>
+        <p className="card-sub" style={{ marginTop: "var(--s-5)" }}>
+          After your free year, a {PARTNER_PLATFORM_FEE_PCT}% platform fee
+          applies to the listing fees you collect.{" "}
+          <Link href="/partners">How it works →</Link>
+        </p>
+      </div>
     </div>
   );
 }
