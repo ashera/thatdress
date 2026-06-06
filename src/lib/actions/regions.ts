@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { query } from "@/lib/db";
-import { requireAdmin } from "@/lib/auth";
+import { getCurrentUser, requireAdmin } from "@/lib/auth";
 import { REGION_COOKIE } from "@/lib/regions";
 
 const COOKIE_MAX_AGE = 30 * 24 * 60 * 60;
@@ -48,6 +48,49 @@ export async function clearRegion(): Promise<void> {
   jar.delete(REGION_COOKIE);
   revalidatePath("/", "layout");
   redirect("/");
+}
+
+/** Enter a sandbox/test region. Unlike setRegion this accepts an inactive
+ *  region, but only when the caller is its provisioned owner (or an admin) —
+ *  so the prospect can browse + sell inside their private sandbox. */
+export async function enterSandbox(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login");
+
+  const id = String(formData.get("region_id") ?? "");
+  if (!/^\d+$/.test(id)) redirect("/partner");
+
+  const r = await query<{ id: string }>(
+    `SELECT id::text FROM regions
+      WHERE id = $1::bigint AND is_test = TRUE
+        AND ($2 OR sandbox_user_id = $3::bigint)
+      LIMIT 1`,
+    [id, user.isAdmin, user.id],
+  );
+  if (r.rows.length === 0) redirect("/partner");
+
+  const jar = await cookies();
+  jar.set(REGION_COOKIE, id, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: COOKIE_MAX_AGE,
+  });
+
+  revalidatePath("/", "layout");
+  const next = String(formData.get("next") ?? "/listings");
+  redirect(next.startsWith("/") ? next : "/listings");
+}
+
+/** Leave the sandbox — clears the region cookie so the next request
+ *  re-resolves to the user's real (active) region or the picker. */
+export async function exitSandbox(formData: FormData): Promise<void> {
+  const jar = await cookies();
+  jar.delete(REGION_COOKIE);
+  revalidatePath("/", "layout");
+  const next = String(formData.get("next") ?? "/partner");
+  redirect(next.startsWith("/") ? next : "/partner");
 }
 
 // ---------- Admin CRUD ----------

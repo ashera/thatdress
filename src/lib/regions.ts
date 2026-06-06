@@ -2,6 +2,7 @@ import "server-only";
 import { cookies } from "next/headers";
 import { query } from "@/lib/db";
 import { getAnonymousLocation } from "@/lib/geo";
+import { getCurrentUser } from "@/lib/auth";
 
 export const REGION_COOKIE = "region_id";
 
@@ -182,6 +183,80 @@ export function matchRegion(regions: Region[], ipLocation: string): Region | nul
   return null;
 }
 
+/** SQL predicate that excludes listings sitting in a sandbox/test region.
+ *  Param-free — AND it into the WHERE of any listings query (`alias` is the
+ *  listings table alias). Sandbox inventory must never leak onto public
+ *  surfaces (browse, home, seller profiles, sitemap, saved-search digests). */
+export function excludeTestRegionsSql(alias = "l"): string {
+  return `NOT EXISTS (SELECT 1 FROM regions rg_t WHERE rg_t.id = ${alias}.region_id AND rg_t.is_test)`;
+}
+
+/** A sandbox/test region a user is allowed to enter: the prospect it was
+ *  provisioned for (sandbox_user_id), or any test region for an admin who's
+ *  trialing it. Returns null when the id isn't a test region or the viewer
+ *  isn't entitled to it. Test regions are is_active = FALSE, so they never
+ *  surface via the normal active-region path. */
+async function resolveSandboxRegion(regionId: string): Promise<Region | null> {
+  try {
+    const res = await query<Region & { sandbox_user_id: string | null }>(
+      `SELECT id::text, slug, label, short_name, match_pattern, sort_order,
+              is_active, sandbox_user_id::text AS sandbox_user_id
+         FROM regions
+        WHERE id = $1::bigint AND is_test = TRUE
+        LIMIT 1`,
+      [regionId],
+    );
+    const row = res.rows[0];
+    if (!row) return null;
+    const user = await getCurrentUser();
+    if (!user) return null;
+    if (!user.isAdmin && row.sandbox_user_id !== user.id) return null;
+    return {
+      id: row.id,
+      slug: row.slug,
+      label: row.label,
+      short_name: row.short_name,
+      match_pattern: row.match_pattern,
+      sort_order: row.sort_order,
+      is_active: row.is_active,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** The sandbox/test region provisioned for a user (its owner), if any.
+ *  Drives the "enter your sandbox" banner. */
+export async function getSandboxRegionForUser(
+  userId: string,
+): Promise<Region | null> {
+  if (!/^\d+$/.test(userId)) return null;
+  try {
+    const res = await query<Region>(
+      `SELECT id::text, slug, label, short_name, match_pattern, sort_order,
+              is_active
+         FROM regions
+        WHERE is_test = TRUE AND sandbox_user_id = $1::bigint
+        ORDER BY id
+        LIMIT 1`,
+      [userId],
+    );
+    return res.rows[0] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** The sandbox/test region the viewer is *currently inside* (their region
+ *  cookie points at a test region they're entitled to). null otherwise.
+ *  Drives the global "you're in the sandbox" banner + exit control. */
+export async function getCurrentTestRegion(): Promise<Region | null> {
+  const jar = await cookies();
+  const cookieId = jar.get(REGION_COOKIE)?.value;
+  if (!cookieId || !/^\d+$/.test(cookieId)) return null;
+  return resolveSandboxRegion(cookieId);
+}
+
 export type ResolvedRegion =
   | { kind: "selected"; region: Region }
   | { kind: "auto"; region: Region; ipLocation: string }
@@ -200,6 +275,10 @@ export async function resolveCurrentRegion(): Promise<ResolvedRegion> {
   if (cookieId && /^\d+$/.test(cookieId)) {
     const selected = regions.find((r) => r.id === cookieId);
     if (selected) return { kind: "selected", region: selected };
+    // Not an active region — it may be a sandbox/test region the current
+    // user is entitled to enter (its owner trialing it, or an admin).
+    const sandbox = await resolveSandboxRegion(cookieId);
+    if (sandbox) return { kind: "selected", region: sandbox };
   }
 
   // 2. IP-derived location. Same flow for anonymous and logged-in users —

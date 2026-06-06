@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { query } from "@/lib/db";
 import { getBaseUrl } from "@/lib/email";
+import { excludeTestRegionsSql } from "@/lib/regions";
 
 export const dynamic = "force-dynamic";
 
@@ -45,12 +46,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let listings: { id: string; created_at: string }[] = [];
   try {
     const r = await query<{ id: string; created_at: string }>(
-      `SELECT id::text, created_at::text
-         FROM listings
-        WHERE is_published = TRUE
-          AND is_draft = FALSE
-          AND sold_at IS NULL
-        ORDER BY created_at DESC
+      `SELECT l.id::text, l.created_at::text
+         FROM listings l
+        WHERE l.is_published = TRUE
+          AND l.is_draft = FALSE
+          AND l.sold_at IS NULL
+          AND ${excludeTestRegionsSql("l")}
+        ORDER BY l.created_at DESC
         LIMIT 5000`,
     );
     listings = r.rows;
@@ -78,7 +80,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         WHERE u.suspended_at IS NULL
           AND l.is_published = TRUE
           AND l.is_draft = FALSE
-          AND l.sold_at IS NULL`,
+          AND l.sold_at IS NULL
+          AND ${excludeTestRegionsSql("l")}`,
     );
     sellers = r.rows;
   } catch {

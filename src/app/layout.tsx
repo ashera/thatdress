@@ -9,6 +9,7 @@ import { Footer } from "./_components/footer";
 import { MaintenanceBanner } from "./_components/maintenance-banner";
 import { MaintenancePage } from "./_components/maintenance-page";
 import { RegionGate } from "./_components/region-gate";
+import { SandboxBanner } from "./_components/sandbox-banner";
 import { VerifyBanner } from "./_components/verify-banner";
 
 /** Paths that stay reachable even when maintenance mode is active.
@@ -167,6 +168,7 @@ export default async function RootLayout({
           <>
             <AuthNav />
             <VerifyBanner />
+            <SandboxBanner />
             <div className="flex flex-1 flex-col">
               <RegionGate>{children}</RegionGate>
             </div>

@@ -76,6 +76,7 @@ type ListingRow = {
   is_authentic_declared: boolean | null;
   includes_label_lining_photos: boolean | null;
   trust_status: string | null;
+  region_is_test: boolean | null;
 };
 
 type ImageRow = {
@@ -124,7 +125,8 @@ const LISTING_SELECT = `
   l.has_original_receipt,
   l.is_authentic_declared,
   l.includes_label_lining_photos,
-  l.trust_status
+  l.trust_status,
+  (SELECT rg.is_test FROM regions rg WHERE rg.id = l.region_id) AS region_is_test
 `;
 
 const LISTING_JOINS = `
@@ -713,6 +715,18 @@ export default async function ListingDetailPage({
   // Owner still sees it (so they know it's under review) and admin
   // sees it from the moderation queue.
   if (l.trust_status === "flagged" && !isOwner && !isAdmin) notFound();
+  // Sandbox/test-region listings are private to the sandbox. Only the
+  // seller, an admin, or someone currently inside that region (its
+  // provisioned owner — the only one who can hold its region cookie) may
+  // view them. Everyone else gets a 404, even via a direct link.
+  if (
+    l.region_is_test &&
+    !isOwner &&
+    !isAdmin &&
+    l.region_id !== regionId
+  ) {
+    notFound();
+  }
   // Out-of-region listings used to 404, but that broke the new
   // seller-profile drill-through (a seller selling in multiple
   // regions has listings the buyer's region filter would otherwise

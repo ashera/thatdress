@@ -1,6 +1,7 @@
 import "server-only";
 import { query } from "@/lib/db";
 import { emailLayout, escapeHtml, sendEmail } from "@/lib/email";
+import { excludeTestRegionsSql } from "@/lib/regions";
 
 type Params = Record<string, unknown>;
 
@@ -39,6 +40,8 @@ export function buildSavedSearchWhere(params: Params): {
   const where: string[] = [
     "l.is_published = TRUE",
     "l.trust_status <> 'flagged'",
+    // Saved-search digests email real users — never surface sandbox stock.
+    excludeTestRegionsSql("l"),
   ];
   const vals: unknown[] = [];
 

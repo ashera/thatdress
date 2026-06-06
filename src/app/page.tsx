@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { getBaseUrl } from "@/lib/email";
 import { getShortlistIds } from "@/lib/shortlist";
 import {
+  excludeTestRegionsSql,
   getRegionListingFeeCents,
   regionShortName,
   resolveCurrentRegion,
@@ -78,7 +79,11 @@ async function getMarketplaceStats(
          JOIN dresses dr ON dr.id = l.dress_id
         WHERE l.is_published = TRUE
           AND l.sold_at IS NULL
-          ${regionId ? "AND l.region_id = $1::bigint" : ""}`,
+          ${
+            regionId
+              ? "AND l.region_id = $1::bigint"
+              : `AND ${excludeTestRegionsSql("l")}`
+          }`,
       regionId ? [regionId] : [],
     );
     const row = r.rows[0];
@@ -186,7 +191,11 @@ async function getFeaturedListings(
         WHERE l.is_published = TRUE
           AND l.sold_at IS NULL
           AND l.trust_status <> 'flagged'
-          ${regionId ? "AND l.region_id = $1::bigint" : ""}
+          ${
+            regionId
+              ? "AND l.region_id = $1::bigint"
+              : `AND ${excludeTestRegionsSql("l")}`
+          }
         ORDER BY l.is_featured DESC, l.created_at DESC
         LIMIT 3`,
       regionId ? [regionId] : [],

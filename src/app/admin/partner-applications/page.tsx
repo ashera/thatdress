@@ -1,9 +1,11 @@
 import { requireAdmin } from "@/lib/auth";
 import { listApplications } from "@/lib/partner-programme";
+import { getSandboxesByUser } from "@/lib/partner-sandbox";
 import {
   approveApplication,
   rejectApplication,
 } from "@/lib/actions/admin-partner-applications";
+import { endSandbox, startSandbox } from "@/lib/actions/admin-sandbox";
 import { Badge, Button, Input } from "../../_components/ui";
 
 export const dynamic = "force-dynamic";
@@ -25,7 +27,10 @@ export default async function PartnerApplicationsPage({
 }) {
   await requireAdmin();
   const { done, error } = await searchParams;
-  const apps = await listApplications();
+  const [apps, sandboxes] = await Promise.all([
+    listApplications(),
+    getSandboxesByUser(),
+  ]);
   const pending = apps.filter((a) => a.status === "pending");
   const decided = apps.filter((a) => a.status !== "pending");
 
@@ -58,6 +63,27 @@ export default async function PartnerApplicationsPage({
       {error === "approve" && (
         <p className="form-error" style={{ marginBottom: "var(--s-4)" }}>
           Couldn&rsquo;t approve — the application may have already been decided.
+        </p>
+      )}
+      {done === "sandbox-started" && (
+        <p className="form-success" style={{ marginBottom: "var(--s-4)" }}>
+          Sandbox created — the applicant can now trial the partner tools and
+          browse their private test region.
+        </p>
+      )}
+      {done === "sandbox-ended" && (
+        <p className="form-success" style={{ marginBottom: "var(--s-4)" }}>
+          Sandbox removed.
+        </p>
+      )}
+      {error === "sandbox-exists" && (
+        <p className="form-error" style={{ marginBottom: "var(--s-4)" }}>
+          That applicant already has a sandbox.
+        </p>
+      )}
+      {error === "sandbox-failed" && (
+        <p className="form-error" style={{ marginBottom: "var(--s-4)" }}>
+          Couldn&rsquo;t create the sandbox — please try again.
         </p>
       )}
 
@@ -159,6 +185,51 @@ export default async function PartnerApplicationsPage({
                   </Button>
                 </form>
               </div>
+
+              {(() => {
+                const sb = sandboxes[a.user_id];
+                return (
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "var(--s-3)",
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                      marginTop: "var(--s-4)",
+                      paddingTop: "var(--s-3)",
+                      borderTop: "1px dashed var(--hairline)",
+                    }}
+                  >
+                    {sb ? (
+                      <>
+                        <Badge variant="info">
+                          Sandbox active · {sb.listings} listing
+                          {sb.listings === 1 ? "" : "s"}
+                        </Badge>
+                        <form action={endSandbox}>
+                          <input type="hidden" name="region_id" value={sb.regionId} />
+                          <Button type="submit" variant="ghost" size="sm">
+                            End sandbox
+                          </Button>
+                        </form>
+                      </>
+                    ) : (
+                      <>
+                        <span style={{ fontSize: 12, color: "var(--ink-3)" }}>
+                          Let them trial the partner tools in a private test
+                          region before you decide.
+                        </span>
+                        <form action={startSandbox}>
+                          <input type="hidden" name="application_id" value={a.id} />
+                          <Button type="submit" variant="dark" size="sm">
+                            Start a sandbox
+                          </Button>
+                        </form>
+                      </>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           ))}
         </div>

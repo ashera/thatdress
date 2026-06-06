@@ -1,5 +1,5 @@
 import "server-only";
-import { getCurrentRegionId } from "@/lib/regions";
+import { excludeTestRegionsSql, getCurrentRegionId } from "@/lib/regions";
 import type { ActiveFilters } from "@/lib/listings-filter-types";
 
 export type RawBrowseParams = {
@@ -196,6 +196,19 @@ export async function buildBrowseFilters(
       where.push(`(l.region_id = ${regionParam} OR l.seller_id = ${userParam})`);
     } else {
       where.push(`l.region_id = ${regionParam}`);
+    }
+  }
+
+  // Keep sandbox/test-region inventory out of public browse. The lone
+  // exception is the region the viewer is currently in — a sandbox owner
+  // browsing their own test region (resolved above) still sees its
+  // listings. Admins are unscoped and see everything.
+  if (!isAdmin) {
+    if (regionId) {
+      params.push(regionId);
+      where.push(`(${excludeTestRegionsSql("l")} OR l.region_id = $${params.length}::bigint)`);
+    } else {
+      where.push(excludeTestRegionsSql("l"));
     }
   }
 

@@ -4,7 +4,11 @@ import { query } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { getBaseUrl } from "@/lib/email";
 import type { ColorOption, RefOption } from "@/lib/ref-data";
-import { resolveCurrentRegion, regionShortName } from "@/lib/regions";
+import {
+  excludeTestRegionsSql,
+  resolveCurrentRegion,
+  regionShortName,
+} from "@/lib/regions";
 import {
   buildBrowseFilters,
   type BrowseMode,
@@ -349,6 +353,17 @@ async function loadFilterOptions({
       );
     } else {
       conds.push(`l.region_id = $${params.length}::bigint`);
+    }
+  }
+  // Mirror the browse query's sandbox isolation so option counts agree with
+  // the visible listings (exclude test-region inventory except the region
+  // the viewer is currently in).
+  if (!isAdmin) {
+    if (regionId) {
+      params.push(regionId);
+      conds.push(`(${excludeTestRegionsSql("l")} OR l.region_id = $${params.length}::bigint)`);
+    } else {
+      conds.push(excludeTestRegionsSql("l"));
     }
   }
   const livePredicate = conds.join(" AND ");

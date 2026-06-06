@@ -1,8 +1,13 @@
 import { requirePartner } from "@/lib/auth";
 import { query } from "@/lib/db";
-import { getPartnerRegions } from "@/lib/regions";
+import {
+  getCurrentTestRegion,
+  getPartnerRegions,
+  getSandboxRegionForUser,
+} from "@/lib/regions";
 import { updatePartnerListingFees } from "@/lib/actions/partner";
-import { Button, ButtonLink } from "../_components/ui";
+import { enterSandbox } from "@/lib/actions/regions";
+import { Badge, Button, ButtonLink } from "../_components/ui";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Partner dashboard" };
@@ -113,6 +118,11 @@ export default async function PartnerDashboardPage({
       : null;
   const partnerRegions = await getPartnerRegions(user.id);
   const regionIds = partnerRegions.map((r) => r.id);
+  const [sandbox, currentTest] = await Promise.all([
+    getSandboxRegionForUser(user.id),
+    getCurrentTestRegion(),
+  ]);
+  const inSandbox = !!sandbox && currentTest?.id === sandbox.id;
 
   if (regionIds.length === 0) {
     return (
@@ -243,6 +253,52 @@ export default async function PartnerDashboardPage({
           </ButtonLink>
         </div>
       </header>
+
+      {sandbox && (
+        <section
+          className="form-card"
+          style={{
+            padding: "var(--s-4) var(--s-5)",
+            marginBottom: "var(--s-5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "var(--s-4)",
+            flexWrap: "wrap",
+          }}
+        >
+          <div>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "var(--s-2)",
+                marginBottom: 4,
+              }}
+            >
+              <h2 className="card-heading" style={{ margin: 0 }}>
+                Your sandbox
+              </h2>
+              <Badge variant="info">Test region</Badge>
+            </div>
+            <p className="card-sub" style={{ margin: 0 }}>
+              A private region only you can see — switch in to browse, list, and
+              try the partner tools end to end. {inSandbox ? "You're in it now." : ""}
+            </p>
+          </div>
+          {inSandbox ? (
+            <Badge variant="ok">Active now</Badge>
+          ) : (
+            <form action={enterSandbox}>
+              <input type="hidden" name="region_id" value={sandbox.id} />
+              <input type="hidden" name="next" value="/listings" />
+              <Button type="submit" variant="primary" size="sm" iconRight="arrow">
+                Enter sandbox
+              </Button>
+            </form>
+          )}
+        </section>
+      )}
 
       {sp.saved && !feeError && (
         <p className="form-success" style={{ marginBottom: "var(--s-5)" }}>

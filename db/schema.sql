@@ -807,6 +807,20 @@ CREATE TABLE IF NOT EXISTS regions (
 ALTER TABLE regions
   ADD COLUMN IF NOT EXISTS short_name TEXT;
 
+-- Sandbox / test regions. A test region lets a prospective partner trial
+-- the partner + buyer/seller tools in private before they're approved.
+-- It stays is_active = FALSE so it never appears in the region picker or
+-- IP auto-match, and its listings are excluded from every public surface
+-- (browse, home, seller profiles, sitemap, saved-search digests). Only the
+-- linked sandbox_user_id (and admins) can enter it via resolveCurrentRegion.
+-- Deleting the user cascades the region away.
+ALTER TABLE regions
+  ADD COLUMN IF NOT EXISTS is_test         BOOLEAN NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS sandbox_user_id BIGINT REFERENCES users(id) ON DELETE CASCADE;
+
+CREATE INDEX IF NOT EXISTS regions_sandbox_user_idx
+  ON regions (sandbox_user_id) WHERE sandbox_user_id IS NOT NULL;
+
 -- Marketing regions for partner accounts (users.is_partner). A partner
 -- can be assigned one or more regions they promote; deleting either the
 -- user or the region drops the link.

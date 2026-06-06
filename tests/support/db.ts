@@ -129,6 +129,127 @@ export async function createTestRegion(): Promise<{ id: string; label: string }>
   });
 }
 
+/** Insert a pending partner application (the sandbox provisioning flow
+ *  starts from one). Returns the application id. */
+export async function createPartnerApplication(
+  userId: string,
+  regionId: string,
+): Promise<string> {
+  return withDb(async (c) => {
+    const r = await c.query<{ id: string }>(
+      `INSERT INTO partner_applications (user_id, region_id, status, pitch)
+         VALUES ($1::bigint, $2::bigint, 'pending', 'E2E sandbox applicant')
+       RETURNING id::text`,
+      [userId, regionId],
+    );
+    return r.rows[0]!.id;
+  });
+}
+
+/** The sandbox/test region provisioned for a user, if any. */
+export async function getSandboxRegion(
+  userId: string,
+): Promise<{ id: string; label: string } | null> {
+  return withDb(async (c) => {
+    const r = await c.query<{ id: string; label: string }>(
+      `SELECT id::text, label FROM regions
+        WHERE is_test = TRUE AND sandbox_user_id = $1::bigint LIMIT 1`,
+      [userId],
+    );
+    return r.rows[0] ?? null;
+  });
+}
+
+export async function countListingsInRegion(regionId: string): Promise<number> {
+  return withDb(async (c) => {
+    const r = await c.query<{ n: string }>(
+      `SELECT COUNT(*)::text AS n FROM listings WHERE region_id = $1::bigint`,
+      [regionId],
+    );
+    return Number(r.rows[0]?.n ?? 0);
+  });
+}
+
+export async function firstListingIdInRegion(
+  regionId: string,
+): Promise<string | null> {
+  return withDb(async (c) => {
+    const r = await c.query<{ id: string }>(
+      `SELECT id::text FROM listings WHERE region_id = $1::bigint
+        ORDER BY id LIMIT 1`,
+      [regionId],
+    );
+    return r.rows[0]?.id ?? null;
+  });
+}
+
+export async function getUserIsPartner(userId: string): Promise<boolean> {
+  return withDb(async (c) => {
+    const r = await c.query<{ is_partner: boolean }>(
+      `SELECT is_partner FROM users WHERE id = $1::bigint`,
+      [userId],
+    );
+    return r.rows[0]?.is_partner === true;
+  });
+}
+
+/** Remove any sandbox region(s) a user owns, plus their seeded sample
+ *  sellers + listings — a safety net for afterAll when a test bails before
+ *  the UI teardown runs. FK-safe order: children before parents. */
+export async function cleanupSandboxFor(userId: string): Promise<void> {
+  if (!/^\d+$/.test(userId)) return;
+  await withDb(async (c) => {
+    const rids = (
+      await c.query<{ id: string }>(
+        `SELECT id::text FROM regions
+          WHERE is_test = TRUE AND sandbox_user_id = $1::bigint`,
+        [userId],
+      )
+    ).rows.map((r) => r.id);
+    for (const rid of rids) {
+      const lids = (
+        await c.query<{ id: string }>(
+          `SELECT id::text FROM listings WHERE region_id = $1::bigint`,
+          [rid],
+        )
+      ).rows.map((r) => r.id);
+      const dids = (
+        await c.query<{ dress_id: string }>(
+          `SELECT DISTINCT dress_id::text AS dress_id FROM listings
+            WHERE region_id = $1::bigint`,
+          [rid],
+        )
+      ).rows.map((r) => r.dress_id);
+      if (lids.length > 0) {
+        await c.query(
+          `DELETE FROM listing_images WHERE listing_id = ANY($1::bigint[])`,
+          [lids],
+        );
+        await c.query(
+          `DELETE FROM dress_ownership_events WHERE via_listing_id = ANY($1::bigint[])`,
+          [lids],
+        );
+        await c.query(`DELETE FROM listings WHERE id = ANY($1::bigint[])`, [lids]);
+      }
+      if (dids.length > 0) {
+        await c.query(
+          `DELETE FROM dress_ownership_events WHERE dress_id = ANY($1::bigint[])`,
+          [dids],
+        );
+        await c.query(`DELETE FROM dresses WHERE id = ANY($1::bigint[])`, [dids]);
+      }
+      await c.query(`DELETE FROM users WHERE email LIKE $1`, [
+        `sandbox+${rid}+%@frockd.test`,
+      ]);
+      await c.query(
+        `DELETE FROM partner_marketing_regions WHERE region_id = $1::bigint`,
+        [rid],
+      );
+      await c.query(`DELETE FROM regions WHERE id = $1::bigint`, [rid]);
+    }
+  });
+}
+
 export async function deleteTestRegions(ids: string[]): Promise<void> {
   const valid = ids.filter((id) => /^\d+$/.test(id));
   if (valid.length === 0) return;

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { query } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { getCurrentRegionId } from "@/lib/regions";
+import { excludeTestRegionsSql, getCurrentRegionId } from "@/lib/regions";
 import { getBaseUrl } from "@/lib/email";
 import { getShortlistIds } from "@/lib/shortlist";
 import {
@@ -73,14 +73,17 @@ async function fetchSeller(id: string): Promise<SellerRow | null> {
                  WHERE seller_id = u.id
                    AND is_published = TRUE
                    AND is_draft = FALSE
-                   AND sold_at IS NULL)        AS active_count,
+                   AND sold_at IS NULL
+                   AND ${excludeTestRegionsSql("listings")}) AS active_count,
               (SELECT COUNT(*)::text FROM listings
                  WHERE seller_id = u.id
-                   AND sold_at IS NOT NULL)    AS sold_count,
+                   AND sold_at IS NOT NULL
+                   AND ${excludeTestRegionsSql("listings")}) AS sold_count,
               (SELECT COUNT(*)::text FROM listings
                  WHERE seller_id = u.id
                    AND trust_status = 'verified'
-                   AND is_draft = FALSE)       AS verified_count
+                   AND is_draft = FALSE
+                   AND ${excludeTestRegionsSql("listings")}) AS verified_count
          FROM users u
         WHERE u.id = $1::bigint
         LIMIT 1`,
@@ -281,6 +284,7 @@ async function fetchSellerListings(
           AND l.is_draft = FALSE
           AND l.sold_at IS NULL
           AND l.trust_status <> 'flagged'
+          AND ${excludeTestRegionsSql("l")}
         ORDER BY l.created_at DESC
         LIMIT 60`,
       [sellerId],
