@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { getBaseUrl } from "@/lib/email";
 import {
   PARTNER_FREE_MONTHS,
@@ -58,66 +59,75 @@ const BENEFITS = [
   },
 ];
 
-function Section({
-  children,
-  style,
-}: {
-  children: React.ReactNode;
-  style?: React.CSSProperties;
-}) {
-  return <section className="section" style={style}>{children}</section>;
-}
+// Tighter than the global .section (which is 96px top/bottom).
+const sectionStyle: React.CSSProperties = {
+  padding: "var(--s-8) 0",
+  borderTop: "1px solid var(--hairline)",
+};
+const h2Style: React.CSSProperties = {
+  fontFamily: "var(--font-display)",
+  fontSize: "var(--t-h2)",
+  color: "var(--ink-1)",
+  letterSpacing: "-0.02em",
+  margin: "var(--s-2) 0 var(--s-5)",
+};
 
 export default function PartnersLandingPage() {
   return (
     <div className="page">
-      {/* Hero */}
-      <Section style={{ paddingTop: "var(--s-9)" }}>
-        <p className="eyebrow">frockd Partner Programme</p>
-        <h1
-          style={{
-            fontFamily: "var(--font-display)",
-            fontSize: "var(--t-display-xl)",
-            lineHeight: 0.95,
-            letterSpacing: "-0.03em",
-            color: "var(--ink-1)",
-            margin: "var(--s-3) 0",
-            maxWidth: "16ch",
-          }}
-        >
-          Run your <span style={{ color: "var(--volt-500)" }}>region.</span>
-        </h1>
-        <p
-          className="sub"
-          style={{ maxWidth: "52ch", fontSize: "var(--t-body-l)" }}
-        >
-          Build a local pre-loved formal-dress marketplace in a region that&rsquo;s
-          yours alone. Recruit sellers, set your listing fees, and grow — with{" "}
-          <strong>{PARTNER_FREE_MONTHS} months free</strong> to get established.
-        </p>
-        <div
-          style={{
-            display: "flex",
-            gap: "var(--s-3)",
-            marginTop: "var(--s-6)",
-            flexWrap: "wrap",
-          }}
-        >
-          <ButtonLink href="/partners/apply" variant="primary" size="lg" iconRight="arrow">
-            Apply to run a region
-          </ButtonLink>
-          <ButtonLink href="#how" variant="ghost" size="lg">
-            How it works
-          </ButtonLink>
+      {/* Hero — mirrors the home page */}
+      <section className="hero">
+        <div className="hero-sketch">
+          <Image
+            src="/dress-sketch-tr-back.png"
+            alt="Illustration of a pre-loved formal dress on a hanger"
+            fill
+            priority
+            sizes="(max-width: 900px) 100vw, 50vw"
+          />
         </div>
-      </Section>
+        <div className="hero-grid">
+          <div>
+            <p className="eyebrow">frockd Partner Programme</p>
+            <h1>
+              Run your <span className="accent">region.</span>
+            </h1>
+            <p className="sub">
+              Build a local pre-loved formal-dress marketplace in a region
+              that&rsquo;s yours alone — recruit sellers, set your listing fees,
+              and grow. <strong>{PARTNER_FREE_MONTHS} months free</strong> to get
+              established.
+            </p>
+            <div
+              style={{
+                display: "flex",
+                gap: "var(--s-3)",
+                marginTop: "var(--s-7)",
+                flexWrap: "wrap",
+              }}
+            >
+              <ButtonLink
+                href="/partners/apply"
+                variant="primary"
+                size="lg"
+                iconRight="arrow"
+              >
+                Apply to run a region
+              </ButtonLink>
+              <ButtonLink href="#how" variant="ghost" size="lg">
+                How it works
+              </ButtonLink>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* The offer */}
-      <Section>
+      <section style={sectionStyle}>
         <div
           style={{
-            padding: "var(--s-6)",
-            borderRadius: 16,
+            padding: "var(--s-5)",
+            borderRadius: 14,
             background: "var(--volt-50)",
             border: "1px solid var(--volt-100)",
           }}
@@ -125,7 +135,7 @@ export default function PartnersLandingPage() {
           <p
             style={{
               fontFamily: "var(--font-mono)",
-              fontSize: 12,
+              fontSize: 11,
               letterSpacing: "0.16em",
               textTransform: "uppercase",
               color: "var(--volt-700)",
@@ -134,42 +144,24 @@ export default function PartnersLandingPage() {
           >
             The offer
           </p>
-          <h2
-            style={{
-              fontFamily: "var(--font-display)",
-              fontSize: 32,
-              color: "var(--ink-1)",
-              letterSpacing: "-0.02em",
-              margin: "var(--s-2) 0",
-            }}
-          >
-            {PARTNER_FREE_MONTHS} months free, then a simple share.
+          <h2 style={{ ...h2Style, margin: "var(--s-2) 0" }}>
+            {PARTNER_FREE_MONTHS} months free, then a simple share
           </h2>
-          <p className="sub" style={{ margin: 0, maxWidth: "60ch" }}>
-            Your region is <strong>free to run for the first {PARTNER_FREE_MONTHS}{" "}
-            months</strong> — time to build inventory and momentum. After that, a{" "}
+          <p className="sub" style={{ margin: 0, maxWidth: "62ch" }}>
+            Your region is{" "}
+            <strong>free to run for the first {PARTNER_FREE_MONTHS} months</strong>{" "}
+            — time to build inventory and momentum. After that, a{" "}
             <strong>{PARTNER_PLATFORM_FEE_PCT}% platform fee</strong> applies to
-            the listing fees you collect. No upfront cost, no surprises — you only
-            ever share a slice of revenue you&rsquo;re already earning.
+            the listing fees you collect. No upfront cost — you only ever share a
+            slice of revenue you&rsquo;re already earning.
           </p>
         </div>
-      </Section>
+      </section>
 
       {/* How it works */}
-      <Section style={{ scrollMarginTop: "var(--s-7)" }}>
-        <span id="how" />
+      <section id="how" style={{ ...sectionStyle, scrollMarginTop: "var(--s-7)" }}>
         <p className="eyebrow">How it works</p>
-        <h2
-          style={{
-            fontFamily: "var(--font-display)",
-            fontSize: 36,
-            color: "var(--ink-1)",
-            letterSpacing: "-0.02em",
-            margin: "var(--s-2) 0 var(--s-6)",
-          }}
-        >
-          Three steps to your region
-        </h2>
+        <h2 style={h2Style}>Three steps to your region</h2>
         <div
           style={{
             display: "grid",
@@ -178,15 +170,11 @@ export default function PartnersLandingPage() {
           }}
         >
           {STEPS.map((s) => (
-            <div
-              key={s.n}
-              className="form-card"
-              style={{ padding: "var(--s-5)" }}
-            >
+            <div key={s.n} className="form-card" style={{ padding: "var(--s-5)" }}>
               <div
                 style={{
-                  width: 36,
-                  height: 36,
+                  width: 30,
+                  height: 30,
                   borderRadius: 999,
                   background: "var(--volt-500)",
                   color: "#fff",
@@ -194,12 +182,13 @@ export default function PartnersLandingPage() {
                   alignItems: "center",
                   justifyContent: "center",
                   fontWeight: 700,
+                  fontSize: 14,
                   marginBottom: "var(--s-3)",
                 }}
               >
                 {s.n}
               </div>
-              <h3 style={{ margin: "0 0 6px", color: "var(--ink-1)" }}>
+              <h3 style={{ margin: "0 0 4px", color: "var(--ink-1)", fontSize: "var(--t-h3)" }}>
                 {s.title}
               </h3>
               <p className="card-sub" style={{ margin: 0 }}>
@@ -208,22 +197,12 @@ export default function PartnersLandingPage() {
             </div>
           ))}
         </div>
-      </Section>
+      </section>
 
       {/* Benefits */}
-      <Section>
+      <section style={sectionStyle}>
         <p className="eyebrow">Why partner</p>
-        <h2
-          style={{
-            fontFamily: "var(--font-display)",
-            fontSize: 36,
-            color: "var(--ink-1)",
-            letterSpacing: "-0.02em",
-            margin: "var(--s-2) 0 var(--s-6)",
-          }}
-        >
-          What you get
-        </h2>
+        <h2 style={h2Style}>What you get</h2>
         <div
           style={{
             display: "grid",
@@ -233,7 +212,7 @@ export default function PartnersLandingPage() {
         >
           {BENEFITS.map((b) => (
             <div key={b.title} className="form-card" style={{ padding: "var(--s-5)" }}>
-              <h3 style={{ margin: "0 0 6px", color: "var(--ink-1)" }}>
+              <h3 style={{ margin: "0 0 4px", color: "var(--ink-1)", fontSize: "var(--t-h3)" }}>
                 {b.title}
               </h3>
               <p className="card-sub" style={{ margin: 0 }}>
@@ -242,25 +221,22 @@ export default function PartnersLandingPage() {
             </div>
           ))}
         </div>
-      </Section>
+      </section>
 
       {/* CTA */}
-      <Section style={{ textAlign: "center", paddingBottom: "var(--s-10)" }}>
-        <h2
-          style={{
-            fontFamily: "var(--font-display)",
-            fontSize: 40,
-            color: "var(--ink-1)",
-            letterSpacing: "-0.02em",
-            margin: "0 0 var(--s-4)",
-          }}
-        >
+      <section style={{ ...sectionStyle, textAlign: "center" }}>
+        <h2 style={{ ...h2Style, margin: "0 0 var(--s-4)" }}>
           Ready to claim your region?
         </h2>
-        <ButtonLink href="/partners/apply" variant="primary" size="lg" iconRight="arrow">
+        <ButtonLink
+          href="/partners/apply"
+          variant="primary"
+          size="lg"
+          iconRight="arrow"
+        >
           Apply to run a region
         </ButtonLink>
-      </Section>
+      </section>
     </div>
   );
 }
