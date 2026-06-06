@@ -350,8 +350,9 @@ export default async function Home({
                 {hasListingFee ? (
                   <p className="sub">
                     A <strong>{feeMoney}</strong> listing fee applies in{" "}
-                    {regionShort}. Free to buy, no commission — connect with
-                    sellers nearby, verified designers, honest condition.
+                    {regionShort}. We don&rsquo;t charge a commission to
+                    buyers — connect with sellers nearby, verified designers,
+                    honest condition.
                   </p>
                 ) : (
                   <p className="sub">
