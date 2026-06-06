@@ -12,8 +12,13 @@ import {
   runBacklinkCheckBatch,
   type BacklinkCheckStats,
 } from "@/lib/cron/backlink-check";
+import { countPendingApplications } from "@/lib/partner-programme";
+import { Badge } from "../_components/ui";
 
 export const dynamic = "force-dynamic";
+
+// Tiles that show a live count badge, keyed by href.
+const PARTNER_APPS_HREF = "/admin/partner-applications";
 
 type JobOutcome<T> =
   | { ok: true; stats: T; ms: number }
@@ -153,10 +158,11 @@ export default async function AdminHomePage() {
   // already-emailed saved-searches keep their last_emailed_at
   // gate — so re-running on every load doesn't re-send. Card
   // below reports what actually happened on this load.
-  const [relist, digest, backlinks] = await Promise.all([
+  const [relist, digest, backlinks, pendingPartnerApps] = await Promise.all([
     timed<RelistNudgeRunStats>(runRelistNudgeBatch),
     timed<SavedSearchRunStats>(runSavedSearchDigest),
     timed<BacklinkCheckStats>(runBacklinkCheckBatch),
+    countPendingApplications(),
   ]);
 
   return (
@@ -296,7 +302,15 @@ export default async function AdminHomePage() {
           <li key={l.href}>
             <Link href={l.href} className="admin-tile">
               <div className="admin-tile-body">
-                <div className="admin-tile-title">{l.title}</div>
+                <div
+                  className="admin-tile-title"
+                  style={{ display: "flex", alignItems: "center", gap: 8 }}
+                >
+                  {l.title}
+                  {l.href === PARTNER_APPS_HREF && pendingPartnerApps > 0 && (
+                    <Badge variant="warn">{pendingPartnerApps} pending</Badge>
+                  )}
+                </div>
                 <div className="admin-tile-desc">{l.desc}</div>
               </div>
               <span className="admin-tile-arrow" aria-hidden>

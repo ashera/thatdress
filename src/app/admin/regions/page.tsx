@@ -49,23 +49,91 @@ const filterField: React.CSSProperties = {
   color: "var(--ink-3)",
 };
 
+const SORT_KEYS = [
+  "region",
+  "visibility",
+  "partner",
+  "fee",
+  "active",
+  "pending",
+  "sort",
+] as const;
+type SortKey = (typeof SORT_KEYS)[number];
+
+function sortValue(r: RegionListRow, key: SortKey): string | number {
+  switch (key) {
+    case "region":
+      return r.label.toLowerCase();
+    case "visibility":
+      return r.is_active ? 1 : 0;
+    case "partner":
+      return r.assigned ? 1 : 0;
+    case "fee":
+      return r.listing_fee_cents ?? -1;
+    case "active":
+      return r.active_listings;
+    case "pending":
+      return r.pending_apps;
+    default:
+      return r.sort_order;
+  }
+}
+
 export default async function AdminRegionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; vis?: string; assign?: string }>;
+  searchParams: Promise<{
+    error?: string;
+    vis?: string;
+    assign?: string;
+    sort?: string;
+    dir?: string;
+  }>;
 }) {
   await requireAdmin();
-  const { error, vis, assign } = await searchParams;
+  const { error, vis, assign, sort, dir } = await searchParams;
   const errorMessage = error ? (ERRORS[error] ?? "Something went wrong.") : null;
 
+  const sortKey: SortKey = (SORT_KEYS as readonly string[]).includes(sort ?? "")
+    ? (sort as SortKey)
+    : "sort";
+  const sortDir: "asc" | "desc" = dir === "desc" ? "desc" : "asc";
+
   const all = await listRegionsWithDetail();
-  const rows = all.filter((r) => {
-    if (vis === "active" && !r.is_active) return false;
-    if (vis === "hidden" && r.is_active) return false;
-    if (assign === "assigned" && !r.assigned) return false;
-    if (assign === "unassigned" && r.assigned) return false;
-    return true;
-  });
+  const rows = all
+    .filter((r) => {
+      if (vis === "active" && !r.is_active) return false;
+      if (vis === "hidden" && r.is_active) return false;
+      if (assign === "assigned" && !r.assigned) return false;
+      if (assign === "unassigned" && r.assigned) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      const va = sortValue(a, sortKey);
+      const vb = sortValue(b, sortKey);
+      const cmp =
+        typeof va === "string" && typeof vb === "string"
+          ? va.localeCompare(vb)
+          : va < vb
+            ? -1
+            : va > vb
+              ? 1
+              : 0;
+      return sortDir === "desc" ? -cmp : cmp;
+    });
+
+  // Build a sortable column header link, preserving the active filters and
+  // toggling direction when re-clicking the current column.
+  const headerHref = (col: SortKey): string => {
+    const params = new URLSearchParams();
+    if (vis) params.set("vis", vis);
+    if (assign) params.set("assign", assign);
+    params.set("sort", col);
+    params.set("dir", sortKey === col && sortDir === "asc" ? "desc" : "asc");
+    return `/admin/regions?${params.toString()}`;
+  };
+  const arrow = (col: SortKey): string =>
+    sortKey === col ? (sortDir === "asc" ? " ▲" : " ▼") : "";
   const activeCount = all.filter((r) => r.is_active).length;
   const assignedCount = all.filter((r) => r.assigned).length;
   const filtersActive = !!vis || !!assign;
@@ -188,13 +256,27 @@ export default async function AdminRegionsPage({
             <table className="data-table" style={{ width: "100%" }}>
               <thead>
                 <tr>
-                  <th style={cellHead}>Region</th>
-                  <th style={cellHead}>Visibility</th>
-                  <th style={cellHead}>Partner</th>
-                  <th style={cellHead}>Listing fee</th>
-                  <th style={cellHead}>Active</th>
-                  <th style={cellHead}>Applications</th>
-                  <th style={cellHead}>Sort</th>
+                  {(
+                    [
+                      ["region", "Region"],
+                      ["visibility", "Visibility"],
+                      ["partner", "Partner"],
+                      ["fee", "Listing fee"],
+                      ["active", "Active"],
+                      ["pending", "Applications"],
+                      ["sort", "Sort"],
+                    ] as Array<[SortKey, string]>
+                  ).map(([col, label]) => (
+                    <th key={col} style={cellHead}>
+                      <Link
+                        href={headerHref(col)}
+                        style={{ color: "inherit", textDecoration: "none" }}
+                      >
+                        {label}
+                        {arrow(col)}
+                      </Link>
+                    </th>
+                  ))}
                   <th style={cellHead}></th>
                 </tr>
               </thead>
