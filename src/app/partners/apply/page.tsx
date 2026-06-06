@@ -66,15 +66,14 @@ export default async function PartnerApplyPage({
         </p>
       )}
 
-      {available.length === 0 ? (
+      {regions.length === 0 ? (
         <section className="form-card">
           <h2 className="card-heading" style={{ marginTop: 0 }}>
-            No regions available right now
+            No active regions yet
           </h2>
           <p className="card-sub" style={{ margin: 0 }}>
-            Every active region is currently taken or already has your
-            application. Check back soon — or{" "}
-            <Link href="/support">contact us</Link> about upcoming regions.
+            There are no live regions to apply for right now. Check back soon
+            — or <Link href="/support">contact us</Link>.
           </p>
         </section>
       ) : (
@@ -86,16 +85,68 @@ export default async function PartnerApplyPage({
             action={applyForRegion}
             style={{ display: "flex", flexDirection: "column", gap: "var(--s-4)" }}
           >
-            <Field label="Region" htmlFor="region_id">
-              <select id="region_id" name="region_id" className="input" required>
-                <option value="">Choose a region…</option>
-                {available.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.label}
-                  </option>
-                ))}
-              </select>
-            </Field>
+            <fieldset style={{ border: 0, margin: 0, padding: 0 }}>
+              <legend
+                className="field-label"
+                style={{ marginBottom: "var(--s-2)", padding: 0 }}
+              >
+                Choose a region
+              </legend>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {regions.map((r) => {
+                  const selectable = !r.taken && !r.yours && !r.pendingByYou;
+                  const badge = r.yours ? (
+                    <Badge variant="info">You run this</Badge>
+                  ) : r.pendingByYou ? (
+                    <Badge variant="info">Pending</Badge>
+                  ) : r.taken ? (
+                    <Badge variant="ink">Taken</Badge>
+                  ) : (
+                    <Badge variant="ok">Available</Badge>
+                  );
+                  return (
+                    <label
+                      key={r.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        padding: "10px 12px",
+                        borderRadius: 10,
+                        border: "1px solid var(--hairline)",
+                        background: selectable
+                          ? "var(--surface)"
+                          : "var(--surface-sunken)",
+                        cursor: selectable ? "pointer" : "default",
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="region_id"
+                        value={r.id}
+                        disabled={!selectable}
+                        required={selectable}
+                      />
+                      <span
+                        style={{
+                          fontWeight: 600,
+                          color: selectable ? "var(--ink-1)" : "var(--ink-3)",
+                        }}
+                      >
+                        {r.label}
+                      </span>
+                      <span style={{ marginLeft: "auto" }}>{badge}</span>
+                    </label>
+                  );
+                })}
+              </div>
+              {available.length === 0 && (
+                <p className="card-sub" style={{ marginTop: "var(--s-3)" }}>
+                  Every active region is currently taken or already has your
+                  application — check back soon.
+                </p>
+              )}
+            </fieldset>
 
             <Field
               label="Business or trading name (optional)"
@@ -124,7 +175,12 @@ export default async function PartnerApplyPage({
             </Field>
 
             <div style={{ display: "flex", justifyContent: "flex-end" }}>
-              <Button type="submit" variant="primary" iconRight="arrow">
+              <Button
+                type="submit"
+                variant="primary"
+                iconRight="arrow"
+                disabled={available.length === 0}
+              >
                 Submit application
               </Button>
             </div>

@@ -41,7 +41,7 @@ test("apply for a region, admin approves, partner is activated", async ({ browse
   ]);
   const ap = await applicantCtx.newPage();
   await ap.goto("/partners/apply", { waitUntil: "networkidle" });
-  await ap.selectOption('select[name="region_id"]', region.id);
+  await ap.check(`input[name="region_id"][value="${region.id}"]`);
   await ap.fill('input[name="business_name"]', "E2E Partner Co");
   await ap.fill('textarea[name="pitch"]', "I can bring 30 sellers in month one.");
   await Promise.all([
