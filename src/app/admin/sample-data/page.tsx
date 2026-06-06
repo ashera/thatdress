@@ -1,7 +1,12 @@
 import { requireAdmin } from "@/lib/auth";
-import { getSampleCounts, sampleDataEnabled } from "@/lib/sample-data";
+import {
+  getSampleCounts,
+  sampleDataEnabled,
+  SAMPLE_LISTINGS_DEFAULT,
+  SAMPLE_LISTINGS_MAX,
+} from "@/lib/sample-data";
 import { cleanupSample, seedSample } from "@/lib/actions/admin-sample-data";
-import { Button } from "../../_components/ui";
+import { Button, Input } from "../../_components/ui";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Sample Data — Admin" };
@@ -73,12 +78,29 @@ export default async function SampleDataPage({
                 display: "flex",
                 gap: "var(--s-3)",
                 flexWrap: "wrap",
+                alignItems: "flex-end",
                 marginTop: "var(--s-4)",
               }}
             >
-              <form action={seedSample}>
+              <form
+                action={seedSample}
+                style={{ display: "flex", gap: "var(--s-2)", alignItems: "flex-end" }}
+              >
+                <label style={{ fontSize: "var(--t-body-s)", color: "var(--ink-2)" }}>
+                  <span style={{ display: "block", marginBottom: 4 }}>
+                    Listings (1–{SAMPLE_LISTINGS_MAX})
+                  </span>
+                  <Input
+                    type="number"
+                    name="count"
+                    min={1}
+                    max={SAMPLE_LISTINGS_MAX}
+                    defaultValue={SAMPLE_LISTINGS_DEFAULT}
+                    style={{ width: 110 }}
+                  />
+                </label>
                 <Button type="submit" variant="primary" iconRight="arrow">
-                  {counts.users > 0 ? "Re-seed sample data" : "Seed sample data"}
+                  {counts.users > 0 ? "Re-seed" : "Seed sample data"}
                 </Button>
               </form>
               <form action={cleanupSample}>

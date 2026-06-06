@@ -11,11 +11,14 @@ import {
 
 const PATH = "/admin/sample-data";
 
-/** Seed (or re-seed — it cleans first) the local sample dataset. */
-export async function seedSample(): Promise<void> {
+/** Seed (or re-seed — it cleans first) the local sample dataset. The
+ *  number of listings comes from the form (clamped in seedSampleData). */
+export async function seedSample(formData: FormData): Promise<void> {
   await requireAdmin();
   if (!sampleDataEnabled()) redirect(`${PATH}?error=disabled`);
-  const counts = await seedSampleData();
+  const raw = String(formData.get("count") ?? "").trim();
+  const listings = /^\d+$/.test(raw) ? Number(raw) : undefined;
+  const counts = await seedSampleData({ listings });
   revalidatePath(PATH);
   redirect(`${PATH}?seeded=${counts.listings}`);
 }

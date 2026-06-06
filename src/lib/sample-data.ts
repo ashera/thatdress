@@ -1,7 +1,12 @@
 import "server-only";
+import fs from "node:fs";
+import path from "node:path";
 import zlib from "node:zlib";
 import bcrypt from "bcryptjs";
 import { query, withTransaction } from "@/lib/db";
+
+export const SAMPLE_LISTINGS_DEFAULT = 12;
+export const SAMPLE_LISTINGS_MAX = 48;
 
 /**
  * Local-only sample/demo data. Every sample row hangs off a user whose
@@ -83,6 +88,49 @@ const PALETTE: Array<[number, number, number]> = [
   [180, 150, 130], // taupe
 ];
 
+// --- listing photos -----------------------------------------------------
+export type SampleImage = { mime: string; bytes: Buffer };
+
+function mimeFromExt(file: string): string {
+  const e = file.toLowerCase();
+  if (e.endsWith(".png")) return "image/png";
+  if (e.endsWith(".webp")) return "image/webp";
+  return "image/jpeg";
+}
+
+/** Image files the user has dropped in db/sample-images/ (jpg/png/webp),
+ *  in stable sorted order. Empty if the folder is missing/empty. */
+function localSampleImageNames(): string[] {
+  const dir = path.join(process.cwd(), "db", "sample-images");
+  try {
+    return fs
+      .readdirSync(dir)
+      .filter((f) => /\.(jpe?g|png|webp)$/i.test(f))
+      .sort();
+  } catch {
+    return [];
+  }
+}
+
+/** Resolve one image per listing. Uses your own photos from
+ *  db/sample-images/ (cycled) when present; otherwise a generated
+ *  colour placeholder. No network access. */
+function resolveSampleImages(count: number): SampleImage[] {
+  const dir = path.join(process.cwd(), "db", "sample-images");
+  const names = localSampleImageNames();
+  if (names.length > 0) {
+    const buffers = names.map((f) => fs.readFileSync(path.join(dir, f)));
+    return Array.from({ length: count }, (_, i) => ({
+      mime: mimeFromExt(names[i % names.length]),
+      bytes: buffers[i % buffers.length],
+    }));
+  }
+  return Array.from({ length: count }, (_, i) => ({
+    mime: "image/png",
+    bytes: solidPng(120, 160, PALETTE[i % PALETTE.length]),
+  }));
+}
+
 // --- counts (for the admin panel) ---------------------------------------
 export type SampleCounts = { users: number; listings: number };
 export async function getSampleCounts(): Promise<SampleCounts> {
@@ -161,12 +209,21 @@ export type SeedCounts = {
   partnerFees: number;
 };
 
-export async function seedSampleData(): Promise<SeedCounts> {
+export async function seedSampleData(
+  opts: { listings?: number } = {},
+): Promise<SeedCounts> {
   guard();
+  const count = Math.max(
+    1,
+    Math.min(SAMPLE_LISTINGS_MAX, Math.floor(opts.listings ?? SAMPLE_LISTINGS_DEFAULT)),
+  );
+
   // Always start clean so re-seeding doesn't pile up duplicates.
   await cleanupSampleData();
 
   const passwordHash = await bcrypt.hash("Sample123", 10);
+  // Resolve photos before the transaction (fs I/O).
+  const images = resolveSampleImages(count);
 
   return withTransaction(async (c) => {
     const idList = async (table: string): Promise<string[]> =>
@@ -221,8 +278,7 @@ export async function seedSampleData(): Promise<SeedCounts> {
     const COLOR_NAMES = ["Blush", "Ivory", "Emerald", "Navy", "Champagne", "Black"];
     const created: Array<{ id: string; seller: string; region: string }> = [];
 
-    const COUNT = 12;
-    for (let i = 0; i < COUNT; i++) {
+    for (let i = 0; i < count; i++) {
       const seller = sellers[i % sellers.length];
       const region = i % 2 === 0 ? "7" : "8"; // Sydney / Melbourne (active)
       const postcode = region === "7" ? "2000" : "3000";
@@ -286,18 +342,18 @@ export async function seedSampleData(): Promise<SeedCounts> {
       );
       const listingId = lRes.rows[0]!.id;
 
-      const png = solidPng(120, 160, PALETTE[i % PALETTE.length]);
+      const img = images[i];
       await c.query(
         `INSERT INTO listing_images
            (listing_id, mime_type, bytes, byte_size, position, is_primary, role)
-         VALUES ($1::bigint, 'image/png', $2, $3, 0, TRUE, 'front')`,
-        [listingId, png, png.length],
+         VALUES ($1::bigint, $2, $3, $4, 0, TRUE, 'front')`,
+        [listingId, img.mime, img.bytes, img.bytes.length],
       );
 
       created.push({ id: listingId, seller, region });
     }
 
-    // Shortlists.
+    // Shortlists (only on listings that exist for this count).
     let shortlists = 0;
     const shortlistPairs: Array<[string, number]> = [
       [buyer1, 0],
@@ -307,6 +363,7 @@ export async function seedSampleData(): Promise<SeedCounts> {
       [buyer2, 3],
     ];
     for (const [uid, idx] of shortlistPairs) {
+      if (idx >= created.length) continue;
       await c.query(
         `INSERT INTO shortlists (user_id, listing_id) VALUES ($1::bigint, $2::bigint)
          ON CONFLICT DO NOTHING`,
@@ -315,74 +372,95 @@ export async function seedSampleData(): Promise<SeedCounts> {
       shortlists++;
     }
 
+    // Pick up to three distinct listings for offer / question / sale.
+    const eng: number[] = [];
+    for (const cand of [5, 6, 7, 2, 1, 0]) {
+      if (cand < created.length && !eng.includes(cand)) eng.push(cand);
+      if (eng.length === 3) break;
+    }
+    const [offerIdx, qIdx, soldIdx] = [eng[0] ?? -1, eng[1] ?? -1, eng[2] ?? -1];
+
+    let offers = 0;
+    let conversations = 0;
+    let reviews = 0;
+
     // Conversation + offer (buyer1 on a seller's listing).
-    const offerListing = created[5];
-    const conv1 = await c.query<{ id: string }>(
-      `INSERT INTO conversations (listing_id, buyer_id, seller_id)
-         VALUES ($1::bigint, $2::bigint, $3::bigint) RETURNING id::text`,
-      [offerListing.id, buyer1, offerListing.seller],
-    );
-    await c.query(
-      `INSERT INTO messages (conversation_id, sender_id, body)
-         VALUES ($1::bigint, $2::bigint, $3)`,
-      [conv1.rows[0]!.id, buyer1, "Hi! Would you consider $180 for this?"],
-    );
-    await c.query(
-      `INSERT INTO offers (listing_id, buyer_id, amount_cents, note, status)
-         VALUES ($1::bigint, $2::bigint, $3, $4, 'pending')`,
-      [offerListing.id, buyer1, 18000, "Keen if the price works."],
-    );
+    if (offerIdx >= 0) {
+      const offerListing = created[offerIdx];
+      const conv1 = await c.query<{ id: string }>(
+        `INSERT INTO conversations (listing_id, buyer_id, seller_id)
+           VALUES ($1::bigint, $2::bigint, $3::bigint) RETURNING id::text`,
+        [offerListing.id, buyer1, offerListing.seller],
+      );
+      await c.query(
+        `INSERT INTO messages (conversation_id, sender_id, body)
+           VALUES ($1::bigint, $2::bigint, $3)`,
+        [conv1.rows[0]!.id, buyer1, "Hi! Would you consider $180 for this?"],
+      );
+      await c.query(
+        `INSERT INTO offers (listing_id, buyer_id, amount_cents, note, status)
+           VALUES ($1::bigint, $2::bigint, $3, $4, 'pending')`,
+        [offerListing.id, buyer1, 18000, "Keen if the price works."],
+      );
+      offers++;
+      conversations++;
+    }
 
     // Standalone conversation (buyer2 asks a question, seller replies).
-    const qListing = created[6];
-    const conv2 = await c.query<{ id: string }>(
-      `INSERT INTO conversations (listing_id, buyer_id, seller_id)
-         VALUES ($1::bigint, $2::bigint, $3::bigint) RETURNING id::text`,
-      [qListing.id, buyer2, qListing.seller],
-    );
-    await c.query(
-      `INSERT INTO messages (conversation_id, sender_id, body)
-         VALUES ($1::bigint, $2::bigint, $3), ($1::bigint, $4::bigint, $5)`,
-      [
-        conv2.rows[0]!.id,
-        buyer2,
-        "Is the zip in good working order?",
-        qListing.seller,
-        "Yes, zip and lining are perfect — happy to send more photos.",
-      ],
-    );
+    if (qIdx >= 0) {
+      const qListing = created[qIdx];
+      const conv2 = await c.query<{ id: string }>(
+        `INSERT INTO conversations (listing_id, buyer_id, seller_id)
+           VALUES ($1::bigint, $2::bigint, $3::bigint) RETURNING id::text`,
+        [qListing.id, buyer2, qListing.seller],
+      );
+      await c.query(
+        `INSERT INTO messages (conversation_id, sender_id, body)
+           VALUES ($1::bigint, $2::bigint, $3), ($1::bigint, $4::bigint, $5)`,
+        [
+          conv2.rows[0]!.id,
+          buyer2,
+          "Is the zip in good working order?",
+          qListing.seller,
+          "Yes, zip and lining are perfect — happy to send more photos.",
+        ],
+      );
+      conversations++;
+    }
 
     // A sold listing with a buyer review (full lifecycle).
-    const soldListing = created[7];
-    const soldDress = await c.query<{ dress_id: string }>(
-      `UPDATE listings SET sold_at = NOW(), sold_to_user_id = $2::bigint
-        WHERE id = $1::bigint RETURNING dress_id::text`,
-      [soldListing.id, buyer2],
-    );
-    const soldDressId = soldDress.rows[0]!.dress_id;
-    await c.query(
-      `UPDATE dresses
-          SET current_owner_user_id = $2::bigint, disposition = 'in-use'
-        WHERE id = $1::bigint`,
-      [soldDressId, buyer2],
-    );
-    await c.query(
-      `INSERT INTO dress_ownership_events
-         (dress_id, from_user_id, to_user_id, via_listing_id, event_type)
-       VALUES ($1::bigint, $2::bigint, $3::bigint, $4::bigint, 'sold')`,
-      [soldDressId, soldListing.seller, buyer2, soldListing.id],
-    );
-    await c.query(
-      `INSERT INTO listing_reviews
-         (listing_id, seller_id, buyer_id, stars, body,
-          as_described, easy_communication, smooth_handover)
-       VALUES ($1::bigint, $2::bigint, $3::bigint, 5, $4, TRUE, TRUE, TRUE)`,
-      [soldListing.id, soldListing.seller, buyer2, "Gorgeous dress, exactly as described. Smooth pickup!"],
-    );
+    if (soldIdx >= 0) {
+      const soldListing = created[soldIdx];
+      const soldDress = await c.query<{ dress_id: string }>(
+        `UPDATE listings SET sold_at = NOW(), sold_to_user_id = $2::bigint
+          WHERE id = $1::bigint RETURNING dress_id::text`,
+        [soldListing.id, buyer2],
+      );
+      const soldDressId = soldDress.rows[0]!.dress_id;
+      await c.query(
+        `UPDATE dresses
+            SET current_owner_user_id = $2::bigint, disposition = 'in-use'
+          WHERE id = $1::bigint`,
+        [soldDressId, buyer2],
+      );
+      await c.query(
+        `INSERT INTO dress_ownership_events
+           (dress_id, from_user_id, to_user_id, via_listing_id, event_type)
+         VALUES ($1::bigint, $2::bigint, $3::bigint, $4::bigint, 'sold')`,
+        [soldDressId, soldListing.seller, buyer2, soldListing.id],
+      );
+      await c.query(
+        `INSERT INTO listing_reviews
+           (listing_id, seller_id, buyer_id, stars, body,
+            as_described, easy_communication, smooth_handover)
+         VALUES ($1::bigint, $2::bigint, $3::bigint, 5, $4, TRUE, TRUE, TRUE)`,
+        [soldListing.id, soldListing.seller, buyer2, "Gorgeous dress, exactly as described. Smooth pickup!"],
+      );
+      reviews++;
+    }
 
     // Partner with a regional listing fee (region 8, not claimed by the
     // base seed which uses region 7).
-    let partnerFees = 0;
     await c.query(
       `INSERT INTO partner_marketing_regions (user_id, region_id, listing_fee_cents)
          VALUES ($1::bigint, 8, 1500)
@@ -390,16 +468,15 @@ export async function seedSampleData(): Promise<SeedCounts> {
          SET user_id = EXCLUDED.user_id, listing_fee_cents = EXCLUDED.listing_fee_cents`,
       [partner1],
     );
-    partnerFees = 1;
 
     return {
       users: 6,
       listings: created.length,
       shortlists,
-      offers: 1,
-      conversations: 2,
-      reviews: 1,
-      partnerFees,
+      offers,
+      conversations,
+      reviews,
+      partnerFees: 1,
     };
   });
 }

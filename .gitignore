@@ -18,6 +18,10 @@
 /playwright-report/
 /playwright/.cache/
 
+# Local sample-data images — drop your own; not committed (keep README)
+/db/sample-images/*
+!/db/sample-images/README.md
+
 # next.js
 /.next/
 /out/
