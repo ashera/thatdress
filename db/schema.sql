@@ -179,12 +179,11 @@ ALTER TABLE listings
 
 -- Admin-curated 'Featured' slot. At most one featured listing per
 -- region; the partial unique index enforces that at the DB layer
--- so the application can't accidentally double-feature.
+-- so the application can't accidentally double-feature. The index
+-- itself lives further down, after listings.region_id is added (it
+-- references both columns), so a fresh schema run sees the column first.
 ALTER TABLE listings
   ADD COLUMN IF NOT EXISTS is_featured BOOLEAN NOT NULL DEFAULT FALSE;
-
-CREATE UNIQUE INDEX IF NOT EXISTS listings_one_featured_per_region
-  ON listings (region_id) WHERE is_featured = TRUE;
 
 CREATE INDEX IF NOT EXISTS listings_draft_idx
   ON listings (seller_id, is_draft) WHERE is_draft = TRUE;
@@ -911,6 +910,12 @@ ON CONFLICT (country_code, postcode) DO NOTHING;
 
 ALTER TABLE listings
   ADD COLUMN IF NOT EXISTS region_id BIGINT REFERENCES regions(id) ON DELETE SET NULL;
+
+-- Featured-slot uniqueness (one featured listing per region). Defined
+-- here rather than next to the is_featured column because it references
+-- region_id, which is only added just above.
+CREATE UNIQUE INDEX IF NOT EXISTS listings_one_featured_per_region
+  ON listings (region_id) WHERE is_featured = TRUE;
 
 -- Trust + authenticity ladder. Sellers declare authenticity in the
 -- publish step; listings that meet the photo/measurement/health
