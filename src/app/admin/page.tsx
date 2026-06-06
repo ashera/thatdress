@@ -124,6 +124,11 @@ const ADMIN_LINKS: Array<{ href: string; title: string; desc: string }> = [
     title: "Test Management",
     desc: "Trigger Playwright suites and monitor results — smoke tests against production, write-flow tests against your local app.",
   },
+  {
+    href: "/admin/emails",
+    title: "Captured Emails",
+    desc: "Local inbox of outbound email captured when running with EMAIL_CAPTURE=1 — read messages and click their links to action the flow.",
+  },
 ];
 
 export default async function AdminHomePage() {
