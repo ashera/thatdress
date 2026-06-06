@@ -1359,11 +1359,69 @@ textarea.input {
     opacity: 0.14;
   }
 }
+
+/* Hero corner ribbon — a diagonal "splash" pinned across the top-left
+   corner of the hero, announcing the current region's listing fee. The
+   .hero section is position:relative + overflow:hidden, so the ribbon's
+   overhang is clipped to a clean corner. Decorative: pointer-events off
+   so it never intercepts clicks on the headline beneath it. */
+.hero-ribbon {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 140px;
+  height: 140px;
+  overflow: hidden;
+  z-index: 2;
+  pointer-events: none;
+}
+.hero-ribbon-band {
+  position: absolute;
+  top: 26px;
+  left: -50px;
+  width: 200px;
+  transform: rotate(-45deg);
+  text-align: center;
+  padding: 8px 0;
+  /* Default (free): soft brand rose so a "Free to list" badge stays
+     calm. The fee variant below swaps in the bright gold. */
+  background: linear-gradient(135deg, var(--volt-300), var(--volt-500));
+  color: #fff;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  box-shadow: 0 6px 16px oklch(20% 0.02 350 / 0.22);
+  text-shadow: 0 1px 1px oklch(20% 0.05 60 / 0.25);
+}
+/* Fee variant — bright gold/amber, dark ink text for contrast. */
+.hero-ribbon--fee .hero-ribbon-band {
+  background: linear-gradient(135deg, oklch(86% 0.15 90), oklch(74% 0.16 70));
+  color: oklch(30% 0.07 60);
+  text-shadow: 0 1px 0 oklch(95% 0.08 90 / 0.55);
+}
+@media (max-width: 760px) {
+  .hero-ribbon {
+    width: 112px;
+    height: 112px;
+  }
+  .hero-ribbon-band {
+    top: 20px;
+    left: -46px;
+    width: 164px;
+    font-size: 10px;
+    padding: 6px 0;
+  }
+}
 .hero-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr);
   gap: var(--s-9);
   align-items: end;
+  /* Clear the top-left corner ribbon so it never overlaps the eyebrow
+     or headline's first line. */
+  padding-top: var(--s-6);
 }
 .hero h1 {
   font-family: var(--font-display);
@@ -1385,7 +1443,11 @@ textarea.input {
   font-weight: 600;
 }
 @media (max-width: 768px) {
-  .hero-grid { gap: var(--s-7); }
+  /* The hero's top padding shrinks on mobile, so push the text column
+     further down to clear the corner ribbon. Scoped as `.hero .hero-grid`
+     (specificity 0,2,0) so it always beats the base `.hero-grid` rule
+     regardless of stylesheet injection order. */
+  .hero .hero-grid { gap: var(--s-7); padding-top: var(--s-10); }
 }
 
 /* Hide the dress-sketch decoration on the start-listing card on

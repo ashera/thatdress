@@ -5,7 +5,11 @@ import { query } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { getBaseUrl } from "@/lib/email";
 import { getShortlistIds } from "@/lib/shortlist";
-import { regionShortName, resolveCurrentRegion } from "@/lib/regions";
+import {
+  getRegionListingFeeCents,
+  regionShortName,
+  resolveCurrentRegion,
+} from "@/lib/regions";
 import { loadSiteSettings } from "@/lib/site-settings";
 import { ButtonLink, Spec } from "./_components/ui";
 import {
@@ -207,16 +211,36 @@ export default async function Home({
     r.kind === "selected" || r.kind === "auto" ? r.region : null;
   const regionShort = region ? regionShortName(region) : null;
   const regionId = region ? region.id : null;
-  const [stats, featured, shortlistedIds, latestPost, baseUrl, settings] =
-    await Promise.all([
-      getMarketplaceStats(regionId),
-      getFeaturedListings(regionId),
-      user ? getShortlistIds(user.id) : Promise.resolve(new Set<string>()),
-      getLatestPublishedPost(),
-      getBaseUrl(),
-      loadSiteSettings(),
-    ]);
+  const [
+    stats,
+    featured,
+    shortlistedIds,
+    latestPost,
+    baseUrl,
+    settings,
+    listingFeeCents,
+  ] = await Promise.all([
+    getMarketplaceStats(regionId),
+    getFeaturedListings(regionId),
+    user ? getShortlistIds(user.id) : Promise.resolve(new Set<string>()),
+    getLatestPublishedPost(),
+    getBaseUrl(),
+    loadSiteSettings(),
+    getRegionListingFeeCents(regionId),
+  ]);
   const reviewsThreshold = settings.reviewsDisplayThreshold;
+
+  // Hero corner ribbon: announces the listing fee for the current region.
+  // The fee is per-region (a partner can set one on the regions they
+  // market); most regions are free. The wording flips: a dollar amount
+  // where a fee applies, "Free to list" everywhere else (including when
+  // there's no resolved region, since getRegionListingFeeCents returns 0).
+  const hasListingFee = listingFeeCents > 0;
+  const feeDollars = listingFeeCents / 100;
+  const feeMoney = `$${
+    Number.isInteger(feeDollars) ? feeDollars : feeDollars.toFixed(2)
+  }`;
+  const ribbonLabel = hasListingFee ? `${feeMoney} to list` : "Free to list";
 
   // Organisation + WebSite JSON-LD. Organisation gives Google enough
   // signal to build a brand entity (logo + name + URL); WebSite with a
@@ -272,6 +296,11 @@ export default async function Home({
         </div>
       )}
       <section className="hero">
+        <div
+          className={`hero-ribbon${hasListingFee ? " hero-ribbon--fee" : ""}`}
+        >
+          <span className="hero-ribbon-band">{ribbonLabel}</span>
+        </div>
         <div className="hero-sketch">
           <Image
             src="/dress-sketch-tr-back.png"
@@ -318,11 +347,19 @@ export default async function Home({
                   The <span className="accent">{regionShort}</span>{" "}
                   <span className="accent">formal dress</span> marketplace.
                 </h1>
-                <p className="sub">
-                  <strong>Free</strong> to list and buy. Connect with
-                  sellers nearby — verified designers, honest condition, no
-                  listing fees, no commission.
-                </p>
+                {hasListingFee ? (
+                  <p className="sub">
+                    A <strong>{feeMoney}</strong> listing fee applies in{" "}
+                    {regionShort}. Free to buy, no commission — connect with
+                    sellers nearby, verified designers, honest condition.
+                  </p>
+                ) : (
+                  <p className="sub">
+                    <strong>Free</strong> to list and buy. Connect with
+                    sellers nearby — verified designers, honest condition, no
+                    listing fees, no commission.
+                  </p>
+                )}
               </>
             ) : (
               <>
