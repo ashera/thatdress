@@ -1,30 +1,77 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
-import { listAllRegions } from "@/lib/regions";
-import { createRegion, updateRegion } from "@/lib/actions/regions";
-import { Button, Field, Input } from "../../_components/ui";
+import { listRegionsWithDetail, type RegionListRow } from "@/lib/admin-regions";
+import { createRegion } from "@/lib/actions/regions";
+import { Badge, Button, Field, Input } from "../../_components/ui";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Manage Regions — Admin" };
 
 const ERRORS: Record<string, string> = {
   "missing-label": "A label is required.",
   "missing-slug": "Slug couldn't be derived from that label.",
 };
 
+function fmtAud(cents: number | null): string {
+  if (cents == null || cents <= 0) return "Free";
+  return new Intl.NumberFormat("en-AU", {
+    style: "currency",
+    currency: "AUD",
+    maximumFractionDigits: 0,
+  }).format(cents / 100);
+}
+
+function assignmentBadge(r: RegionListRow) {
+  if (!r.assigned) return <Badge variant="warn">Unassigned</Badge>;
+  if (r.in_free) return <Badge variant="info">Partner · free trial</Badge>;
+  return <Badge variant="ok">Partner · fee active</Badge>;
+}
+
+const cellHead: React.CSSProperties = {
+  textAlign: "left",
+  padding: "var(--s-2) var(--s-3)",
+  fontSize: 12,
+  color: "var(--ink-3)",
+  borderBottom: "1px solid var(--hairline)",
+  whiteSpace: "nowrap",
+};
+const cell: React.CSSProperties = {
+  padding: "var(--s-2) var(--s-3)",
+  fontSize: "var(--t-body-s)",
+  borderBottom: "1px solid var(--hairline)",
+  verticalAlign: "top",
+};
+const filterField: React.CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  gap: 4,
+  fontSize: 12,
+  color: "var(--ink-3)",
+};
+
 export default async function AdminRegionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; vis?: string; assign?: string }>;
 }) {
   await requireAdmin();
-  const { error } = await searchParams;
+  const { error, vis, assign } = await searchParams;
   const errorMessage = error ? (ERRORS[error] ?? "Something went wrong.") : null;
 
-  const regions = await listAllRegions();
-  const active = regions.filter((r) => r.is_active).length;
+  const all = await listRegionsWithDetail();
+  const rows = all.filter((r) => {
+    if (vis === "active" && !r.is_active) return false;
+    if (vis === "hidden" && r.is_active) return false;
+    if (assign === "assigned" && !r.assigned) return false;
+    if (assign === "unassigned" && r.assigned) return false;
+    return true;
+  });
+  const activeCount = all.filter((r) => r.is_active).length;
+  const assignedCount = all.filter((r) => r.assigned).length;
+  const filtersActive = !!vis || !!assign;
 
   return (
-    <div className="page admin-page">
+    <div className="page admin-page" style={{ maxWidth: 1280 }}>
       <Link href="/admin" className="back-link">
         ← Admin console
       </Link>
@@ -33,8 +80,9 @@ export default async function AdminRegionsPage({
         <p className="eyebrow">Admin · Regions</p>
         <h1>Manage regions</h1>
         <p className="sub">
-          {active} active · {regions.length} total. The site is exclusive to
-          active regions — anyone outside them is shown the picker.
+          {activeCount} active · {assignedCount} with a partner · {all.length}{" "}
+          total. The site is exclusive to active regions — anyone outside them
+          sees the picker.
         </p>
       </header>
 
@@ -44,41 +92,28 @@ export default async function AdminRegionsPage({
         </p>
       )}
 
-      <section className="form-card" style={{ marginBottom: "var(--s-7)" }}>
-        <h2 className="card-heading">Add a region</h2>
-        <form
-          action={createRegion}
-          style={{
-            display: "grid",
-            gap: "var(--s-3)",
-          }}
-        >
+      {/* Add a region */}
+      <section className="form-card" style={{ marginBottom: "var(--s-6)" }}>
+        <h2 className="card-heading" style={{ marginTop: 0 }}>
+          Add a region
+        </h2>
+        <form action={createRegion} style={{ display: "grid", gap: "var(--s-3)" }}>
           <div className="grid-2">
-            <Field
-              label="Label"
-              htmlFor="label"
-              help="Full display name (used in picker, topbar)."
-            >
+            <Field label="Label" htmlFor="label" help="Full display name.">
               <Input id="label" name="label" required placeholder="Austin Metro, TX" />
             </Field>
             <Field
               label="Short name"
               htmlFor="short_name"
-              help='Used in prose like "The {Austin Metro} formal-dress marketplace". Strips state/country.'
+              help='Used in prose like "The {Austin Metro} marketplace".'
             >
               <Input id="short_name" name="short_name" placeholder="Austin Metro" />
             </Field>
           </div>
-          <div className="grid-2">
-            <Field label="Slug" htmlFor="slug" help="Optional, auto-derived if blank.">
-              <Input id="slug" name="slug" placeholder="auto" />
-            </Field>
-            <div />
-          </div>
           <Field
             label="Match patterns"
             htmlFor="match_pattern"
-            help="Comma-separated. Each pattern is a case-insensitive substring of the IP-derived 'City, ST' string."
+            help="Comma-separated case-insensitive substrings of the IP-derived 'City, ST'."
           >
             <Input
               id="match_pattern"
@@ -88,12 +123,7 @@ export default async function AdminRegionsPage({
           </Field>
           <div className="grid-2">
             <Field label="Sort" htmlFor="sort_order">
-              <Input
-                id="sort_order"
-                name="sort_order"
-                type="number"
-                defaultValue={0}
-              />
+              <Input id="sort_order" name="sort_order" type="number" defaultValue={0} />
             </Field>
             <div style={{ display: "flex", alignItems: "flex-end" }}>
               <Button type="submit" variant="primary" iconRight="arrow">
@@ -104,84 +134,130 @@ export default async function AdminRegionsPage({
         </form>
       </section>
 
-      {regions.length === 0 ? (
-        <div className="empty-state">
-          <h3>No regions yet</h3>
-          <p style={{ margin: 0 }}>
-            Add one above. Without an active region, every non-admin visitor
-            will see the picker with no options.
+      {/* Filters */}
+      <form
+        method="get"
+        style={{
+          display: "flex",
+          flexDirection: "row",
+          gap: "var(--s-3)",
+          alignItems: "flex-end",
+          marginBottom: "var(--s-4)",
+          flexWrap: "wrap",
+        }}
+      >
+        <label style={filterField}>
+          Visibility
+          <select name="vis" defaultValue={vis ?? "all"} className="input">
+            <option value="all">All</option>
+            <option value="active">Active</option>
+            <option value="hidden">Hidden</option>
+          </select>
+        </label>
+        <label style={filterField}>
+          Partner
+          <select name="assign" defaultValue={assign ?? "all"} className="input">
+            <option value="all">All</option>
+            <option value="assigned">Assigned</option>
+            <option value="unassigned">Unassigned</option>
+          </select>
+        </label>
+        <Button type="submit" variant="dark" size="sm">
+          Filter
+        </Button>
+        {filtersActive && (
+          <Link
+            href="/admin/regions"
+            style={{ fontSize: "var(--t-body-s)", color: "var(--ink-3)", alignSelf: "center" }}
+          >
+            Clear
+          </Link>
+        )}
+      </form>
+
+      {/* Regions table */}
+      <section className="form-card">
+        {rows.length === 0 ? (
+          <p className="card-sub" style={{ margin: 0 }}>
+            {all.length === 0
+              ? "No regions yet — add one above."
+              : "No regions match these filters."}
           </p>
-        </div>
-      ) : (
-        <div className="ref-table">
-          <div className="ref-row region-row ref-head">
-            <div>Label</div>
-            <div>Short name</div>
-            <div>Slug</div>
-            <div>Match patterns</div>
-            <div>Sort</div>
-            <div>Active</div>
-            <div></div>
+        ) : (
+          <div style={{ overflowX: "auto" }}>
+            <table className="data-table" style={{ width: "100%" }}>
+              <thead>
+                <tr>
+                  <th style={cellHead}>Region</th>
+                  <th style={cellHead}>Visibility</th>
+                  <th style={cellHead}>Partner</th>
+                  <th style={cellHead}>Listing fee</th>
+                  <th style={cellHead}>Active</th>
+                  <th style={cellHead}>Applications</th>
+                  <th style={cellHead}>Sort</th>
+                  <th style={cellHead}></th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr key={r.id}>
+                    <td style={cell}>
+                      <Link
+                        href={`/admin/regions/${r.id}`}
+                        style={{ color: "var(--ink-1)", fontWeight: 600 }}
+                      >
+                        {r.label}
+                      </Link>
+                      <div
+                        style={{
+                          fontFamily: "var(--font-mono)",
+                          fontSize: 11,
+                          color: "var(--ink-4)",
+                        }}
+                      >
+                        {r.slug}
+                      </div>
+                    </td>
+                    <td style={cell}>
+                      {r.is_active ? (
+                        <Badge variant="ok">Active</Badge>
+                      ) : (
+                        <Badge variant="ink">Hidden</Badge>
+                      )}
+                    </td>
+                    <td style={cell}>
+                      {assignmentBadge(r)}
+                      {r.partner_email && (
+                        <div style={{ fontSize: 12, color: "var(--ink-3)", marginTop: 2 }}>
+                          {r.partner_email}
+                        </div>
+                      )}
+                    </td>
+                    <td style={cell}>{r.assigned ? fmtAud(r.listing_fee_cents) : "—"}</td>
+                    <td style={cell}>{r.active_listings}</td>
+                    <td style={cell}>
+                      {r.pending_apps > 0 ? (
+                        <Badge variant="warn">{r.pending_apps} pending</Badge>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td style={cell}>{r.sort_order}</td>
+                    <td style={cell}>
+                      <Link
+                        href={`/admin/regions/${r.id}`}
+                        style={{ color: "var(--volt-700)", fontWeight: 600 }}
+                      >
+                        Manage →
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          {regions.map((r) => (
-            <form
-              key={r.id}
-              action={updateRegion}
-              className={`ref-row region-row ${r.is_active ? "" : "is-inactive"}`}
-            >
-              <input type="hidden" name="id" value={r.id} />
-              <div>
-                <Input
-                  name="label"
-                  defaultValue={r.label}
-                  required
-                  className="--square"
-                />
-              </div>
-              <div>
-                <Input
-                  name="short_name"
-                  defaultValue={r.short_name ?? ""}
-                  className="--square"
-                  placeholder="(uses label)"
-                />
-              </div>
-              <div className="ref-slug">{r.slug}</div>
-              <div>
-                <Input
-                  name="match_pattern"
-                  defaultValue={r.match_pattern ?? ""}
-                  className="--square"
-                  placeholder="(none)"
-                />
-              </div>
-              <div>
-                <Input
-                  name="sort_order"
-                  type="number"
-                  defaultValue={r.sort_order}
-                  className="--square"
-                />
-              </div>
-              <div>
-                <label className="ref-toggle">
-                  <input
-                    type="checkbox"
-                    name="is_active"
-                    defaultChecked={r.is_active}
-                  />
-                  <span>{r.is_active ? "Active" : "Hidden"}</span>
-                </label>
-              </div>
-              <div className="ref-actions">
-                <Button type="submit" variant="ghost" size="sm">
-                  Save
-                </Button>
-              </div>
-            </form>
-          ))}
-        </div>
-      )}
+        )}
+      </section>
     </div>
   );
 }

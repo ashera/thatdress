@@ -16,6 +16,14 @@ function note(formData: FormData): string | null {
   return v.length > 0 ? v : null;
 }
 
+/** Where to land after the decision: a safe relative `from` (e.g. the
+ *  region detail page) when provided, else the applications list. */
+function backTo(formData: FormData, q: string): string {
+  const f = String(formData.get("from") ?? "");
+  const base = f.startsWith("/") && !f.startsWith("//") ? f : PATH;
+  return base + (base.includes("?") ? "&" : "?") + q;
+}
+
 /**
  * Approve an application: grant the region, flag the user as a partner,
  * and start the 12-month free window (snapshotting the platform-fee rate).
@@ -62,13 +70,14 @@ export async function approveApplication(formData: FormData): Promise<void> {
     });
   } catch (e) {
     if ((e as { code?: string }).code === "23505") {
-      redirect(`${PATH}?error=taken`);
+      redirect(backTo(formData, "error=taken"));
     }
-    redirect(`${PATH}?error=approve`);
+    redirect(backTo(formData, "error=approve"));
   }
 
   revalidatePath(PATH);
-  redirect(`${PATH}?done=approved`);
+  revalidatePath("/admin/regions");
+  redirect(backTo(formData, "done=approved"));
 }
 
 /** Reject a pending application with an optional note. */
@@ -85,5 +94,5 @@ export async function rejectApplication(formData: FormData): Promise<void> {
     [id, admin.id, note(formData)],
   );
   revalidatePath(PATH);
-  redirect(`${PATH}?done=rejected`);
+  redirect(backTo(formData, "done=rejected"));
 }
