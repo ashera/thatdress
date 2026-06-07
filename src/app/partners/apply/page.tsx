@@ -9,7 +9,9 @@ import {
   PARTNER_PLATFORM_FEE_PCT,
 } from "@/lib/partner-programme";
 import { applyForRegion } from "@/lib/actions/partner-apply";
+import { getSandboxRegionForUser } from "@/lib/regions";
 import { Badge, Button, Field, Input, Textarea } from "../../_components/ui";
+import { ApplicationTimeline } from "../../_components/application-timeline";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Apply to partner — frockd" };
@@ -35,10 +37,12 @@ export default async function PartnerApplyPage({
   if (!user) redirect(`/login?next=${encodeURIComponent("/partners/apply")}`);
 
   const { submitted, error } = await searchParams;
-  const [regions, myApps] = await Promise.all([
+  const [regions, myApps, sandbox] = await Promise.all([
     getApplyRegions(user.id),
     getMyApplications(user.id),
+    getSandboxRegionForUser(user.id),
   ]);
+  const hasSandbox = sandbox !== null;
   const available = regions.filter(
     (r) => !r.taken && !r.yours && !r.pendingByYou,
   );
@@ -216,30 +220,59 @@ export default async function PartnerApplyPage({
           <h2 className="card-heading" style={{ marginTop: 0 }}>
             Your applications
           </h2>
-          <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+          <ul
+            style={{
+              listStyle: "none",
+              margin: 0,
+              padding: 0,
+              display: "flex",
+              flexDirection: "column",
+              gap: "var(--s-4)",
+            }}
+          >
             {myApps.map((a) => (
               <li
                 key={a.id}
                 style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: "var(--s-3)",
-                  alignItems: "center",
-                  padding: "var(--s-3) 0",
-                  borderBottom: "1px solid var(--hairline)",
+                  padding: "var(--s-4)",
+                  border: "1px solid var(--hairline)",
+                  borderRadius: 12,
+                  background: "var(--surface)",
                 }}
               >
-                <div>
-                  <div style={{ fontWeight: 600, color: "var(--ink-1)" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: "var(--s-3)",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <div style={{ fontWeight: 700, color: "var(--ink-1)" }}>
                     {a.region_label}
                   </div>
-                  {a.decision_note && (
-                    <div style={{ fontSize: 13, color: "var(--ink-3)" }}>
-                      {a.decision_note}
-                    </div>
-                  )}
+                  {statusBadge(a.status)}
                 </div>
-                {statusBadge(a.status)}
+
+                <ApplicationTimeline status={a.status} hasSandbox={hasSandbox} />
+
+                {a.decision_note && (
+                  <p
+                    style={{
+                      fontSize: 13,
+                      color: "var(--ink-3)",
+                      margin: "var(--s-3) 0 0",
+                      paddingTop: "var(--s-3)",
+                      borderTop: "1px solid var(--hairline)",
+                    }}
+                  >
+                    <strong style={{ color: "var(--ink-2)" }}>
+                      Note from our team:
+                    </strong>{" "}
+                    {a.decision_note}
+                  </p>
+                )}
               </li>
             ))}
           </ul>
