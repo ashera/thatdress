@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createSession, getCurrentUser, hashPassword } from "@/lib/auth";
 import { query } from "@/lib/db";
 import { dispatchVerificationEmail } from "@/lib/email-verify";
+import { provisionSandboxForUser } from "@/lib/partner-sandbox";
 import { passwordMeetsRules } from "@/lib/password-rules";
 import {
   ensureReferralCode,
@@ -129,4 +130,30 @@ export async function applyForRegion(formData: FormData): Promise<void> {
   }
 
   redirect(`${APPLY}?submitted=1`);
+}
+
+/**
+ * Self-service: a prospect spins up their own sandbox / test region after
+ * applying, to trial the partner experience while they wait for a decision.
+ * Gated to applicants (must have a pending application) and one-per-user.
+ */
+export async function createMySandbox(): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect(`/login?next=${encodeURIComponent(APPLY)}`);
+
+  const pending = await query(
+    `SELECT 1 FROM partner_applications
+      WHERE user_id = $1::bigint AND status = 'pending' LIMIT 1`,
+    [user.id],
+  );
+  if (pending.rows.length === 0) redirect(`${APPLY}?error=no-application`);
+
+  try {
+    await provisionSandboxForUser(user.id);
+  } catch (e) {
+    const code = e instanceof Error ? e.message : "error";
+    redirect(`${APPLY}?error=sandbox-${code === "exists" ? "exists" : "failed"}`);
+  }
+
+  redirect(`${APPLY}?sandbox=ready`);
 }

@@ -113,3 +113,42 @@ test("admin provisions a private sandbox, then tears it down", async ({
 
   await adminCtx.close();
 });
+
+test("a prospect can create their own sandbox from the apply page", async ({
+  browser,
+}) => {
+  const u = await createTestUser();
+  const r = await createTestRegion();
+  await createPartnerApplication(u.id, r.id); // pending application
+
+  const ctx = await browser.newContext();
+  await ctx.addCookies([
+    { name: "session", value: await mintSession(u.id), url: BASE, httpOnly: true },
+  ]);
+  const page = await ctx.newPage();
+  try {
+    await page.goto("/partners/apply", { waitUntil: "networkidle" });
+    await expect(
+      page.getByRole("heading", { name: /Try it in a sandbox/i }),
+    ).toBeVisible();
+
+    await Promise.all([
+      page.waitForURL(/sandbox=ready/, { timeout: 20_000 }),
+      page.getByRole("button", { name: /Create my sandbox/i }).click(),
+    ]);
+
+    const sb = await getSandboxRegion(u.id);
+    expect(sb).not.toBeNull();
+    expect(await countListingsInRegion(sb!.id)).toBeGreaterThan(0);
+    expect(await getUserIsPartner(u.id)).toBe(true);
+
+    // The card now offers to enter the sandbox instead of creating one.
+    await expect(
+      page.getByRole("button", { name: /Enter your sandbox/i }),
+    ).toBeVisible();
+  } finally {
+    await cleanupSandboxFor(u.id);
+    await cleanupUsers([u.id]);
+    await deleteTestRegions([r.id]);
+  }
+});

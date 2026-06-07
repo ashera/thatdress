@@ -9,8 +9,11 @@ import {
 } from "@/lib/partner-programme";
 import {
   applyForRegion,
+  createMySandbox,
   registerPartnerApplicant,
 } from "@/lib/actions/partner-apply";
+import { enterSandbox } from "@/lib/actions/regions";
+import { getSandboxRegionForUser } from "@/lib/regions";
 import { PASSWORD_RULES_SUMMARY } from "@/lib/password-rules";
 import { Badge, Button, Field, Input, Textarea } from "../../_components/ui";
 import { ApplicationTimeline } from "../../_components/application-timeline";
@@ -29,7 +32,56 @@ const ERRORS: Record<string, string> = {
   "weak-password": PASSWORD_RULES_SUMMARY,
   "long-password": "Password must be 72 characters or fewer.",
   "email-taken": "An account with that email already exists. Log in instead.",
+  "no-application": "Apply for a region first, then you can spin up a sandbox.",
+  "sandbox-exists": "You already have a sandbox — jump back in below.",
+  "sandbox-failed": "Couldn’t create your sandbox just now — please try again.",
 };
+
+/** Explains the sandbox and offers a one-click create (or enter, if they
+ *  already have one). Shown to applicants after they've applied. */
+function SandboxCard({ sandbox }: { sandbox: { id: string } | null }) {
+  return (
+    <section className="form-card" style={{ marginTop: "var(--s-5)" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "var(--s-2)",
+          marginBottom: 4,
+        }}
+      >
+        <h2 className="card-heading" style={{ margin: 0 }}>
+          Try it in a sandbox
+        </h2>
+        <Badge variant="info">Test region</Badge>
+      </div>
+      <p className="card-sub" style={{ marginTop: 0 }}>
+        A sandbox is your own private test region — a full copy of the partner
+        experience that only you can see. Browse it as a buyer, list a dress as
+        a seller, and explore the partner dashboard and listing-fee controls.
+        Nothing in your sandbox is visible to the public and it doesn&rsquo;t
+        affect your application — we&rsquo;ve even added a few sample listings to
+        get you started. You can leave the sandbox any time from the banner at
+        the top.
+      </p>
+      {sandbox ? (
+        <form action={enterSandbox}>
+          <input type="hidden" name="region_id" value={sandbox.id} />
+          <input type="hidden" name="next" value="/listings" />
+          <Button type="submit" variant="primary" iconRight="arrow">
+            Enter your sandbox
+          </Button>
+        </form>
+      ) : (
+        <form action={createMySandbox}>
+          <Button type="submit" variant="primary" iconRight="arrow">
+            Create my sandbox
+          </Button>
+        </form>
+      )}
+    </section>
+  );
+}
 
 function ApplyHero() {
   return (
@@ -73,10 +125,12 @@ export default async function PartnerApplyPage({
     submitted?: string;
     error?: string;
     registered?: string;
+    sandbox?: string;
   }>;
 }) {
   const user = await getCurrentUser();
-  const { submitted, error, registered } = await searchParams;
+  const { submitted, error, registered, sandbox: sandboxFlag } =
+    await searchParams;
   const errorMessage = error ? ERRORS[error] ?? "Something went wrong." : null;
 
   // Anonymous prospects register inline here rather than detouring through
@@ -86,9 +140,10 @@ export default async function PartnerApplyPage({
     return <PartnerSignup errorMessage={errorMessage} />;
   }
 
-  const [regions, myApps] = await Promise.all([
+  const [regions, myApps, sandbox] = await Promise.all([
     getApplyRegions(user.id),
     getMyApplications(user.id),
+    getSandboxRegionForUser(user.id),
   ]);
   const available = regions.filter(
     (r) => !r.taken && !r.yours && !r.pendingByYou,
@@ -117,6 +172,11 @@ export default async function PartnerApplyPage({
         <p className="form-success" style={{ marginBottom: "var(--s-4)" }}>
           Application received — we&rsquo;ll review it and be in touch. You can
           track its status below.
+        </p>
+      )}
+      {sandboxFlag === "ready" && (
+        <p className="form-success" style={{ marginBottom: "var(--s-4)" }}>
+          Your sandbox is ready — jump in below to explore the partner tools.
         </p>
       )}
       {errorMessage && (
@@ -257,6 +317,8 @@ export default async function PartnerApplyPage({
           </form>
         </section>
       )}
+
+      {(hasPending || sandbox) && <SandboxCard sandbox={sandbox} />}
 
       {myApps.length > 0 && (
         <section className="form-card" style={{ marginTop: "var(--s-5)" }}>

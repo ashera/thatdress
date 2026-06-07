@@ -213,11 +213,55 @@ async function seedSandboxListings(
   return made;
 }
 
+/** Core provisioning, inside an open transaction: create the inactive
+ *  test region, flag the user as a partner, grant them the region with the
+ *  standard free window, and seed listings. Throws "exists" if the user
+ *  already has a sandbox. */
+async function provisionInTx(
+  c: PoolClient,
+  userId: string,
+  email: string,
+): Promise<SandboxResult> {
+  const existing = await c.query<{ id: string }>(
+    `SELECT id::text FROM regions
+      WHERE is_test = TRUE AND sandbox_user_id = $1::bigint LIMIT 1`,
+    [userId],
+  );
+  if (existing.rows.length > 0) throw new Error("exists");
+
+  const slug = `sandbox-u${userId}`;
+  const label = `Sandbox · ${email}`;
+  const reg = await c.query<{ id: string }>(
+    `INSERT INTO regions (slug, label, short_name, is_active, is_test,
+                          sandbox_user_id, sort_order)
+     VALUES ($1, $2, 'Sandbox', FALSE, TRUE, $3::bigint, 9999)
+     RETURNING id::text`,
+    [slug, label, userId],
+  );
+  const regionId = reg.rows[0]!.id;
+
+  // Flag as partner + grant the sandbox region with the normal free window
+  // so the partner dashboard + fee controls are fully usable.
+  await c.query(`UPDATE users SET is_partner = TRUE WHERE id = $1::bigint`, [
+    userId,
+  ]);
+  await c.query(
+    `INSERT INTO partner_marketing_regions
+       (user_id, region_id, listing_fee_cents, activated_at, free_until,
+        platform_fee_pct)
+     VALUES ($1::bigint, $2::bigint, 0, NOW(),
+             NOW() + (INTERVAL '1 month' * $3::int), $4)`,
+    [userId, regionId, PARTNER_FREE_MONTHS, PARTNER_PLATFORM_FEE_PCT],
+  );
+
+  const listings = await seedSandboxListings(c, regionId);
+  return { regionId, label, listings };
+}
+
 /**
- * Provision a sandbox for the user behind a pending partner application.
- * Creates the inactive test region, flags the user as a partner, grants
- * them the region (with the standard free window), and seeds listings.
- * Throws "exists" if the prospect already has a sandbox.
+ * Provision a sandbox for the user behind a partner application (admin path,
+ * keyed by application id). Throws "not-found" if the application is gone,
+ * "exists" if the prospect already has a sandbox.
  */
 export async function provisionSandboxForApplication(
   applicationId: string,
@@ -225,57 +269,38 @@ export async function provisionSandboxForApplication(
   if (!/^\d+$/.test(applicationId)) throw new Error("bad-id");
 
   return withTransaction(async (c) => {
-    const a = await c.query<{
-      user_id: string;
-      user_email: string;
-      region_label: string;
-    }>(
-      `SELECT a.user_id::text AS user_id, u.email AS user_email,
-              r.label AS region_label
+    const a = await c.query<{ user_id: string; user_email: string }>(
+      `SELECT a.user_id::text AS user_id, u.email AS user_email
          FROM partner_applications a
-         JOIN users u   ON u.id = a.user_id
-         JOIN regions r ON r.id = a.region_id
+         JOIN users u ON u.id = a.user_id
         WHERE a.id = $1::bigint
         FOR UPDATE OF a`,
       [applicationId],
     );
     const app = a.rows[0];
     if (!app) throw new Error("not-found");
+    return provisionInTx(c, app.user_id, app.user_email);
+  });
+}
 
-    const existing = await c.query<{ id: string }>(
-      `SELECT id::text FROM regions
-        WHERE is_test = TRUE AND sandbox_user_id = $1::bigint LIMIT 1`,
-      [app.user_id],
+/**
+ * Provision a sandbox for a user directly (self-service path — a prospect
+ * spins up their own from the apply page). Throws "not-found" if the user
+ * is gone, "exists" if they already have a sandbox.
+ */
+export async function provisionSandboxForUser(
+  userId: string,
+): Promise<SandboxResult> {
+  if (!/^\d+$/.test(userId)) throw new Error("bad-id");
+
+  return withTransaction(async (c) => {
+    const u = await c.query<{ email: string }>(
+      `SELECT email FROM users WHERE id = $1::bigint FOR UPDATE`,
+      [userId],
     );
-    if (existing.rows.length > 0) throw new Error("exists");
-
-    const slug = `sandbox-u${app.user_id}`;
-    const label = `Sandbox · ${app.user_email}`;
-    const reg = await c.query<{ id: string }>(
-      `INSERT INTO regions (slug, label, short_name, is_active, is_test,
-                            sandbox_user_id, sort_order)
-       VALUES ($1, $2, 'Sandbox', FALSE, TRUE, $3::bigint, 9999)
-       RETURNING id::text`,
-      [slug, label, app.user_id],
-    );
-    const regionId = reg.rows[0]!.id;
-
-    // Flag as partner + grant the sandbox region with the normal free
-    // window so the partner dashboard + fee controls are fully usable.
-    await c.query(`UPDATE users SET is_partner = TRUE WHERE id = $1::bigint`, [
-      app.user_id,
-    ]);
-    await c.query(
-      `INSERT INTO partner_marketing_regions
-         (user_id, region_id, listing_fee_cents, activated_at, free_until,
-          platform_fee_pct)
-       VALUES ($1::bigint, $2::bigint, 0, NOW(),
-               NOW() + (INTERVAL '1 month' * $3::int), $4)`,
-      [app.user_id, regionId, PARTNER_FREE_MONTHS, PARTNER_PLATFORM_FEE_PCT],
-    );
-
-    const listings = await seedSandboxListings(c, regionId);
-    return { regionId, label, listings };
+    const email = u.rows[0]?.email;
+    if (!email) throw new Error("not-found");
+    return provisionInTx(c, userId, email);
   });
 }
 
