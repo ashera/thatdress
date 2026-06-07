@@ -56,17 +56,17 @@ test("apply for a region, admin approves, partner is activated", async ({ browse
   expect(state.appStatus).toBe("pending");
   expect(state.isPartner).toBe(false);
 
-  // 2) Admin approves the applicant's application.
+  // 2) Admin approves the applicant's application from the region page
+  //    (decisions live there now, not on the applications list).
   const adminCtx = await browser.newContext();
   await adminCtx.addCookies([
     { name: "session", value: await mintSession(admin.id), url: BASE, httpOnly: true },
   ]);
   const mp = await adminCtx.newPage();
-  await mp.goto("/admin/partner-applications", { waitUntil: "networkidle" });
-  const row = mp.locator("tr", { hasText: applicant.email });
+  await mp.goto(`/admin/regions/${region.id}`, { waitUntil: "networkidle" });
   await Promise.all([
     mp.waitForURL(/done=approved/, { timeout: 20_000 }),
-    row.getByRole("button", { name: /^Approve$/i }).click(),
+    mp.getByRole("button", { name: /Approve & activate/i }).click(),
   ]);
 
   // 3) Activated: partner flag set, region granted, free window in the

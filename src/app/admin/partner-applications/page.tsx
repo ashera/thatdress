@@ -1,14 +1,12 @@
+import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
 import { listApplications } from "@/lib/partner-programme";
 import { getSandboxesByUser } from "@/lib/partner-sandbox";
-import {
-  approveApplication,
-  deleteApplication,
-  rejectApplication,
-} from "@/lib/actions/admin-partner-applications";
+import { deleteApplication } from "@/lib/actions/admin-partner-applications";
 import { endSandbox, startSandbox } from "@/lib/actions/admin-sandbox";
-import { Badge, Button, Input } from "../../_components/ui";
+import { Badge, Button } from "../../_components/ui";
 import { ConfirmSubmit } from "../../_components/confirm-submit";
+import { ClickableRow } from "../../_components/clickable-row";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Partner applications — Admin" };
@@ -44,16 +42,12 @@ function statusBadge(status: string) {
 }
 
 const NOTES: Record<string, string> = {
-  approved: "Application approved — partner activated.",
-  rejected: "Application rejected.",
   deleted: "Application deleted.",
   "sandbox-started":
     "Sandbox created — the applicant can trial the partner tools and browse their private test region.",
   "sandbox-ended": "Sandbox removed.",
 };
 const ERRORS: Record<string, string> = {
-  taken: "That region was already granted to another partner. Reject this application instead.",
-  approve: "Couldn’t approve — the application may have already been decided.",
   "sandbox-exists": "That applicant already has a sandbox.",
   "sandbox-failed": "Couldn’t create the sandbox — please try again.",
 };
@@ -79,9 +73,9 @@ export default async function PartnerApplicationsPage({
         <p className="eyebrow">Admin · Partner applications</p>
         <h1>Partner applications</h1>
         <p className="sub">
-          {pendingCount} pending · {apps.length} total. Approving grants the
-          region, flags the user as a partner, and starts their 12-month free
-          window.
+          {pendingCount} pending · {apps.length} total. Open a row to review
+          and approve or reject it on the region&rsquo;s page. Delete here to
+          clear out spam, withdrawn, or test applications.
         </p>
       </header>
 
@@ -106,9 +100,9 @@ export default async function PartnerApplicationsPage({
             <table className="data-table" style={{ width: "100%" }}>
               <thead>
                 <tr>
-                  {["Region", "Applicant", "Submitted", "Status", "Sandbox", "Actions"].map(
+                  {["Region", "Applicant", "Submitted", "Status", "Sandbox", ""].map(
                     (h) => (
-                      <th key={h} style={cellHead}>
+                      <th key={h || "actions"} style={cellHead}>
                         {h}
                       </th>
                     ),
@@ -121,13 +115,17 @@ export default async function PartnerApplicationsPage({
                   const sb = sandboxes[a.user_id];
                   const hasDetail =
                     !!a.business_name || !!a.pitch || !!a.expected_inventory;
+                  const regionHref = `/admin/regions/${a.region_id}`;
                   return (
-                    <tr key={a.id}>
+                    <ClickableRow key={a.id} href={regionHref}>
                       {/* Region */}
                       <td style={cell}>
-                        <div style={{ fontWeight: 600, color: "var(--ink-1)" }}>
+                        <Link
+                          href={regionHref}
+                          style={{ color: "var(--ink-1)", fontWeight: 600 }}
+                        >
                           {a.region_label}
-                        </div>
+                        </Link>
                         {a.region_taken && (
                           <div style={{ marginTop: 4 }}>
                             <Badge variant="warn">
@@ -206,9 +204,7 @@ export default async function PartnerApplicationsPage({
                           <div
                             style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-start" }}
                           >
-                            <Badge variant="info">
-                              Active · {sb.listings}
-                            </Badge>
+                            <Badge variant="info">Active · {sb.listings}</Badge>
                             <form action={endSandbox}>
                               <input type="hidden" name="region_id" value={sb.regionId} />
                               <Button type="submit" variant="ghost" size="sm">
@@ -228,52 +224,16 @@ export default async function PartnerApplicationsPage({
                         )}
                       </td>
 
-                      {/* Actions */}
-                      <td style={{ ...cell, minWidth: 200 }}>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                          {isPending && (
-                            <>
-                              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                                <form action={approveApplication}>
-                                  <input type="hidden" name="id" value={a.id} />
-                                  <Button
-                                    type="submit"
-                                    variant="primary"
-                                    size="sm"
-                                    disabled={a.region_taken}
-                                  >
-                                    Approve
-                                  </Button>
-                                </form>
-                              </div>
-                              <form
-                                action={rejectApplication}
-                                style={{ display: "flex", gap: 6, alignItems: "center" }}
-                              >
-                                <input type="hidden" name="id" value={a.id} />
-                                <Input
-                                  name="note"
-                                  maxLength={500}
-                                  placeholder="Reason (optional)"
-                                  style={{ maxWidth: 150, fontSize: 12 }}
-                                />
-                                <Button type="submit" variant="ghost" size="sm">
-                                  Reject
-                                </Button>
-                              </form>
-                            </>
-                          )}
-                          <form action={deleteApplication}>
-                            <input type="hidden" name="id" value={a.id} />
-                            <ConfirmSubmit
-                              message="Delete this application permanently? This can't be undone."
-                            >
-                              Delete
-                            </ConfirmSubmit>
-                          </form>
-                        </div>
+                      {/* Delete */}
+                      <td style={{ ...cell, textAlign: "right", whiteSpace: "nowrap" }}>
+                        <form action={deleteApplication}>
+                          <input type="hidden" name="id" value={a.id} />
+                          <ConfirmSubmit message="Delete this application permanently? This can't be undone.">
+                            Delete
+                          </ConfirmSubmit>
+                        </form>
                       </td>
-                    </tr>
+                    </ClickableRow>
                   );
                 })}
               </tbody>
