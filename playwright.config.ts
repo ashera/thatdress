@@ -19,17 +19,25 @@ const LOCAL_URL = process.env.BASE_URL ?? "http://localhost:3000";
 
 export default defineConfig({
   testDir: "./tests",
+  // Warm `next dev` routes before workers start so cold, parallel
+  // first-hit compiles don't race the navigation timeout (no-op for
+  // non-local targets like the prod smoke run).
+  globalSetup: "./tests/support/warm-routes.ts",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: 1,
   workers: process.env.CI ? 1 : undefined,
-  timeout: 30_000,
+  // Multi-step write flows (e.g. the publish wizard) plus a dev server
+  // serving several parallel workers can legitimately run ~30s, so the old
+  // 30s cap tipped them into timeout flakes. Give real headroom; warmup
+  // (globalSetup) keeps the common case fast.
+  timeout: 60_000,
   expect: { timeout: 10_000 },
   reporter: [["list"], ["./tests/reporter/db-reporter.ts"]],
   use: {
     trace: "on-first-retry",
     actionTimeout: 15_000,
-    navigationTimeout: 20_000,
+    navigationTimeout: 45_000,
   },
   projects: [
     {
