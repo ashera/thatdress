@@ -88,6 +88,15 @@ export async function applyForRegion(formData: FormData): Promise<void> {
   const regionId = String(formData.get("region_id") ?? "").trim();
   if (!/^\d+$/.test(regionId)) redirect(`${APPLY}?error=region`);
 
+  // One application in flight at a time: block a new one while any of the
+  // prospect's applications is still pending review.
+  const pending = await query(
+    `SELECT 1 FROM partner_applications
+      WHERE user_id = $1::bigint AND status = 'pending' LIMIT 1`,
+    [user.id],
+  );
+  if (pending.rows.length > 0) redirect(`${APPLY}?error=pending-exists`);
+
   const available = await query(
     `SELECT 1 FROM regions r
       WHERE r.id = $1::bigint AND r.is_active = TRUE

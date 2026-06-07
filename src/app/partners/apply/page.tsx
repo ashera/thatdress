@@ -24,6 +24,8 @@ const ERRORS: Record<string, string> = {
   region: "Please choose a region.",
   unavailable: "That region isn't available anymore.",
   duplicate: "You already have a pending application for that region.",
+  "pending-exists":
+    "You already have an application under review — you can apply for another region once it's decided.",
   "invalid-email": "Please enter a valid email address.",
   "weak-password": PASSWORD_RULES_SUMMARY,
   "long-password": "Password must be 72 characters or fewer.",
@@ -94,6 +96,8 @@ export default async function PartnerApplyPage({
   const available = regions.filter(
     (r) => !r.taken && !r.yours && !r.pendingByYou,
   );
+  // A prospect may only have one application in flight at a time.
+  const hasPending = myApps.some((a) => a.status === "pending");
 
   return (
     <div className="page">
@@ -132,6 +136,17 @@ export default async function PartnerApplyPage({
           <p className="card-sub" style={{ margin: 0 }}>
             There are no live regions to apply for right now. Check back soon
             — or <Link href="/support">contact us</Link>.
+          </p>
+        </section>
+      ) : hasPending ? (
+        <section className="form-card">
+          <h2 className="card-heading" style={{ marginTop: 0 }}>
+            Application under review
+          </h2>
+          <p className="card-sub" style={{ margin: 0 }}>
+            You can only have one application in progress at a time. We&rsquo;re
+            reviewing your current application — once it&rsquo;s decided you can
+            apply for another region. Track its progress below.
           </p>
         </section>
       ) : (

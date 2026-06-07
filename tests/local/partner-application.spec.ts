@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import {
   cleanupUsers,
+  createPartnerApplication,
   createTestRegion,
   createTestUser,
   deleteTestRegions,
@@ -79,4 +80,29 @@ test("apply for a region, admin approves, partner is activated", async ({ browse
   const dash = await applicantCtx.newPage();
   await dash.goto("/partner", { waitUntil: "domcontentloaded" });
   await expect(dash.getByText(region.label).first()).toBeVisible();
+});
+
+test("a prospect with a pending application can't open a second one", async ({
+  browser,
+}) => {
+  const u = await createTestUser();
+  const r = await createTestRegion();
+  await createPartnerApplication(u.id, r.id); // already pending
+
+  const ctx = await browser.newContext();
+  await ctx.addCookies([
+    { name: "session", value: await mintSession(u.id), url: BASE, httpOnly: true },
+  ]);
+  const page = await ctx.newPage();
+  try {
+    await page.goto("/partners/apply", { waitUntil: "networkidle" });
+    await expect(
+      page.getByRole("heading", { name: /Application under review/i }),
+    ).toBeVisible();
+    // The region-picker form is gone — no second application can be started.
+    await expect(page.locator('input[name="region_id"]')).toHaveCount(0);
+  } finally {
+    await cleanupUsers([u.id]);
+    await deleteTestRegions([r.id]);
+  }
 });
