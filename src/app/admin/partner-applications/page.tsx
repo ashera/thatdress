@@ -3,10 +3,12 @@ import { listApplications } from "@/lib/partner-programme";
 import { getSandboxesByUser } from "@/lib/partner-sandbox";
 import {
   approveApplication,
+  deleteApplication,
   rejectApplication,
 } from "@/lib/actions/admin-partner-applications";
 import { endSandbox, startSandbox } from "@/lib/actions/admin-sandbox";
 import { Badge, Button, Input } from "../../_components/ui";
+import { ConfirmSubmit } from "../../_components/confirm-submit";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Partner applications — Admin" };
@@ -20,6 +22,42 @@ function fmtDate(iso: string): string {
   });
 }
 
+const cellHead: React.CSSProperties = {
+  textAlign: "left",
+  padding: "var(--s-2) var(--s-3)",
+  fontSize: 12,
+  color: "var(--ink-3)",
+  borderBottom: "1px solid var(--hairline)",
+  whiteSpace: "nowrap",
+};
+const cell: React.CSSProperties = {
+  padding: "var(--s-3)",
+  fontSize: "var(--t-body-s)",
+  borderBottom: "1px solid var(--hairline)",
+  verticalAlign: "top",
+};
+
+function statusBadge(status: string) {
+  if (status === "approved") return <Badge variant="ok">Approved</Badge>;
+  if (status === "rejected") return <Badge variant="warn">Rejected</Badge>;
+  return <Badge variant="info">Pending</Badge>;
+}
+
+const NOTES: Record<string, string> = {
+  approved: "Application approved — partner activated.",
+  rejected: "Application rejected.",
+  deleted: "Application deleted.",
+  "sandbox-started":
+    "Sandbox created — the applicant can trial the partner tools and browse their private test region.",
+  "sandbox-ended": "Sandbox removed.",
+};
+const ERRORS: Record<string, string> = {
+  taken: "That region was already granted to another partner. Reject this application instead.",
+  approve: "Couldn’t approve — the application may have already been decided.",
+  "sandbox-exists": "That applicant already has a sandbox.",
+  "sandbox-failed": "Couldn’t create the sandbox — please try again.",
+};
+
 export default async function PartnerApplicationsPage({
   searchParams,
 }: {
@@ -31,252 +69,218 @@ export default async function PartnerApplicationsPage({
     listApplications(),
     getSandboxesByUser(),
   ]);
-  const pending = apps.filter((a) => a.status === "pending");
-  const decided = apps.filter((a) => a.status !== "pending");
+  const pendingCount = apps.filter((a) => a.status === "pending").length;
+  const doneMessage = done ? NOTES[done] ?? null : null;
+  const errorMessage = error ? ERRORS[error] ?? "Something went wrong." : null;
 
   return (
-    <div className="page page--pad" style={{ maxWidth: 1000 }}>
-      <header style={{ marginBottom: "var(--s-5)" }}>
+    <div className="page admin-page" style={{ maxWidth: 1180 }}>
+      <header className="admin-header">
+        <p className="eyebrow">Admin · Partner applications</p>
         <h1>Partner applications</h1>
         <p className="sub">
-          Review applications to run a region. Approving grants the region,
-          flags the user as a partner, and starts their 12-month free window.
+          {pendingCount} pending · {apps.length} total. Approving grants the
+          region, flags the user as a partner, and starts their 12-month free
+          window.
         </p>
       </header>
 
-      {done === "approved" && (
+      {doneMessage && (
         <p className="form-success" style={{ marginBottom: "var(--s-4)" }}>
-          Application approved — partner activated.
+          {doneMessage}
         </p>
       )}
-      {done === "rejected" && (
-        <p className="form-success" style={{ marginBottom: "var(--s-4)" }}>
-          Application rejected.
-        </p>
-      )}
-      {error === "taken" && (
+      {errorMessage && (
         <p className="form-error" style={{ marginBottom: "var(--s-4)" }}>
-          That region was already granted to another partner. Reject this
-          application instead.
-        </p>
-      )}
-      {error === "approve" && (
-        <p className="form-error" style={{ marginBottom: "var(--s-4)" }}>
-          Couldn&rsquo;t approve — the application may have already been decided.
-        </p>
-      )}
-      {done === "sandbox-started" && (
-        <p className="form-success" style={{ marginBottom: "var(--s-4)" }}>
-          Sandbox created — the applicant can now trial the partner tools and
-          browse their private test region.
-        </p>
-      )}
-      {done === "sandbox-ended" && (
-        <p className="form-success" style={{ marginBottom: "var(--s-4)" }}>
-          Sandbox removed.
-        </p>
-      )}
-      {error === "sandbox-exists" && (
-        <p className="form-error" style={{ marginBottom: "var(--s-4)" }}>
-          That applicant already has a sandbox.
-        </p>
-      )}
-      {error === "sandbox-failed" && (
-        <p className="form-error" style={{ marginBottom: "var(--s-4)" }}>
-          Couldn&rsquo;t create the sandbox — please try again.
+          {errorMessage}
         </p>
       )}
 
-      <h2 className="card-heading">Pending ({pending.length})</h2>
-      {pending.length === 0 ? (
-        <p className="card-sub" style={{ marginBottom: "var(--s-6)" }}>
-          No applications waiting for review.
-        </p>
-      ) : (
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "var(--s-4)",
-            marginBottom: "var(--s-7)",
-          }}
-        >
-          {pending.map((a) => (
-            <div key={a.id} className="form-card" style={{ padding: "var(--s-5)" }}>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: "var(--s-3)",
-                  flexWrap: "wrap",
-                }}
-              >
-                <div>
-                  <h3 style={{ margin: 0, color: "var(--ink-1)" }}>
-                    {a.region_label}
-                  </h3>
-                  <p className="card-sub" style={{ margin: "2px 0 0" }}>
-                    {a.user_email} · applied {fmtDate(a.created_at)}
-                  </p>
-                </div>
-                {a.region_taken && (
-                  <Badge variant="warn">
-                    Region taken{a.region_owner_email ? ` · ${a.region_owner_email}` : ""}
-                  </Badge>
-                )}
-              </div>
-
-              {(a.business_name || a.pitch || a.expected_inventory) && (
-                <dl style={{ margin: "var(--s-3) 0 0", fontSize: "var(--t-body-s)" }}>
-                  {a.business_name && (
-                    <p style={{ margin: "0 0 4px" }}>
-                      <strong>Business:</strong> {a.business_name}
-                    </p>
+      <section className="form-card">
+        {apps.length === 0 ? (
+          <p className="card-sub" style={{ margin: 0 }}>
+            No partner applications yet.
+          </p>
+        ) : (
+          <div style={{ overflowX: "auto" }}>
+            <table className="data-table" style={{ width: "100%" }}>
+              <thead>
+                <tr>
+                  {["Region", "Applicant", "Submitted", "Status", "Sandbox", "Actions"].map(
+                    (h) => (
+                      <th key={h} style={cellHead}>
+                        {h}
+                      </th>
+                    ),
                   )}
-                  {a.pitch && (
-                    <p style={{ margin: "0 0 4px", color: "var(--ink-2)" }}>
-                      <strong style={{ color: "var(--ink-1)" }}>Pitch:</strong>{" "}
-                      {a.pitch}
-                    </p>
-                  )}
-                  {a.expected_inventory && (
-                    <p style={{ margin: 0, color: "var(--ink-2)" }}>
-                      <strong style={{ color: "var(--ink-1)" }}>Inventory:</strong>{" "}
-                      {a.expected_inventory}
-                    </p>
-                  )}
-                </dl>
-              )}
+                </tr>
+              </thead>
+              <tbody>
+                {apps.map((a) => {
+                  const isPending = a.status === "pending";
+                  const sb = sandboxes[a.user_id];
+                  const hasDetail =
+                    !!a.business_name || !!a.pitch || !!a.expected_inventory;
+                  return (
+                    <tr key={a.id}>
+                      {/* Region */}
+                      <td style={cell}>
+                        <div style={{ fontWeight: 600, color: "var(--ink-1)" }}>
+                          {a.region_label}
+                        </div>
+                        {a.region_taken && (
+                          <div style={{ marginTop: 4 }}>
+                            <Badge variant="warn">
+                              Taken
+                              {a.region_owner_email ? ` · ${a.region_owner_email}` : ""}
+                            </Badge>
+                          </div>
+                        )}
+                      </td>
 
-              <div
-                style={{
-                  display: "flex",
-                  gap: "var(--s-3)",
-                  flexWrap: "wrap",
-                  alignItems: "flex-end",
-                  marginTop: "var(--s-4)",
-                }}
-              >
-                <form
-                  action={approveApplication}
-                  style={{ display: "flex", gap: "var(--s-2)", alignItems: "flex-end" }}
-                >
-                  <input type="hidden" name="id" value={a.id} />
-                  <Button
-                    type="submit"
-                    variant="primary"
-                    size="sm"
-                    disabled={a.region_taken}
-                  >
-                    Approve &amp; activate
-                  </Button>
-                </form>
-                <form
-                  action={rejectApplication}
-                  style={{ display: "flex", gap: "var(--s-2)", alignItems: "flex-end", flex: "1 1 280px" }}
-                >
-                  <input type="hidden" name="id" value={a.id} />
-                  <label style={{ flex: 1, fontSize: 12, color: "var(--ink-3)" }}>
-                    Reason (optional, sent to applicant)
-                    <Input name="note" maxLength={500} />
-                  </label>
-                  <Button type="submit" variant="ghost" size="sm">
-                    Reject
-                  </Button>
-                </form>
-              </div>
+                      {/* Applicant + expandable detail */}
+                      <td style={{ ...cell, minWidth: 220 }}>
+                        <div style={{ color: "var(--ink-1)" }}>{a.user_email}</div>
+                        {a.business_name && (
+                          <div style={{ fontSize: 12, color: "var(--ink-3)", marginTop: 2 }}>
+                            {a.business_name}
+                          </div>
+                        )}
+                        {hasDetail && (
+                          <details style={{ marginTop: 6 }}>
+                            <summary
+                              style={{
+                                cursor: "pointer",
+                                fontSize: 12,
+                                color: "var(--volt-700)",
+                                fontWeight: 600,
+                              }}
+                            >
+                              Details
+                            </summary>
+                            <div style={{ marginTop: 6, color: "var(--ink-2)" }}>
+                              {a.pitch && (
+                                <p style={{ margin: "0 0 4px" }}>
+                                  <strong style={{ color: "var(--ink-1)" }}>Pitch:</strong>{" "}
+                                  {a.pitch}
+                                </p>
+                              )}
+                              {a.expected_inventory && (
+                                <p style={{ margin: 0 }}>
+                                  <strong style={{ color: "var(--ink-1)" }}>
+                                    Inventory:
+                                  </strong>{" "}
+                                  {a.expected_inventory}
+                                </p>
+                              )}
+                            </div>
+                          </details>
+                        )}
+                      </td>
 
-              {(() => {
-                const sb = sandboxes[a.user_id];
-                return (
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: "var(--s-3)",
-                      alignItems: "center",
-                      flexWrap: "wrap",
-                      marginTop: "var(--s-4)",
-                      paddingTop: "var(--s-3)",
-                      borderTop: "1px dashed var(--hairline)",
-                    }}
-                  >
-                    {sb ? (
-                      <>
-                        <Badge variant="info">
-                          Sandbox active · {sb.listings} listing
-                          {sb.listings === 1 ? "" : "s"}
-                        </Badge>
-                        <form action={endSandbox}>
-                          <input type="hidden" name="region_id" value={sb.regionId} />
-                          <Button type="submit" variant="ghost" size="sm">
-                            End sandbox
-                          </Button>
-                        </form>
-                      </>
-                    ) : (
-                      <>
-                        <span style={{ fontSize: 12, color: "var(--ink-3)" }}>
-                          Let them trial the partner tools in a private test
-                          region before you decide.
-                        </span>
-                        <form action={startSandbox}>
-                          <input type="hidden" name="application_id" value={a.id} />
-                          <Button type="submit" variant="dark" size="sm">
-                            Start a sandbox
-                          </Button>
-                        </form>
-                      </>
-                    )}
-                  </div>
-                );
-              })()}
-            </div>
-          ))}
-        </div>
-      )}
+                      {/* Submitted / decided */}
+                      <td style={{ ...cell, whiteSpace: "nowrap", color: "var(--ink-3)" }}>
+                        {fmtDate(a.created_at)}
+                        {a.decided_at && (
+                          <div style={{ fontSize: 11, marginTop: 2 }}>
+                            decided {fmtDate(a.decided_at)}
+                          </div>
+                        )}
+                      </td>
 
-      {decided.length > 0 && (
-        <>
-          <h2 className="card-heading">Decided</h2>
-          <div className="form-card">
-            <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-              {decided.map((a) => (
-                <li
-                  key={a.id}
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    gap: "var(--s-3)",
-                    alignItems: "center",
-                    padding: "var(--s-3) 0",
-                    borderBottom: "1px solid var(--hairline)",
-                  }}
-                >
-                  <div>
-                    <span style={{ fontWeight: 600, color: "var(--ink-1)" }}>
-                      {a.region_label}
-                    </span>{" "}
-                    <span style={{ color: "var(--ink-3)", fontSize: 13 }}>
-                      · {a.user_email}
-                      {a.decided_at ? ` · ${fmtDate(a.decided_at)}` : ""}
-                    </span>
-                    {a.decision_note && (
-                      <div style={{ fontSize: 13, color: "var(--ink-3)" }}>
-                        {a.decision_note}
-                      </div>
-                    )}
-                  </div>
-                  {a.status === "approved" ? (
-                    <Badge variant="ok">Approved</Badge>
-                  ) : (
-                    <Badge variant="warn">Rejected</Badge>
-                  )}
-                </li>
-              ))}
-            </ul>
+                      {/* Status + decision note */}
+                      <td style={cell}>
+                        {statusBadge(a.status)}
+                        {a.decision_note && (
+                          <div
+                            style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 4, maxWidth: 200 }}
+                          >
+                            {a.decision_note}
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Sandbox */}
+                      <td style={cell}>
+                        {sb ? (
+                          <div
+                            style={{ display: "flex", flexDirection: "column", gap: 4, alignItems: "flex-start" }}
+                          >
+                            <Badge variant="info">
+                              Active · {sb.listings}
+                            </Badge>
+                            <form action={endSandbox}>
+                              <input type="hidden" name="region_id" value={sb.regionId} />
+                              <Button type="submit" variant="ghost" size="sm">
+                                End
+                              </Button>
+                            </form>
+                          </div>
+                        ) : isPending ? (
+                          <form action={startSandbox}>
+                            <input type="hidden" name="application_id" value={a.id} />
+                            <Button type="submit" variant="ghost" size="sm">
+                              Start
+                            </Button>
+                          </form>
+                        ) : (
+                          <span style={{ color: "var(--ink-4)" }}>—</span>
+                        )}
+                      </td>
+
+                      {/* Actions */}
+                      <td style={{ ...cell, minWidth: 200 }}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                          {isPending && (
+                            <>
+                              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                                <form action={approveApplication}>
+                                  <input type="hidden" name="id" value={a.id} />
+                                  <Button
+                                    type="submit"
+                                    variant="primary"
+                                    size="sm"
+                                    disabled={a.region_taken}
+                                  >
+                                    Approve
+                                  </Button>
+                                </form>
+                              </div>
+                              <form
+                                action={rejectApplication}
+                                style={{ display: "flex", gap: 6, alignItems: "center" }}
+                              >
+                                <input type="hidden" name="id" value={a.id} />
+                                <Input
+                                  name="note"
+                                  maxLength={500}
+                                  placeholder="Reason (optional)"
+                                  style={{ maxWidth: 150, fontSize: 12 }}
+                                />
+                                <Button type="submit" variant="ghost" size="sm">
+                                  Reject
+                                </Button>
+                              </form>
+                            </>
+                          )}
+                          <form action={deleteApplication}>
+                            <input type="hidden" name="id" value={a.id} />
+                            <ConfirmSubmit
+                              message="Delete this application permanently? This can't be undone."
+                            >
+                              Delete
+                            </ConfirmSubmit>
+                          </form>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-        </>
-      )}
+        )}
+      </section>
     </div>
   );
 }

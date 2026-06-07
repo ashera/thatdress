@@ -54,10 +54,10 @@ test("admin provisions a private sandbox, then tears it down", async ({
   const adminPage = await adminCtx.newPage();
   await adminPage.goto("/admin/partner-applications", { waitUntil: "networkidle" });
 
-  const card = adminPage.locator(".form-card").filter({ hasText: prospect.email });
+  const row = adminPage.locator("tr").filter({ hasText: prospect.email });
   await Promise.all([
     adminPage.waitForURL(/done=sandbox-started/, { timeout: 20_000 }),
-    card.getByRole("button", { name: /Start a sandbox/i }).click(),
+    row.getByRole("button", { name: /^Start$/i }).click(),
   ]);
 
   const sandbox = await getSandboxRegion(prospect.id);
@@ -101,10 +101,10 @@ test("admin provisions a private sandbox, then tears it down", async ({
 
   // --- Admin tears the sandbox down -------------------------------------
   await adminPage.goto("/admin/partner-applications", { waitUntil: "networkidle" });
-  const card2 = adminPage.locator(".form-card").filter({ hasText: prospect.email });
+  const row2 = adminPage.locator("tr").filter({ hasText: prospect.email });
   await Promise.all([
     adminPage.waitForURL(/done=sandbox-ended/, { timeout: 20_000 }),
-    card2.getByRole("button", { name: /End sandbox/i }).click(),
+    row2.getByRole("button", { name: /^End$/i }).click(),
   ]);
 
   expect(await getSandboxRegion(prospect.id)).toBeNull();

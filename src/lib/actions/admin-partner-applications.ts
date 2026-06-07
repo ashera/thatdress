@@ -80,6 +80,21 @@ export async function approveApplication(formData: FormData): Promise<void> {
   redirect(backTo(formData, "done=approved"));
 }
 
+/** Permanently delete an application (any status). Used to tidy the
+ *  queue — spam, withdrawn, or test applications. Nothing references
+ *  partner_applications.id, so a plain DELETE is safe; a granted region
+ *  (partner_marketing_regions) and any sandbox are keyed to the user, not
+ *  the application, so they're untouched. */
+export async function deleteApplication(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  if (!/^\d+$/.test(id)) redirect(PATH);
+
+  await query(`DELETE FROM partner_applications WHERE id = $1::bigint`, [id]);
+  revalidatePath(PATH);
+  redirect(backTo(formData, "done=deleted"));
+}
+
 /** Reject a pending application with an optional note. */
 export async function rejectApplication(formData: FormData): Promise<void> {
   const admin = await requireAdmin();

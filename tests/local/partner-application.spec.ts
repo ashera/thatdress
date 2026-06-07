@@ -62,10 +62,10 @@ test("apply for a region, admin approves, partner is activated", async ({ browse
   ]);
   const mp = await adminCtx.newPage();
   await mp.goto("/admin/partner-applications", { waitUntil: "networkidle" });
-  const card = mp.locator(".form-card", { hasText: applicant.email });
+  const row = mp.locator("tr", { hasText: applicant.email });
   await Promise.all([
     mp.waitForURL(/done=approved/, { timeout: 20_000 }),
-    card.getByRole("button", { name: /Approve & activate/i }).click(),
+    row.getByRole("button", { name: /^Approve$/i }).click(),
   ]);
 
   // 3) Activated: partner flag set, region granted, free window in the
@@ -80,6 +80,34 @@ test("apply for a region, admin approves, partner is activated", async ({ browse
   const dash = await applicantCtx.newPage();
   await dash.goto("/partner", { waitUntil: "domcontentloaded" });
   await expect(dash.getByText(region.label).first()).toBeVisible();
+});
+
+test("admin can delete a partner application", async ({ browser }) => {
+  const u = await createTestUser();
+  const r = await createTestRegion();
+  await createPartnerApplication(u.id, r.id);
+
+  const ctx = await browser.newContext();
+  await ctx.addCookies([
+    { name: "session", value: await mintSession(admin.id), url: BASE, httpOnly: true },
+  ]);
+  const page = await ctx.newPage();
+  page.on("dialog", (d) => d.accept()); // accept the delete confirm
+  try {
+    await page.goto("/admin/partner-applications", { waitUntil: "networkidle" });
+    const row = page.locator("tr", { hasText: u.email });
+    await Promise.all([
+      page.waitForURL(/done=deleted/, { timeout: 20_000 }),
+      row.getByRole("button", { name: /^Delete$/ }).click(),
+    ]);
+
+    // The application is gone.
+    const state = await getPartnerActivation(u.id, r.id);
+    expect(state.appStatus).toBeNull();
+  } finally {
+    await cleanupUsers([u.id]);
+    await deleteTestRegions([r.id]);
+  }
 });
 
 test("a prospect with a pending application can't open a second one", async ({
