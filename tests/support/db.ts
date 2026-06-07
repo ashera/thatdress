@@ -609,6 +609,47 @@ export async function getUserSignup(email: string): Promise<{
   });
 }
 
+/** Ensure a test user has a referral_code, returning it. Mirrors the
+ *  app's ensureReferralCode (alphanumeric, 4-16 chars) without needing the
+ *  server-only module. */
+export async function ensureReferralCodeFor(userId: string): Promise<string> {
+  return withDb(async (c) => {
+    const existing = await c.query<{ referral_code: string | null }>(
+      `SELECT referral_code FROM users WHERE id = $1::bigint LIMIT 1`,
+      [userId],
+    );
+    if (existing.rows[0]?.referral_code) return existing.rows[0].referral_code;
+    const code = `E2E${randomBytes(4).toString("hex")}`.toUpperCase().slice(0, 16);
+    await c.query(`UPDATE users SET referral_code = $2 WHERE id = $1::bigint`, [
+      userId,
+      code,
+    ]);
+    return code;
+  });
+}
+
+/** A user's referral_code (null until generated). */
+export async function getReferralCode(userId: string): Promise<string | null> {
+  return withDb(async (c) => {
+    const r = await c.query<{ referral_code: string | null }>(
+      `SELECT referral_code FROM users WHERE id = $1::bigint LIMIT 1`,
+      [userId],
+    );
+    return r.rows[0]?.referral_code ?? null;
+  });
+}
+
+/** The user who referred this account (referred_by_user_id), or null. */
+export async function getReferredBy(userId: string): Promise<string | null> {
+  return withDb(async (c) => {
+    const r = await c.query<{ referred_by_user_id: string | null }>(
+      `SELECT referred_by_user_id::text FROM users WHERE id = $1::bigint LIMIT 1`,
+      [userId],
+    );
+    return r.rows[0]?.referred_by_user_id ?? null;
+  });
+}
+
 /** Look up a user id by email (for cleaning up users created via the UI). */
 export async function findUserIdByEmail(email: string): Promise<string | null> {
   return withDb(async (c) => {
