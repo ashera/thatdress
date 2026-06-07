@@ -388,6 +388,67 @@ export async function getSellerRating(
   });
 }
 
+/** A listing's trust_status + count of open (unresolved) flags — for the
+ *  admin flag/restore moderation flow. */
+export async function getListingModeration(
+  listingId: string,
+): Promise<{ trustStatus: string | null; openFlags: number }> {
+  return withDb(async (c) => {
+    const t = await c.query<{ trust_status: string }>(
+      `SELECT trust_status FROM listings WHERE id = $1::bigint LIMIT 1`,
+      [listingId],
+    );
+    const f = await c.query<{ n: string }>(
+      `SELECT COUNT(*)::text AS n FROM listing_flags
+        WHERE listing_id = $1::bigint AND resolved_at IS NULL`,
+      [listingId],
+    );
+    return {
+      trustStatus: t.rows[0]?.trust_status ?? null,
+      openFlags: Number(f.rows[0]?.n ?? 0),
+    };
+  });
+}
+
+/** Whether a user is suspended, plus their live session count — for the
+ *  admin suspend flow (suspending kills sessions). */
+export async function getUserSuspension(
+  userId: string,
+): Promise<{ suspended: boolean; sessions: number }> {
+  return withDb(async (c) => {
+    const u = await c.query<{ suspended_at: string | null }>(
+      `SELECT suspended_at::text FROM users WHERE id = $1::bigint LIMIT 1`,
+      [userId],
+    );
+    const s = await c.query<{ n: string }>(
+      `SELECT COUNT(*)::text AS n FROM sessions WHERE user_id = $1::bigint`,
+      [userId],
+    );
+    return {
+      suspended: u.rows[0]?.suspended_at != null,
+      sessions: Number(s.rows[0]?.n ?? 0),
+    };
+  });
+}
+
+/** site_settings.maintenance_at (ISO or null) — for the maintenance toggle. */
+export async function getMaintenanceAt(): Promise<string | null> {
+  return withDb(async (c) => {
+    const r = await c.query<{ maintenance_at: string | null }>(
+      `SELECT maintenance_at::text FROM site_settings WHERE id = 1 LIMIT 1`,
+    );
+    return r.rows[0]?.maintenance_at ?? null;
+  });
+}
+
+/** Force-clear any maintenance window — a safety net so a failed
+ *  maintenance test can never leave the site gated for other tests. */
+export async function clearMaintenance(): Promise<void> {
+  await withDb((c) =>
+    c.query(`UPDATE site_settings SET maintenance_at = NULL WHERE id = 1`),
+  );
+}
+
 /** Set a listing's published flag (e.g. to test hidden-listing visibility). */
 export async function setListingPublished(
   listingId: string,
