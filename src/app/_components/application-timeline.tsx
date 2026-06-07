@@ -5,15 +5,15 @@ import React from "react";
  * /partners/apply so an applicant can see the stages of becoming an
  * approved partner and where this application currently sits.
  *
- * Stages (happy path): submitted → under review → [sandbox trial, if one
- * is set up] → approved → region active. A rejected application stops at
- * a terminal "Not approved" stage. Pure server component — no client JS.
+ * Stages: submitted → under review → approved/denied → welcome &
+ * onboarding → region active. A denied application stops at a terminal
+ * "Denied" stage. Pure server component — no client JS.
  */
 
 type StageState = "done" | "current" | "upcoming" | "rejected";
 type Stage = { label: string; description: string; state: StageState };
 
-function stagesFor(status: string, hasSandbox: boolean): Stage[] {
+function stagesFor(status: string): Stage[] {
   const approved = status === "approved";
   const rejected = status === "rejected";
   const pending = !approved && !rejected;
@@ -25,25 +25,15 @@ function stagesFor(status: string, hasSandbox: boolean): Stage[] {
       state: "done",
     },
     {
-      // Once a sandbox is set up the application has moved past the
-      // initial paperwork review into a hands-on trial.
       label: "Under review",
       description: "Our team checks it’s a good fit for the region.",
-      state: pending && !hasSandbox ? "current" : "done",
+      state: pending ? "current" : "done",
     },
   ];
 
-  if (hasSandbox && !rejected) {
-    stages.push({
-      label: "Sandbox trial",
-      description: "Trial the partner tools in your private test region.",
-      state: approved ? "done" : "current",
-    });
-  }
-
   if (rejected) {
     stages.push({
-      label: "Not approved",
+      label: "Denied",
       description:
         "This application wasn’t approved — you’re welcome to apply again.",
       state: "rejected",
@@ -53,13 +43,20 @@ function stagesFor(status: string, hasSandbox: boolean): Stage[] {
 
   stages.push(
     {
-      label: "Approved",
-      description: "We’ve approved you to run this region.",
+      label: approved ? "Approved" : "Approved / Denied",
+      description: approved
+        ? "We’ve approved you to run this region."
+        : "We’ll let you know our decision.",
+      state: approved ? "done" : "upcoming",
+    },
+    {
+      label: "Welcome & onboarding",
+      description: "We help you get set up — your fees and your first sellers.",
       state: approved ? "done" : "upcoming",
     },
     {
       label: "Region active",
-      description: "Your region is live — set your fees and recruit sellers.",
+      description: "Your region is live — start recruiting sellers.",
       state: approved ? "current" : "upcoming",
     },
   );
@@ -107,14 +104,8 @@ function dot(state: StageState): { style: React.CSSProperties; glyph: string } {
   }
 }
 
-export function ApplicationTimeline({
-  status,
-  hasSandbox = false,
-}: {
-  status: string;
-  hasSandbox?: boolean;
-}) {
-  const stages = stagesFor(status, hasSandbox);
+export function ApplicationTimeline({ status }: { status: string }) {
+  const stages = stagesFor(status);
   return (
     <ol style={{ listStyle: "none", margin: "var(--s-3) 0 0", padding: 0 }}>
       {stages.map((s, i) => {

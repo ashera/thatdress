@@ -11,7 +11,6 @@ import {
   applyForRegion,
   registerPartnerApplicant,
 } from "@/lib/actions/partner-apply";
-import { getSandboxRegionForUser } from "@/lib/regions";
 import { PASSWORD_RULES_SUMMARY } from "@/lib/password-rules";
 import { Badge, Button, Field, Input, Textarea } from "../../_components/ui";
 import { ApplicationTimeline } from "../../_components/application-timeline";
@@ -87,12 +86,10 @@ export default async function PartnerApplyPage({
     return <PartnerSignup errorMessage={errorMessage} />;
   }
 
-  const [regions, myApps, sandbox] = await Promise.all([
+  const [regions, myApps] = await Promise.all([
     getApplyRegions(user.id),
     getMyApplications(user.id),
-    getSandboxRegionForUser(user.id),
   ]);
-  const hasSandbox = sandbox !== null;
   const available = regions.filter(
     (r) => !r.taken && !r.yours && !r.pendingByYou,
   );
@@ -301,7 +298,7 @@ export default async function PartnerApplyPage({
                   {statusBadge(a.status)}
                 </div>
 
-                <ApplicationTimeline status={a.status} hasSandbox={hasSandbox} />
+                <ApplicationTimeline status={a.status} />
 
                 {a.decision_note && (
                   <p
