@@ -29,6 +29,8 @@ const ERR: Record<string, string> = {
   assign: "Couldn't assign the partner — please try again.",
   "already-assigned":
     "This region already has a partner. Unassign them first, then assign someone new.",
+  "already-partner":
+    "That account already runs a region. Partners manage a single region for now.",
   taken: "That region was already taken by another partner.",
   approve: "Couldn't approve — the application may already be decided.",
 };

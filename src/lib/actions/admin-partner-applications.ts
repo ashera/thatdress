@@ -49,6 +49,17 @@ export async function approveApplication(formData: FormData): Promise<void> {
       const app = a.rows[0];
       if (!app || app.status !== "pending") throw new Error("not-pending");
 
+      // Partners run one region — refuse if the applicant already holds a
+      // real (non-sandbox) region.
+      const held = await c.query(
+        `SELECT 1 FROM partner_marketing_regions pmr
+           JOIN regions rg ON rg.id = pmr.region_id
+          WHERE pmr.user_id = $1::bigint AND rg.is_test = FALSE
+          LIMIT 1`,
+        [app.user_id],
+      );
+      if (held.rows.length > 0) throw new Error("already-partner");
+
       await c.query(
         `INSERT INTO partner_marketing_regions
            (user_id, region_id, listing_fee_cents, activated_at, free_until,
@@ -71,6 +82,9 @@ export async function approveApplication(formData: FormData): Promise<void> {
   } catch (e) {
     if ((e as { code?: string }).code === "23505") {
       redirect(backTo(formData, "error=taken"));
+    }
+    if ((e as Error).message === "already-partner") {
+      redirect(backTo(formData, "error=already-partner"));
     }
     redirect(backTo(formData, "error=approve"));
   }

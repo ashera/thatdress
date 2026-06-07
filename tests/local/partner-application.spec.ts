@@ -144,6 +144,60 @@ test("a prospect can cancel their own pending application", async ({
   }
 });
 
+test("a partner who already runs a region can't apply for another", async ({
+  browser,
+}) => {
+  const partner = await createTestUser({ isPartner: true });
+  const r = await createTestRegion();
+  await assignPartnerRegion(partner.id, r.id); // now holds a real region
+
+  const ctx = await browser.newContext();
+  await ctx.addCookies([
+    { name: "session", value: await mintSession(partner.id), url: BASE, httpOnly: true },
+  ]);
+  const page = await ctx.newPage();
+  try {
+    await page.goto("/partners/apply", { waitUntil: "networkidle" });
+    await expect(
+      page.getByRole("heading", { name: /You already run a region/i }),
+    ).toBeVisible();
+    // No region picker — they can't start another application.
+    await expect(page.locator('input[name="region_id"]')).toHaveCount(0);
+  } finally {
+    await cleanupUsers([partner.id]);
+    await deleteTestRegions([r.id]);
+  }
+});
+
+test("admin can't approve a second region for an existing partner", async ({
+  browser,
+}) => {
+  const partner = await createTestUser();
+  const regionA = await createTestRegion();
+  await assignPartnerRegion(partner.id, regionA.id); // already runs A
+  const regionB = await createTestRegion();
+  await createPartnerApplication(partner.id, regionB.id); // pending for B
+
+  const ctx = await browser.newContext();
+  await ctx.addCookies([
+    { name: "session", value: await mintSession(admin.id), url: BASE, httpOnly: true },
+  ]);
+  const page = await ctx.newPage();
+  try {
+    await page.goto(`/admin/regions/${regionB.id}`, { waitUntil: "networkidle" });
+    await Promise.all([
+      page.waitForURL(/error=already-partner/, { timeout: 20_000 }),
+      page.getByRole("button", { name: /Approve & activate/i }).click(),
+    ]);
+    // B was not granted; the application is still pending.
+    const state = await getPartnerActivation(partner.id, regionB.id);
+    expect(state.appStatus).toBe("pending");
+  } finally {
+    await cleanupUsers([partner.id]);
+    await deleteTestRegions([regionA.id, regionB.id]);
+  }
+});
+
 test("a prospect can't apply for a region that's already assigned", async ({
   browser,
 }) => {

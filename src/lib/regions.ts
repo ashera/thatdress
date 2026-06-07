@@ -121,6 +121,25 @@ export async function getPartnerRegions(
   }
 }
 
+/** Whether the user already holds a real (non-sandbox) marketing region.
+ *  Partners are limited to one region; sandbox/test grants don't count, so a
+ *  prospect trialing a sandbox can still apply for their first real region. */
+export async function hasRealMarketingRegion(userId: string): Promise<boolean> {
+  if (!/^\d+$/.test(userId)) return false;
+  try {
+    const r = await query(
+      `SELECT 1 FROM partner_marketing_regions pmr
+         JOIN regions rg ON rg.id = pmr.region_id
+        WHERE pmr.user_id = $1::bigint AND rg.is_test = FALSE
+        LIMIT 1`,
+      [userId],
+    );
+    return r.rows.length > 0;
+  } catch {
+    return false;
+  }
+}
+
 /** The listing fee (in cents) the partner who markets `regionId` charges
  *  sellers there. Returns 0 when no partner markets the region, the
  *  partner left it free, or on any lookup error — i.e. "no fee owed" is

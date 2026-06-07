@@ -112,6 +112,11 @@ export async function updatePartnerMarketingRegions(
     ),
   );
 
+  // Partners run a single region for now.
+  if (regionIds.length > 1) {
+    redirect(`/admin/users/${id}?error=one-region`);
+  }
+
   // A region can belong to at most one partner. Reject the save (before
   // touching anything) if any picked region is already another partner's
   // — the partner_marketing_regions_region_key unique index is the
@@ -165,6 +170,18 @@ export async function reassignMarketingRegion(
   if (!id) redirect("/admin/users");
   const regionId = getId(formData, "regionId");
   if (!regionId) redirect(`/admin/users/${id}?error=region-invalid`);
+
+  // Partners run one region — refuse if they already hold a different real
+  // (non-sandbox) region.
+  const held = await query(
+    `SELECT 1 FROM partner_marketing_regions pmr
+       JOIN regions rg ON rg.id = pmr.region_id
+      WHERE pmr.user_id = $1::bigint AND rg.is_test = FALSE
+        AND pmr.region_id <> $2::bigint
+      LIMIT 1`,
+    [id, regionId],
+  );
+  if (held.rows.length > 0) redirect(`/admin/users/${id}?error=one-region`);
 
   await withTransaction(async (client) => {
     // Only reassign to an actual partner and an existing region.

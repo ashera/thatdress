@@ -271,6 +271,8 @@ const ERRORS: Record<string, string> = {
   "region-taken":
     "One or more of those regions is already assigned to another partner. Each region can belong to only one partner.",
   "region-invalid": "That region no longer exists.",
+  "one-region":
+    "Partners manage a single region for now — assign just one (unassign the current one first to switch).",
   "cannot-impersonate-suspended":
     "Suspended accounts can't be impersonated. Unsuspend first.",
 };

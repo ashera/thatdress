@@ -30,6 +30,8 @@ const ERRORS: Record<string, string> = {
   duplicate: "You already have a pending application for that region.",
   "pending-exists":
     "You already have an application under review — you can apply for another region once it's decided.",
+  "already-partner":
+    "You already run a region. Partners manage a single region for now.",
   "invalid-email": "Please enter a valid email address.",
   "weak-password": PASSWORD_RULES_SUMMARY,
   "long-password": "Password must be 72 characters or fewer.",
@@ -155,6 +157,8 @@ export default async function PartnerApplyPage({
   // A prospect may only have one application in flight at a time.
   const pendingApp = myApps.find((a) => a.status === "pending");
   const hasPending = !!pendingApp;
+  // Partners run a single region — once they hold one, no more applications.
+  const alreadyPartner = regions.some((r) => r.yours);
 
   return (
     <div className="page">
@@ -204,6 +208,17 @@ export default async function PartnerApplyPage({
           <p className="card-sub" style={{ margin: 0 }}>
             There are no live regions to apply for right now. Check back soon
             — or <Link href="/support">contact us</Link>.
+          </p>
+        </section>
+      ) : alreadyPartner ? (
+        <section className="form-card">
+          <h2 className="card-heading" style={{ marginTop: 0 }}>
+            You already run a region
+          </h2>
+          <p className="card-sub" style={{ margin: 0 }}>
+            Partners manage a single region for now, so there&rsquo;s nothing
+            more to apply for. Head to your{" "}
+            <Link href="/partner">partner dashboard</Link> to manage it.
           </p>
         </section>
       ) : hasPending ? (

@@ -40,6 +40,19 @@ export async function setRegionPartner(formData: FormData): Promise<void> {
     redirect(`${detail(regionId)}?error=already-assigned`);
   }
 
+  // Partners run one region — refuse if this account already holds a real
+  // (non-sandbox) region.
+  const held = await query(
+    `SELECT 1 FROM partner_marketing_regions pmr
+       JOIN regions rg ON rg.id = pmr.region_id
+      WHERE pmr.user_id = $1::bigint AND rg.is_test = FALSE
+      LIMIT 1`,
+    [newUserId],
+  );
+  if (held.rows.length > 0) {
+    redirect(`${detail(regionId)}?error=already-partner`);
+  }
+
   try {
     await withTransaction(async (c) => {
       await c.query(

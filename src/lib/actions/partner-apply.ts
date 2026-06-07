@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createSession, getCurrentUser, hashPassword } from "@/lib/auth";
 import { query } from "@/lib/db";
 import { dispatchVerificationEmail } from "@/lib/email-verify";
+import { hasRealMarketingRegion } from "@/lib/regions";
 import { provisionSandboxForUser } from "@/lib/partner-sandbox";
 import { passwordMeetsRules } from "@/lib/password-rules";
 import {
@@ -88,6 +89,11 @@ export async function applyForRegion(formData: FormData): Promise<void> {
 
   const regionId = String(formData.get("region_id") ?? "").trim();
   if (!/^\d+$/.test(regionId)) redirect(`${APPLY}?error=region`);
+
+  // Partners run one region. Once they hold one, they can't apply for more.
+  if (await hasRealMarketingRegion(user.id)) {
+    redirect(`${APPLY}?error=already-partner`);
+  }
 
   // One application in flight at a time: block a new one while any of the
   // prospect's applications is still pending review.
