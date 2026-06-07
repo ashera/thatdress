@@ -713,12 +713,19 @@ export default async function ListingDetailPage({
   // edit/owner powers.
   let isRegionPartner = false;
   if (currentUser && currentUser.isPartner && !isOwner && !isAdmin && l.region_id) {
-    const pr = await query(
-      `SELECT 1 FROM partner_marketing_regions
-        WHERE user_id = $1::bigint AND region_id = $2::bigint LIMIT 1`,
-      [currentUser.id, l.region_id],
-    );
-    isRegionPartner = pr.rows.length > 0;
+    try {
+      const pr = await query(
+        `SELECT 1 FROM partner_marketing_regions
+          WHERE user_id = $1::bigint AND region_id = $2::bigint LIMIT 1`,
+        [currentUser.id, l.region_id],
+      );
+      isRegionPartner = pr.rows.length > 0;
+    } catch {
+      // A transient DB error here shouldn't 500 the listing page — fall
+      // back to "not a region partner" (the listing just won't be visible
+      // to them if it's hidden/flagged).
+      isRegionPartner = false;
+    }
   }
   const canOversee = isAdmin || isRegionPartner;
   if (l.is_draft) {

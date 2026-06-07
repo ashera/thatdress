@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
 import pg from "pg";
 
@@ -407,6 +407,41 @@ export async function seedConversation(
       [id, buyerId, body],
     );
     return id;
+  });
+}
+
+/** Mint a review token for (listing, buyer) with a known plaintext, so a
+ *  test can drive the review-submission page directly without the
+ *  mark-sold + email round-trip (the token's plaintext otherwise only
+ *  lives in the emailed link). Stores sha256(token), matching the app. */
+export async function seedReviewToken(
+  listingId: string,
+  buyerId: string,
+  token: string,
+): Promise<void> {
+  const hash = createHash("sha256").update(token).digest("hex");
+  await withDb((c) =>
+    c.query(
+      `INSERT INTO listing_review_tokens (listing_id, buyer_id, token_hash, expires_at)
+         VALUES ($1::bigint, $2::bigint, $3, NOW() + INTERVAL '60 days')`,
+      [listingId, buyerId, hash],
+    ),
+  );
+}
+
+/** Count of review tokens issued for (listing, buyer) — for asserting that
+ *  marking a listing sold to a buyer issued one. */
+export async function countReviewTokens(
+  listingId: string,
+  buyerId: string,
+): Promise<number> {
+  return withDb(async (c) => {
+    const r = await c.query<{ n: string }>(
+      `SELECT COUNT(*)::text AS n FROM listing_review_tokens
+        WHERE listing_id = $1::bigint AND buyer_id = $2::bigint`,
+      [listingId, buyerId],
+    );
+    return Number(r.rows[0]?.n ?? 0);
   });
 }
 
