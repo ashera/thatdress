@@ -115,7 +115,7 @@ function localSampleImageNames(): string[] {
 /** Resolve one image per listing. Uses your own photos from
  *  db/sample-images/ (cycled) when present; otherwise a generated
  *  colour placeholder. No network access. */
-function resolveSampleImages(count: number): SampleImage[] {
+export function resolveSampleImages(count: number): SampleImage[] {
   const dir = path.join(process.cwd(), "db", "sample-images");
   const names = localSampleImageNames();
   if (names.length > 0) {

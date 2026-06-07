@@ -1,11 +1,11 @@
 import "server-only";
-import zlib from "node:zlib";
 import type { PoolClient } from "pg";
 import { query, withTransaction } from "@/lib/db";
 import {
   PARTNER_FREE_MONTHS,
   PARTNER_PLATFORM_FEE_PCT,
 } from "@/lib/partner-programme";
+import { resolveSampleImages } from "@/lib/sample-data";
 
 /**
  * Partner sandbox ("Test Region"). A prospective partner gets a private,
@@ -27,63 +27,6 @@ const SANDBOX_LISTINGS = 6;
 // Bcrypt-shaped placeholder; sandbox sample sellers never log in.
 const DISABLED_HASH = "$2a$12$0000000000000000000000000000000000000000000000000000";
 
-// --- tiny dependency-free PNG encoder (solid-colour placeholder) --------
-let CRC_TABLE: number[] | null = null;
-function crcTable(): number[] {
-  if (CRC_TABLE) return CRC_TABLE;
-  const t: number[] = [];
-  for (let n = 0; n < 256; n++) {
-    let c = n;
-    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
-    t[n] = c >>> 0;
-  }
-  CRC_TABLE = t;
-  return t;
-}
-function crc32(buf: Buffer): number {
-  const t = crcTable();
-  let c = 0xffffffff;
-  for (let i = 0; i < buf.length; i++) c = t[(c ^ buf[i]) & 0xff] ^ (c >>> 8);
-  return (c ^ 0xffffffff) >>> 0;
-}
-function pngChunk(type: string, data: Buffer): Buffer {
-  const len = Buffer.alloc(4);
-  len.writeUInt32BE(data.length, 0);
-  const t = Buffer.from(type, "ascii");
-  const crc = Buffer.alloc(4);
-  crc.writeUInt32BE(crc32(Buffer.concat([t, data])), 0);
-  return Buffer.concat([len, t, data, crc]);
-}
-function solidPng(w: number, h: number, rgb: [number, number, number]): Buffer {
-  const sig = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
-  const ihdr = Buffer.alloc(13);
-  ihdr.writeUInt32BE(w, 0);
-  ihdr.writeUInt32BE(h, 4);
-  ihdr[8] = 8; // bit depth
-  ihdr[9] = 2; // colour type: truecolour RGB
-  const row = Buffer.alloc(1 + w * 3);
-  for (let x = 0; x < w; x++) {
-    row[1 + x * 3] = rgb[0];
-    row[2 + x * 3] = rgb[1];
-    row[3 + x * 3] = rgb[2];
-  }
-  const raw = Buffer.concat(Array.from({ length: h }, () => row));
-  return Buffer.concat([
-    sig,
-    pngChunk("IHDR", ihdr),
-    pngChunk("IDAT", zlib.deflateSync(raw)),
-    pngChunk("IEND", Buffer.alloc(0)),
-  ]);
-}
-
-const PALETTE: Array<[number, number, number]> = [
-  [214, 140, 150],
-  [222, 184, 110],
-  [150, 170, 200],
-  [170, 190, 160],
-  [200, 160, 190],
-  [180, 150, 130],
-];
 const COLOR_NAMES = ["Blush", "Champagne", "Slate", "Sage", "Mauve", "Taupe"];
 
 export type SandboxResult = {
@@ -138,6 +81,11 @@ async function seedSandboxListings(
     );
     sellerIds.push(r.rows[0]!.id);
   }
+
+  // Real dress photos from db/sample-images/ (cycled), falling back to a
+  // generated colour placeholder when that folder isn't present (e.g. in
+  // production). One per listing.
+  const images = resolveSampleImages(SANDBOX_LISTINGS);
 
   let made = 0;
   for (let i = 0; i < SANDBOX_LISTINGS; i++) {
@@ -201,12 +149,12 @@ async function seedSandboxListings(
     );
     const listingId = lRes.rows[0]!.id;
 
-    const png = solidPng(120, 160, PALETTE[i % PALETTE.length]);
+    const img = images[i];
     await c.query(
       `INSERT INTO listing_images
          (listing_id, mime_type, bytes, byte_size, position, is_primary, role)
-       VALUES ($1::bigint, 'image/png', $2, $3, 0, TRUE, 'front')`,
-      [listingId, png, png.length],
+       VALUES ($1::bigint, $2, $3, $4, 0, TRUE, 'front')`,
+      [listingId, img.mime, img.bytes, img.bytes.length],
     );
     made++;
   }
