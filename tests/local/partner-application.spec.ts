@@ -111,6 +111,39 @@ test("admin can delete a partner application", async ({ browser }) => {
   }
 });
 
+test("a prospect can cancel their own pending application", async ({
+  browser,
+}) => {
+  const u = await createTestUser();
+  const r = await createTestRegion();
+  await createPartnerApplication(u.id, r.id);
+
+  const ctx = await browser.newContext();
+  await ctx.addCookies([
+    { name: "session", value: await mintSession(u.id), url: BASE, httpOnly: true },
+  ]);
+  const page = await ctx.newPage();
+  page.on("dialog", (d) => d.accept()); // accept the cancel confirm
+  try {
+    await page.goto("/partners/apply", { waitUntil: "networkidle" });
+    await expect(
+      page.getByRole("heading", { name: /Application under review/i }),
+    ).toBeVisible();
+    await Promise.all([
+      page.waitForURL(/cancelled=1/, { timeout: 20_000 }),
+      page.getByRole("button", { name: /Cancel application/i }).click(),
+    ]);
+
+    // The application is gone, and the region chooser is back.
+    const state = await getPartnerActivation(u.id, r.id);
+    expect(state.appStatus).toBeNull();
+    await expect(page.locator('input[name="region_id"]').first()).toBeVisible();
+  } finally {
+    await cleanupUsers([u.id]);
+    await deleteTestRegions([r.id]);
+  }
+});
+
 test("a prospect can't apply for a region that's already assigned", async ({
   browser,
 }) => {

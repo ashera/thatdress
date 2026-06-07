@@ -9,6 +9,7 @@ import {
 } from "@/lib/partner-programme";
 import {
   applyForRegion,
+  cancelMyApplication,
   createMySandbox,
   registerPartnerApplicant,
 } from "@/lib/actions/partner-apply";
@@ -17,6 +18,7 @@ import { getSandboxRegionForUser } from "@/lib/regions";
 import { PASSWORD_RULES_SUMMARY } from "@/lib/password-rules";
 import { Badge, Button, Field, Input, Textarea } from "../../_components/ui";
 import { ApplicationTimeline } from "../../_components/application-timeline";
+import { ConfirmSubmit } from "../../_components/confirm-submit";
 import { PasswordRules } from "../../_components/password-rules";
 
 export const dynamic = "force-dynamic";
@@ -48,10 +50,11 @@ function SandboxCard({ sandbox }: { sandbox: { id: string } | null }) {
           alignItems: "center",
           gap: "var(--s-2)",
           marginBottom: 4,
+          flexWrap: "wrap",
         }}
       >
         <h2 className="card-heading" style={{ margin: 0 }}>
-          Try it in a sandbox
+          While you wait for us to review your application, try it in a sandbox
         </h2>
         <Badge variant="info">Test region</Badge>
       </div>
@@ -126,10 +129,11 @@ export default async function PartnerApplyPage({
     error?: string;
     registered?: string;
     sandbox?: string;
+    cancelled?: string;
   }>;
 }) {
   const user = await getCurrentUser();
-  const { submitted, error, registered, sandbox: sandboxFlag } =
+  const { submitted, error, registered, sandbox: sandboxFlag, cancelled } =
     await searchParams;
   const errorMessage = error ? ERRORS[error] ?? "Something went wrong." : null;
 
@@ -149,7 +153,8 @@ export default async function PartnerApplyPage({
     (r) => !r.taken && !r.yours && !r.pendingByYou,
   );
   // A prospect may only have one application in flight at a time.
-  const hasPending = myApps.some((a) => a.status === "pending");
+  const pendingApp = myApps.find((a) => a.status === "pending");
+  const hasPending = !!pendingApp;
 
   return (
     <div className="page">
@@ -179,6 +184,12 @@ export default async function PartnerApplyPage({
           Your sandbox is ready — jump in below to explore the partner tools.
         </p>
       )}
+      {cancelled && (
+        <p className="form-success" style={{ marginBottom: "var(--s-4)" }}>
+          Your application has been cancelled. You can apply for a region again
+          below.
+        </p>
+      )}
       {errorMessage && (
         <p className="form-error" style={{ marginBottom: "var(--s-4)" }}>
           {errorMessage}
@@ -205,6 +216,17 @@ export default async function PartnerApplyPage({
             reviewing your current application — once it&rsquo;s decided you can
             apply for another region. Track its progress below.
           </p>
+          {pendingApp && (
+            <form action={cancelMyApplication} style={{ marginTop: "var(--s-4)" }}>
+              <input type="hidden" name="id" value={pendingApp.id} />
+              <ConfirmSubmit
+                className="btn --ghost --sm"
+                message="Cancel this application? You can apply again afterwards."
+              >
+                Cancel application
+              </ConfirmSubmit>
+            </form>
+          )}
         </section>
       ) : (
         <section className="form-card">

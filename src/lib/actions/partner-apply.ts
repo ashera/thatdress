@@ -133,6 +133,26 @@ export async function applyForRegion(formData: FormData): Promise<void> {
 }
 
 /**
+ * Withdraw the prospect's own pending application. Scoped to the caller and
+ * to pending status, so they can only cancel their own in-flight one (and
+ * never an already-decided application). Frees them to apply elsewhere.
+ */
+export async function cancelMyApplication(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect(`/login?next=${encodeURIComponent(APPLY)}`);
+
+  const id = String(formData.get("id") ?? "");
+  if (!/^\d+$/.test(id)) redirect(APPLY);
+
+  await query(
+    `DELETE FROM partner_applications
+      WHERE id = $1::bigint AND user_id = $2::bigint AND status = 'pending'`,
+    [id, user.id],
+  );
+  redirect(`${APPLY}?cancelled=1`);
+}
+
+/**
  * Self-service: a prospect spins up their own sandbox / test region after
  * applying, to trial the partner experience while they wait for a decision.
  * Gated to applicants (must have a pending application) and one-per-user.
