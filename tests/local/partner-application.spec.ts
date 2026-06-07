@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import {
+  assignPartnerRegion,
   cleanupUsers,
   createPartnerApplication,
   createTestRegion,
@@ -106,6 +107,34 @@ test("admin can delete a partner application", async ({ browser }) => {
     expect(state.appStatus).toBeNull();
   } finally {
     await cleanupUsers([u.id]);
+    await deleteTestRegions([r.id]);
+  }
+});
+
+test("a prospect can't apply for a region that's already assigned", async ({
+  browser,
+}) => {
+  const partnerUser = await createTestUser({ isPartner: true });
+  const r = await createTestRegion();
+  await assignPartnerRegion(partnerUser.id, r.id); // region now taken
+  const prospect = await createTestUser();
+
+  const ctx = await browser.newContext();
+  await ctx.addCookies([
+    { name: "session", value: await mintSession(prospect.id), url: BASE, httpOnly: true },
+  ]);
+  const page = await ctx.newPage();
+  try {
+    await page.goto("/partners/apply", { waitUntil: "networkidle" });
+    // The taken region is listed but its radio is disabled and flagged.
+    const radio = page.locator(`input[name="region_id"][value="${r.id}"]`);
+    await expect(radio).toBeDisabled();
+    const label = page.locator(
+      `label:has(input[name="region_id"][value="${r.id}"])`,
+    );
+    await expect(label.getByText(/Taken/i)).toBeVisible();
+  } finally {
+    await cleanupUsers([prospect.id, partnerUser.id]);
     await deleteTestRegions([r.id]);
   }
 });

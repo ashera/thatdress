@@ -27,6 +27,8 @@ const ERR: Record<string, string> = {
   email: "Enter the partner's email.",
   "user-not-found": "No account found with that email.",
   assign: "Couldn't assign the partner — please try again.",
+  "already-assigned":
+    "This region already has a partner. Unassign them first, then assign someone new.",
   taken: "That region was already taken by another partner.",
   approve: "Couldn't approve — the application may already be decided.",
 };
@@ -122,27 +124,18 @@ export default async function RegionDetailPage({
               {freeNote(partner.free_until, partner.platform_fee_pct)}
             </p>
             <div
-              style={{ display: "flex", gap: "var(--s-3)", flexWrap: "wrap", alignItems: "flex-end" }}
+              style={{ display: "flex", gap: "var(--s-3)", flexWrap: "wrap", alignItems: "center" }}
             >
-              <form
-                action={setRegionPartner}
-                style={{ display: "flex", gap: "var(--s-2)", alignItems: "flex-end", flex: "1 1 320px" }}
-              >
-                <input type="hidden" name="region_id" value={c.id} />
-                <label style={{ flex: 1, fontSize: 12, color: "var(--ink-3)" }}>
-                  Reassign to (email) — starts a fresh free window
-                  <Input name="email" type="email" placeholder="newpartner@example.com" required />
-                </label>
-                <Button type="submit" variant="dark" size="sm">
-                  Reassign
-                </Button>
-              </form>
               <form action={unassignRegionPartner}>
                 <input type="hidden" name="region_id" value={c.id} />
                 <Button type="submit" variant="ghost" size="sm">
                   Unassign
                 </Button>
               </form>
+              <span style={{ fontSize: 12, color: "var(--ink-3)" }}>
+                To hand this region to someone else, unassign first — then
+                assign or approve a new application.
+              </span>
             </div>
           </>
         ) : (
