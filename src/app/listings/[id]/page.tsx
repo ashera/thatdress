@@ -77,6 +77,7 @@ type ListingRow = {
   includes_label_lining_photos: boolean | null;
   trust_status: string | null;
   region_is_test: boolean | null;
+  region_label: string | null;
 };
 
 type ImageRow = {
@@ -126,7 +127,8 @@ const LISTING_SELECT = `
   l.is_authentic_declared,
   l.includes_label_lining_photos,
   l.trust_status,
-  (SELECT rg.is_test FROM regions rg WHERE rg.id = l.region_id) AS region_is_test
+  (SELECT rg.is_test FROM regions rg WHERE rg.id = l.region_id) AS region_is_test,
+  (SELECT COALESCE(rg.short_name, rg.label) FROM regions rg WHERE rg.id = l.region_id) AS region_label
 `;
 
 const LISTING_JOINS = `
@@ -368,6 +370,7 @@ function buildSpecs(l: ListingRow): { group: string; items: Spec[] }[] {
   if (l.year) overview.push({ k: "Year", v: String(l.year) });
   if (l.condition_label) overview.push({ k: "Condition", v: l.condition_label });
   if (l.occasion_label) overview.push({ k: "Occasion", v: l.occasion_label });
+  if (l.region_label) overview.push({ k: "Region", v: l.region_label });
   if (l.location_postal)
     overview.push({ k: "Location", v: l.location_postal });
 
