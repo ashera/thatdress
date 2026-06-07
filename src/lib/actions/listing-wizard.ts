@@ -873,6 +873,12 @@ export async function publishDraftListing(formData: FormData): Promise<void> {
   if (!row.condition_id) {
     redirect(`/listings/new/${listingId}/condition?error=incomplete`);
   }
+  // Every listing must belong to a region (a partner owns each region and
+  // listing fees are per-region). A draft can be region-less if it was
+  // started before a region resolved, so block publish until one is set.
+  if (!row.region_id) {
+    redirect(`/listings/new/${listingId}/publish?error=region`);
+  }
 
   // Compute trust_status from the snapshot above + the just-submitted
   // declaration checkboxes + the description being saved on this turn.

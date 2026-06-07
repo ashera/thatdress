@@ -4,6 +4,7 @@ import {
   countPublishedListings,
   createTestUser,
   mintSession,
+  seedDraftListing,
   type TestUser,
 } from "../support/db";
 
@@ -16,7 +17,8 @@ import {
  */
 
 const BASE = "http://localhost:3000";
-const REGION_ID = "1"; // any seeded active region
+const REGION_ID = "8"; // Melbourne — an active region (the draft's region is
+// taken from the resolved cookie, and only active regions resolve)
 
 let user: TestUser;
 let session: string;
@@ -97,4 +99,26 @@ test("seller can publish a listing through the wizard", async ({ context, page }
   expect(m).toBeTruthy();
   await page.goto(`/listings/${m![1]}`, { waitUntil: "domcontentloaded" });
   await expect(page.getByText(/E2E Wizard Frock/i).first()).toBeVisible();
+});
+
+test("a draft with no region can't be published", async ({ context, page }) => {
+  const seller = await createTestUser();
+  const { listingId } = await seedDraftListing(seller.id, { regionId: null });
+  await context.addCookies([
+    { name: "session", value: await mintSession(seller.id), url: BASE, httpOnly: true },
+  ]);
+  try {
+    await page.goto(`/listings/new/${listingId}/publish`, { waitUntil: "networkidle" });
+    await page.fill('input[name="price"]', "180");
+    await page.fill('input[name="location_postal"]', "3000");
+    await page.check('input[name="is_authentic_declared"]');
+    await Promise.all([
+      page.waitForURL(/error=region/, { timeout: 20_000 }),
+      page.getByRole("button", { name: /Publish listing/i }).first().click(),
+    ]);
+    // Still a draft — the region guard blocked the publish.
+    expect(await countPublishedListings(seller.id)).toBe(0);
+  } finally {
+    await cleanupUsers([seller.id]);
+  }
 });

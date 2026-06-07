@@ -804,6 +804,8 @@ export const STEP_ERRORS: Record<string, string> = {
   "bad-type": "Photos must be JPEG, PNG, or WebP.",
   "upload-failed": "Photos failed to save. Try again with smaller files.",
   incomplete: "Some required fields aren't filled in yet.",
+  region:
+    "Pick the region this listing belongs to before publishing — use “Change region” below.",
   "authenticity-required":
     "Tick the 'I confirm this dress is authentic' box before publishing.",
 };

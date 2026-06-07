@@ -113,6 +113,47 @@ export async function seedListing(
   });
 }
 
+/** Insert a complete but unpublished DRAFT listing (all publish-required
+ *  fields set), with an optional null region. Used to test the
+ *  region-required-at-publish guard. */
+export async function seedDraftListing(
+  sellerId: string,
+  opts: { regionId?: string | null; title?: string } = {},
+): Promise<{ listingId: string; dressId: string }> {
+  const regionId = opts.regionId === undefined ? null : opts.regionId;
+  const title = opts.title ?? "E2E Draft Dress";
+  return withDb(async (c) => {
+    const d = await c.query<{ id: string }>(
+      `INSERT INTO dresses
+         (created_by_user_id, current_owner_user_id, disposition, designer_id, model)
+       VALUES ($1::bigint, $1::bigint, 'available',
+               (SELECT id FROM designers ORDER BY id LIMIT 1), 'E2E Model')
+       RETURNING id::text`,
+      [sellerId],
+    );
+    const dressId = d.rows[0]!.id;
+    await c.query(
+      `INSERT INTO dress_ownership_events (dress_id, to_user_id, event_type)
+         VALUES ($1::bigint, $2::bigint, 'created')`,
+      [dressId, sellerId],
+    );
+    const l = await c.query<{ id: string }>(
+      `INSERT INTO listings
+         (dress_id, title, price_cents, seller_id, is_draft, is_published,
+          region_id, offers_enabled, trust_status, occasion_id, condition_id,
+          location_postal)
+       VALUES ($1::bigint, $2, $3, $4::bigint, TRUE, FALSE, $5::bigint, TRUE,
+               'self-declared',
+               (SELECT id FROM occasions ORDER BY id LIMIT 1),
+               (SELECT id FROM condition_grades ORDER BY id LIMIT 1),
+               '3000')
+       RETURNING id::text`,
+      [dressId, title, 20000, sellerId, regionId],
+    );
+    return { listingId: l.rows[0]!.id, dressId };
+  });
+}
+
 /** Create a throwaway ACTIVE, unclaimed region so the partner-application
  *  funnel has something to apply for (the seeded active regions are all
  *  taken). Deleting it cascades any applications / grants for it. */
