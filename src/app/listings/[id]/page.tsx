@@ -705,16 +705,30 @@ export default async function ListingDetailPage({
   const l = result.listing;
   const isOwner = currentUser != null && currentUser.id === l.seller_id;
   const isAdmin = currentUser?.isAdmin ?? false;
+  // The partner who markets this listing's region oversees it, so they
+  // can view its listings even when hidden or flagged — the partner
+  // region-listings page links straight here. Grants visibility only, not
+  // edit/owner powers.
+  let isRegionPartner = false;
+  if (currentUser && currentUser.isPartner && !isOwner && !isAdmin && l.region_id) {
+    const pr = await query(
+      `SELECT 1 FROM partner_marketing_regions
+        WHERE user_id = $1::bigint AND region_id = $2::bigint LIMIT 1`,
+      [currentUser.id, l.region_id],
+    );
+    isRegionPartner = pr.rows.length > 0;
+  }
+  const canOversee = isAdmin || isRegionPartner;
   if (l.is_draft) {
     if (isOwner || isAdmin) redirect(`/listings/new/${l.id}/basics`);
     notFound();
   }
-  if (!l.is_published && !isOwner && !isAdmin) notFound();
+  if (!l.is_published && !isOwner && !canOversee) notFound();
   // Flagged listings are hidden from non-owner / non-admin visitors —
   // they shouldn't be reachable from buyer browse or via direct URL.
-  // Owner still sees it (so they know it's under review) and admin
-  // sees it from the moderation queue.
-  if (l.trust_status === "flagged" && !isOwner && !isAdmin) notFound();
+  // Owner still sees it (so they know it's under review); admin + the
+  // region's partner see it for oversight.
+  if (l.trust_status === "flagged" && !isOwner && !canOversee) notFound();
   // Sandbox/test-region listings are private to the sandbox. Only the
   // seller, an admin, or someone currently inside that region (its
   // provisioned owner — the only one who can hold its region cookie) may

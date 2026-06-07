@@ -7,6 +7,8 @@ import {
   deleteTestRegions,
   getRegionFeeCents,
   mintSession,
+  seedListing,
+  setListingPublished,
   type TestUser,
 } from "../support/db";
 
@@ -42,4 +44,42 @@ test("partner can set a listing fee for their region", async ({ context, page })
   await expect
     .poll(async () => getRegionFeeCents(region.id), { timeout: 15_000 })
     .toBe(1500);
+});
+
+test("a region's partner can open a hidden listing in their region", async ({
+  browser,
+}) => {
+  const partner = await createTestUser({ isPartner: true });
+  const reg = await createTestRegion();
+  await assignPartnerRegion(partner.id, reg.id);
+  const otherSeller = await createTestUser();
+  const buyer = await createTestUser(); // a non-partner, non-owner control
+  const { listingId } = await seedListing(otherSeller.id, { regionId: reg.id });
+  await setListingPublished(listingId, false); // hidden
+
+  try {
+    // The partner who markets the region can view the hidden listing
+    // (region-listings page links straight here — used to 404).
+    const partnerCtx = await browser.newContext();
+    await partnerCtx.addCookies([
+      { name: "session", value: await mintSession(partner.id), url: BASE, httpOnly: true },
+    ]);
+    const pp = await partnerCtx.newPage();
+    const partnerResp = await pp.goto(`/listings/${listingId}`);
+    expect(partnerResp?.status()).toBe(200);
+    await partnerCtx.close();
+
+    // A regular signed-in shopper still gets a 404 on the hidden listing.
+    const buyerCtx = await browser.newContext();
+    await buyerCtx.addCookies([
+      { name: "session", value: await mintSession(buyer.id), url: BASE, httpOnly: true },
+    ]);
+    const bpg = await buyerCtx.newPage();
+    const buyerResp = await bpg.goto(`/listings/${listingId}`);
+    expect(buyerResp?.status()).toBe(404);
+    await buyerCtx.close();
+  } finally {
+    await cleanupUsers([partner.id, otherSeller.id, buyer.id]);
+    await deleteTestRegions([reg.id]);
+  }
 });

@@ -343,6 +343,64 @@ export async function getRegionFeeCents(regionId: string): Promise<number> {
   });
 }
 
+/** Seed a buyer↔seller conversation on a listing with one buyer message,
+ *  so the buyer is attributable in the seller's mark-sold dialog and the
+ *  thread has content. Returns the conversation id. */
+export async function seedConversation(
+  listingId: string,
+  buyerId: string,
+  sellerId: string,
+  body = "Hi, is this still available?",
+): Promise<string> {
+  return withDb(async (c) => {
+    const r = await c.query<{ id: string }>(
+      `INSERT INTO conversations (listing_id, buyer_id, seller_id)
+         VALUES ($1::bigint, $2::bigint, $3::bigint)
+       RETURNING id::text`,
+      [listingId, buyerId, sellerId],
+    );
+    const id = r.rows[0]!.id;
+    await c.query(
+      `INSERT INTO messages (conversation_id, sender_id, body)
+         VALUES ($1::bigint, $2::bigint, $3)`,
+      [id, buyerId, body],
+    );
+    return id;
+  });
+}
+
+/** Seller's review tally (non-hidden), for asserting the review loop. */
+export async function getSellerRating(
+  sellerId: string,
+): Promise<{ count: number; average: number }> {
+  return withDb(async (c) => {
+    const r = await c.query<{ count: string; average: string | null }>(
+      `SELECT COUNT(*)::text AS count,
+              ROUND(AVG(stars)::numeric, 1)::text AS average
+         FROM listing_reviews
+        WHERE seller_id = $1::bigint AND hidden_by_admin_at IS NULL`,
+      [sellerId],
+    );
+    return {
+      count: Number(r.rows[0]?.count ?? 0),
+      average: Number(r.rows[0]?.average ?? 0),
+    };
+  });
+}
+
+/** Set a listing's published flag (e.g. to test hidden-listing visibility). */
+export async function setListingPublished(
+  listingId: string,
+  published: boolean,
+): Promise<void> {
+  await withDb((c) =>
+    c.query(`UPDATE listings SET is_published = $2 WHERE id = $1::bigint`, [
+      listingId,
+      published,
+    ]),
+  );
+}
+
 /** Insert a session row and return its id (use as the `session` cookie). */
 export async function mintSession(userId: string): Promise<string> {
   const sid = randomBytes(32).toString("base64url");
