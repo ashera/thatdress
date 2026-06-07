@@ -14,12 +14,23 @@ export default async function PickRegionPage() {
     resolveCurrentRegion(),
   ]);
 
+  const currentRegionId =
+    current.kind === "selected" || current.kind === "auto"
+      ? current.region.id
+      : null;
   const detectedDisplay =
     current.kind === "selected" || current.kind === "auto"
       ? current.region.label
       : ipLocation;
 
   return (
-    <RegionPicker detected={detectedDisplay} regions={regions} next="/" />
+    <RegionPicker
+      detected={detectedDisplay}
+      regions={regions}
+      next="/"
+      currentRegionId={currentRegionId}
+      // A region is already set, so let them back out without changing it.
+      exitHref={currentRegionId ? "/" : null}
+    />
   );
 }

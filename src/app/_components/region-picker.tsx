@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 import type { Region } from "@/lib/regions";
 import { setRegion } from "@/lib/actions/regions";
 import { Button } from "./ui";
@@ -29,6 +30,10 @@ type Props = {
   /** Region the user is currently in — highlighted in the list so it's
    *  clear which one is active when the picker opens. */
   currentRegionId?: string | null;
+  /** When set, show a close (✕) control that dismisses the picker by
+   *  navigating here. Only makes sense when a region is already set (so the
+   *  blocking region gate never offers it). */
+  exitHref?: string | null;
 };
 
 export function RegionPicker({
@@ -43,9 +48,34 @@ export function RegionPicker({
   prompt,
   showDetected = true,
   currentRegionId = null,
+  exitHref = null,
 }: Props) {
   const card = (
-    <div className="region-gate-card">
+    <div className="region-gate-card" style={{ position: "relative" }}>
+      {exitHref && (
+        <Link
+          href={exitHref}
+          aria-label="Close and keep your current region"
+          title="Keep your current region"
+          style={{
+            position: "absolute",
+            top: 12,
+            right: 14,
+            width: 32,
+            height: 32,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            borderRadius: 999,
+            color: "var(--ink-3)",
+            fontSize: 18,
+            lineHeight: 1,
+            textDecoration: "none",
+          }}
+        >
+          ✕
+        </Link>
+      )}
       <p className="eyebrow">{eyebrow}</p>
       <h1 className="region-gate-title">{title}</h1>
 
