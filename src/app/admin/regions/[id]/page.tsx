@@ -85,7 +85,19 @@ export default async function RegionDetailPage({
 
       <header style={{ margin: "var(--s-3) 0 var(--s-5)" }}>
         <p className="eyebrow">Admin · Region</p>
-        <h1 style={{ marginBottom: 4 }}>{c.label}</h1>
+        <h1
+          style={{
+            marginBottom: 4,
+            fontFamily: "var(--font-display)",
+            fontSize: "var(--t-h1, 44px)",
+            fontWeight: 800,
+            letterSpacing: "-0.02em",
+            lineHeight: 1.05,
+            color: "var(--ink-1)",
+          }}
+        >
+          {c.label}
+        </h1>
         <p className="sub" style={{ margin: 0 }}>
           <code style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}>{c.slug}</code>{" "}
           ·{" "}
