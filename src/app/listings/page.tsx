@@ -28,10 +28,8 @@ import {
   type ActiveFilters,
 } from "@/lib/listings-filter-types";
 import { ViewToggle, type ListingsView } from "../_components/view-toggle";
-import {
-  ListingsMap,
-  type MapPostcodeBucket,
-} from "../_components/listings-map";
+import { ListingsMap } from "../_components/listings-map";
+import { bucketByPostcode } from "@/lib/listing-map";
 import { saveSearch } from "@/lib/actions/saved-searches";
 import { setRegion } from "@/lib/actions/regions";
 import { loadSiteSettings } from "@/lib/site-settings";
@@ -147,85 +145,6 @@ function asScalar(v: string | string[] | undefined): string | undefined {
   if (v === undefined) return undefined;
   const s = Array.isArray(v) ? v[0] : v;
   return s && s.length > 0 ? s : undefined;
-}
-
-/**
- * Group the listings result by normalised postcode, then look up
- * each postcode's centroid from the `postcodes` table. Listings
- * whose postcode isn't in the table get counted as off-map so the
- * UI can prompt to expand the seed. Result is shaped for direct
- * consumption by <ListingsMap />.
- */
-async function bucketByPostcode(
-  listings: ListingCardRow[],
-): Promise<{ buckets: MapPostcodeBucket[]; offMapCount: number }> {
-  type Pending = {
-    postcode: string;
-    listings: MapPostcodeBucket["listings"];
-  };
-  const byPostcode = new Map<string, Pending>();
-  for (const l of listings) {
-    const code = (l.location_postal ?? "").trim().toUpperCase();
-    if (!code) continue;
-    let bucket = byPostcode.get(code);
-    if (!bucket) {
-      bucket = { postcode: code, listings: [] };
-      byPostcode.set(code, bucket);
-    }
-    bucket.listings.push({
-      id: l.id,
-      title: l.title,
-      price_cents: l.price_cents,
-      primary_image_id: l.primary_image_id ?? null,
-    });
-  }
-  if (byPostcode.size === 0) {
-    return { buckets: [], offMapCount: 0 };
-  }
-  const codes = Array.from(byPostcode.keys());
-  let rows: {
-    postcode: string;
-    place_name: string | null;
-    latitude: string;
-    longitude: string;
-  }[] = [];
-  try {
-    const r = await query<{
-      postcode: string;
-      place_name: string | null;
-      latitude: string;
-      longitude: string;
-    }>(
-      `SELECT postcode, place_name,
-              latitude::text  AS latitude,
-              longitude::text AS longitude
-         FROM postcodes
-        WHERE country_code = 'AU'
-          AND postcode = ANY($1::text[])`,
-      [codes],
-    );
-    rows = r.rows;
-  } catch {
-    rows = [];
-  }
-  const coords = new Map(rows.map((r) => [r.postcode, r]));
-  const buckets: MapPostcodeBucket[] = [];
-  let offMapCount = 0;
-  for (const [code, b] of byPostcode) {
-    const c = coords.get(code);
-    if (!c) {
-      offMapCount += b.listings.length;
-      continue;
-    }
-    buckets.push({
-      postcode: code,
-      place_name: c.place_name,
-      latitude: Number(c.latitude),
-      longitude: Number(c.longitude),
-      listings: b.listings,
-    });
-  }
-  return { buckets, offMapCount };
 }
 
 async function fetchListings(

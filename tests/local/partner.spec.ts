@@ -46,6 +46,39 @@ test("partner can set a listing fee for their region", async ({ context, page })
     .toBe(1500);
 });
 
+test("partner sees a region map on the dashboard and a map toggle on listings", async ({
+  browser,
+}) => {
+  const partner = await createTestUser({ isPartner: true });
+  const reg = await createTestRegion();
+  await assignPartnerRegion(partner.id, reg.id);
+  const seller = await createTestUser();
+  // seedListing uses postcode 3000 (in the postcodes centroid seed), so it
+  // lands on the map.
+  await seedListing(seller.id, { regionId: reg.id });
+
+  const ctx = await browser.newContext();
+  await ctx.addCookies([
+    { name: "session", value: await mintSession(partner.id), url: BASE, httpOnly: true },
+  ]);
+  const page = await ctx.newPage();
+  try {
+    // Dashboard shows the region map card (renders only when listings map).
+    await page.goto("/partner", { waitUntil: "networkidle" });
+    await expect(
+      page.getByRole("heading", { name: /Where your listings are/i }),
+    ).toBeVisible();
+
+    // Region-listings map view replaces the table with the map.
+    await page.goto("/partner/listings?view=map", { waitUntil: "networkidle" });
+    await expect(page.getByRole("link", { name: /^Map$/ })).toBeVisible();
+    await expect(page.locator("table.data-table")).toHaveCount(0);
+  } finally {
+    await cleanupUsers([partner.id, seller.id]);
+    await deleteTestRegions([reg.id]);
+  }
+});
+
 test("a region's partner can open a hidden listing in their region", async ({
   browser,
 }) => {

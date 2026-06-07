@@ -2,7 +2,9 @@ import Link from "next/link";
 import { requirePartner } from "@/lib/auth";
 import { query } from "@/lib/db";
 import { getCurrentTestRegion, getPartnerRegions } from "@/lib/regions";
+import { bucketByPostcode } from "@/lib/listing-map";
 import { Badge, Button, ButtonLink, Input } from "../../_components/ui";
+import { ListingsMap } from "../../_components/listings-map";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Region listings — Partner" };
@@ -24,6 +26,7 @@ type Row = {
   region_label: string | null;
   seller_email: string | null;
   primary_image_id: string | null;
+  location_postal: string | null;
 };
 
 type RefOption = { id: string; label: string };
@@ -88,6 +91,7 @@ export default async function PartnerListingsPage({
     condition?: string;
     q?: string;
     sort?: string;
+    view?: string;
   }>;
 }) {
   const user = await requirePartner();
@@ -126,6 +130,7 @@ export default async function PartnerListingsPage({
     ? (sp.sort as Sort)
     : "newest";
   const q = (sp.q ?? "").trim().slice(0, 80);
+  const view: "list" | "map" = sp.view === "map" ? "map" : "list";
   const regionFilter =
     sp.region && regionIds.includes(sp.region) ? sp.region : null;
   const occasionFilter = /^\d+$/.test(sp.occasion ?? "") ? sp.occasion! : null;
@@ -202,7 +207,7 @@ export default async function PartnerListingsPage({
               d.name AS designer_name, dr.model AS model,
               cg.label AS condition_label, o.label AS occasion_label,
               ds.label AS size_label, rg.label AS region_label,
-              u.email AS seller_email,
+              u.email AS seller_email, l.location_postal,
               (
                 SELECT li.id::text FROM listing_images li
                   WHERE li.listing_id = l.id
@@ -227,7 +232,24 @@ export default async function PartnerListingsPage({
     rows = [];
   }
 
+  // Map view clusters the (filtered) rows by postcode centroid.
+  const map = view === "map" ? await bucketByPostcode(rows) : null;
+
   const regionNames = regions.map((r) => r.label).join(", ");
+
+  // A link to this page in the given view, preserving the active filters.
+  const viewHref = (v: "list" | "map"): string => {
+    const params = new URLSearchParams();
+    if (status !== "all") params.set("status", status);
+    if (sort !== "newest") params.set("sort", sort);
+    if (q) params.set("q", q);
+    if (regionFilter) params.set("region", regionFilter);
+    if (occasionFilter) params.set("occasion", occasionFilter);
+    if (conditionFilter) params.set("condition", conditionFilter);
+    if (v === "map") params.set("view", "map");
+    const qs = params.toString();
+    return qs ? `/partner/listings?${qs}` : "/partner/listings";
+  };
 
   return (
     <div className="page page--pad" style={{ maxWidth: 1280 }}>
@@ -347,11 +369,49 @@ export default async function PartnerListingsPage({
       </form>
 
       <section className="form-card">
-        <p className="card-sub" style={{ marginTop: 0 }}>
-          <strong>{rows.length}</strong> listing{rows.length === 1 ? "" : "s"}
-          {rows.length >= MAX_ROWS ? ` (showing newest ${MAX_ROWS})` : ""}.
-        </p>
-        {rows.length === 0 ? (
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: "var(--s-3)",
+            flexWrap: "wrap",
+            marginBottom: "var(--s-3)",
+          }}
+        >
+          <p className="card-sub" style={{ margin: 0 }}>
+            <strong>{rows.length}</strong> listing{rows.length === 1 ? "" : "s"}
+            {rows.length >= MAX_ROWS ? ` (showing newest ${MAX_ROWS})` : ""}.
+          </p>
+          <div style={{ display: "flex", gap: 4 }}>
+            {(["list", "map"] as const).map((v) => (
+              <Link
+                key={v}
+                href={viewHref(v)}
+                style={{
+                  padding: "5px 14px",
+                  borderRadius: 999,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  textDecoration: "none",
+                  border: "1px solid var(--hairline-strong)",
+                  background: view === v ? "var(--ink-1)" : "transparent",
+                  color: view === v ? "#fff" : "var(--ink-2)",
+                }}
+              >
+                {v === "list" ? "List" : "Map"}
+              </Link>
+            ))}
+          </div>
+        </div>
+        {view === "map" ? (
+          <ListingsMap
+            buckets={map?.buckets ?? []}
+            offMapCount={map?.offMapCount ?? 0}
+            height="560px"
+            minHeight={420}
+          />
+        ) : rows.length === 0 ? (
           <p className="card-sub">No listings match these filters.</p>
         ) : (
           <div style={{ overflowX: "auto" }}>

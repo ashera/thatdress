@@ -35,12 +35,17 @@ export type MapPostcodeBucket = {
 export function ListingsMap({
   buckets,
   offMapCount,
+  height = "calc(100vh - 320px)",
+  minHeight = 480,
 }: {
   buckets: MapPostcodeBucket[];
   /** Count of listings that didn't match any postcode in our
    *  centroid table — surfaced as a footer chip so admins know to
    *  expand the postcodes seed. */
   offMapCount: number;
+  /** CSS height for the map container (compact embeds pass a fixed px). */
+  height?: string;
+  minHeight?: number;
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -137,8 +142,8 @@ export function ListingsMap({
         ref={ref}
         style={{
           width: "100%",
-          height: "calc(100vh - 320px)",
-          minHeight: 480,
+          height,
+          minHeight,
           borderRadius: 14,
           border: "1px solid var(--hairline)",
           overflow: "hidden",

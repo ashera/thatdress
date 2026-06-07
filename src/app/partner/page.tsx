@@ -7,7 +7,9 @@ import {
 } from "@/lib/regions";
 import { updatePartnerListingFees } from "@/lib/actions/partner";
 import { enterSandbox } from "@/lib/actions/regions";
+import { bucketByPostcode, type MapListingRow } from "@/lib/listing-map";
 import { Badge, Button, ButtonLink } from "../_components/ui";
+import { ListingsMap } from "../_components/listings-map";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Partner dashboard" };
@@ -91,6 +93,32 @@ async function fetchRegionBreakdown(
         WHERE rg.id = ANY($1::bigint[])
         GROUP BY rg.id, rg.label, rg.sort_order
         ORDER BY rg.sort_order, rg.id`,
+      [regionIds],
+    );
+    return r.rows;
+  } catch {
+    return [];
+  }
+}
+
+/** Live listings in the partner's region(s), for the dashboard map card. */
+async function fetchRegionMapListings(
+  regionIds: string[],
+): Promise<MapListingRow[]> {
+  try {
+    const r = await query<MapListingRow>(
+      `SELECT l.id::text, l.title, l.price_cents, l.location_postal,
+              (SELECT li.id::text FROM listing_images li
+                 WHERE li.listing_id = l.id
+                 ORDER BY li.is_primary DESC, li.position, li.id
+                 LIMIT 1) AS primary_image_id
+         FROM listings l
+        WHERE l.is_draft = FALSE
+          AND l.is_published = TRUE
+          AND l.sold_at IS NULL
+          AND l.region_id = ANY($1::bigint[])
+        ORDER BY l.created_at DESC
+        LIMIT 500`,
       [regionIds],
     );
     return r.rows;
@@ -237,6 +265,8 @@ export default async function PartnerDashboardPage({
     ),
   ]);
 
+  const mapData = await bucketByPostcode(await fetchRegionMapListings(regionIds));
+
   // Top-line totals are the sum of the per-region rows, so the tiles and
   // the breakdown table can never disagree.
   const totalActive = breakdown.reduce((s, r) => s + Number(r.active), 0);
@@ -333,6 +363,47 @@ export default async function PartnerDashboardPage({
           <StatCard key={t.label} tile={t} />
         ))}
       </div>
+
+      {mapData.buckets.length > 0 && (
+        <section
+          className="form-card"
+          style={{ padding: "var(--s-5)", marginBottom: "var(--s-6)" }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: "var(--s-3)",
+              flexWrap: "wrap",
+              marginBottom: "var(--s-3)",
+            }}
+          >
+            <div>
+              <h2 className="card-heading" style={{ margin: 0 }}>
+                Where your listings are
+              </h2>
+              <p className="card-sub" style={{ margin: "2px 0 0" }}>
+                Live listings clustered by suburb.
+              </p>
+            </div>
+            <ButtonLink
+              href="/partner/listings?view=map"
+              variant="ghost"
+              size="sm"
+              iconRight="arrow"
+            >
+              Full map
+            </ButtonLink>
+          </div>
+          <ListingsMap
+            buckets={mapData.buckets}
+            offMapCount={mapData.offMapCount}
+            height="360px"
+            minHeight={320}
+          />
+        </section>
+      )}
 
       <section
         className="form-card"
