@@ -18,9 +18,15 @@
 /playwright-report/
 /playwright/.cache/
 
-# Local sample-data images — drop your own; not committed (keep README)
+# Sample-data / sandbox seed images. Image files are committed so seeded
+# listings show real photos everywhere (not just locally); anything else
+# dropped in here stays ignored.
 /db/sample-images/*
 !/db/sample-images/README.md
+!/db/sample-images/*.webp
+!/db/sample-images/*.jpg
+!/db/sample-images/*.jpeg
+!/db/sample-images/*.png
 
 # next.js
 /.next/
