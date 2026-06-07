@@ -76,6 +76,9 @@ export type PartnerRegion = {
   freeUntil: string | null;
   /** Platform-fee % that applies after the free window. */
   platformFeePct: number;
+  /** True for a sandbox/test region — surfaced so partner views can scope
+   *  it to "only while inside the sandbox". */
+  isTest: boolean;
 };
 
 /** A partner's assigned marketing regions with their configured listing
@@ -91,12 +94,14 @@ export async function getPartnerRegions(
       listing_fee_cents: number;
       free_until: string | null;
       platform_fee_pct: string | null;
+      is_test: boolean;
     }>(
       `SELECT r.id::text          AS id,
               r.label             AS label,
               pmr.listing_fee_cents,
               pmr.free_until::text AS free_until,
-              pmr.platform_fee_pct
+              pmr.platform_fee_pct,
+              r.is_test           AS is_test
          FROM partner_marketing_regions pmr
          JOIN regions r ON r.id = pmr.region_id
         WHERE pmr.user_id = $1::bigint
@@ -109,6 +114,7 @@ export async function getPartnerRegions(
       listingFeeCents: Number(r.listing_fee_cents ?? 0),
       freeUntil: r.free_until,
       platformFeePct: Number(r.platform_fee_pct ?? 0),
+      isTest: r.is_test === true,
     }));
   } catch {
     return [];

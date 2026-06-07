@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requirePartner } from "@/lib/auth";
 import { query } from "@/lib/db";
-import { getPartnerRegions } from "@/lib/regions";
+import { getCurrentTestRegion, getPartnerRegions } from "@/lib/regions";
 import { Badge, Button, ButtonLink, Input } from "../../_components/ui";
 
 export const dynamic = "force-dynamic";
@@ -91,7 +91,16 @@ export default async function PartnerListingsPage({
   }>;
 }) {
   const user = await requirePartner();
-  const regions = await getPartnerRegions(user.id);
+  // The sandbox/test region is one of "your regions" only while you're
+  // inside it — otherwise its private seeded listings would show here and
+  // 404 on click (they're hidden from anyone not currently in the sandbox).
+  const [allRegions, currentTest] = await Promise.all([
+    getPartnerRegions(user.id),
+    getCurrentTestRegion(),
+  ]);
+  const regions = allRegions.filter(
+    (r) => !r.isTest || r.id === currentTest?.id,
+  );
   const regionIds = regions.map((r) => r.id);
   const multiRegion = regions.length > 1;
 

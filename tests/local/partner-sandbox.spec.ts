@@ -1,9 +1,11 @@
 import { test, expect } from "@playwright/test";
 import {
+  assignPartnerRegion,
   cleanupSandboxFor,
   cleanupUsers,
   countListingsInRegion,
   createPartnerApplication,
+  createSandboxRegion,
   createTestRegion,
   createTestUser,
   deleteTestRegions,
@@ -11,6 +13,7 @@ import {
   getSandboxRegion,
   getUserIsPartner,
   mintSession,
+  seedListing,
   type TestUser,
 } from "../support/db";
 
@@ -112,6 +115,47 @@ test("admin provisions a private sandbox, then tears it down", async ({
   expect(await getUserIsPartner(prospect.id)).toBe(false);
 
   await adminCtx.close();
+});
+
+test("sandbox listings only appear in /partner/listings from inside the sandbox", async ({
+  browser,
+}) => {
+  const owner = await createTestUser({ isPartner: true });
+  const { regionId } = await createSandboxRegion(owner.id);
+  await assignPartnerRegion(owner.id, regionId); // the sandbox grant
+  const { listingId } = await seedListing(owner.id, {
+    regionId,
+    title: "E2E Sandbox-only Dress",
+  });
+  const link = `a[href="/listings/${listingId}"]`;
+
+  try {
+    // Outside the sandbox: the test region isn't one of the partner's
+    // "real" regions, so its listings don't show (and can't 404 on click).
+    const outCtx = await browser.newContext();
+    await outCtx.addCookies([
+      { name: "session", value: await mintSession(owner.id), url: BASE, httpOnly: true },
+    ]);
+    const outPage = await outCtx.newPage();
+    await outPage.goto("/partner/listings", { waitUntil: "networkidle" });
+    await expect(outPage.locator(link)).toHaveCount(0);
+    await outCtx.close();
+
+    // Inside the sandbox (region cookie set): the listing shows.
+    const inCtx = await browser.newContext();
+    await inCtx.addCookies([
+      { name: "session", value: await mintSession(owner.id), url: BASE, httpOnly: true },
+      { name: REGION_COOKIE, value: regionId, url: BASE, httpOnly: true },
+    ]);
+    const inPage = await inCtx.newPage();
+    await inPage.goto("/partner/listings", { waitUntil: "networkidle" });
+    await expect(inPage.locator(link).first()).toBeVisible();
+    await inCtx.close();
+  } finally {
+    await cleanupSandboxFor(owner.id);
+    await cleanupUsers([owner.id]);
+    await deleteTestRegions([regionId]);
+  }
 });
 
 test("a prospect can create their own sandbox from the apply page", async ({

@@ -117,12 +117,64 @@ export default async function PartnerDashboardPage({
       ? "Enter a valid amount (e.g. 5 or 12.50), or leave blank for free."
       : null;
   const partnerRegions = await getPartnerRegions(user.id);
-  const regionIds = partnerRegions.map((r) => r.id);
   const [sandbox, currentTest] = await Promise.all([
     getSandboxRegionForUser(user.id),
     getCurrentTestRegion(),
   ]);
   const inSandbox = !!sandbox && currentTest?.id === sandbox.id;
+  // A sandbox/test region only counts as one of "your regions" while you're
+  // inside it — otherwise its seeded stock would leak into the real
+  // dashboard + region-listings (and clicking through would 404).
+  const regions = partnerRegions.filter(
+    (r) => !r.isTest || r.id === currentTest?.id,
+  );
+  const regionIds = regions.map((r) => r.id);
+
+  const sandboxCard = sandbox ? (
+    <section
+      className="form-card"
+      style={{
+        padding: "var(--s-4) var(--s-5)",
+        marginBottom: "var(--s-5)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: "var(--s-4)",
+        flexWrap: "wrap",
+      }}
+    >
+      <div>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--s-2)",
+            marginBottom: 4,
+          }}
+        >
+          <h2 className="card-heading" style={{ margin: 0 }}>
+            Your sandbox
+          </h2>
+          <Badge variant="info">Test region</Badge>
+        </div>
+        <p className="card-sub" style={{ margin: 0 }}>
+          A private region only you can see — switch in to browse, list, and
+          try the partner tools end to end. {inSandbox ? "You're in it now." : ""}
+        </p>
+      </div>
+      {inSandbox ? (
+        <Badge variant="ok">Active now</Badge>
+      ) : (
+        <form action={enterSandbox}>
+          <input type="hidden" name="region_id" value={sandbox.id} />
+          <input type="hidden" name="next" value="/listings" />
+          <Button type="submit" variant="primary" size="sm" iconRight="arrow">
+            Enter sandbox
+          </Button>
+        </form>
+      )}
+    </section>
+  ) : null;
 
   if (regionIds.length === 0) {
     return (
@@ -133,11 +185,13 @@ export default async function PartnerDashboardPage({
           </p>
           <h1 style={{ marginBottom: 4 }}>Partner dashboard</h1>
         </header>
+        {sandboxCard}
         <div className="empty-state">
           <h3>No marketing regions assigned yet</h3>
           <p style={{ margin: 0 }}>
-            An admin needs to assign you one or more marketing regions
-            before your dashboard can show activity.
+            {sandbox
+              ? "Enter your sandbox above to trial the partner tools, or an admin can assign you a live region."
+              : "An admin needs to assign you one or more marketing regions before your dashboard can show activity."}
           </p>
         </div>
       </div>
@@ -254,51 +308,7 @@ export default async function PartnerDashboardPage({
         </div>
       </header>
 
-      {sandbox && (
-        <section
-          className="form-card"
-          style={{
-            padding: "var(--s-4) var(--s-5)",
-            marginBottom: "var(--s-5)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: "var(--s-4)",
-            flexWrap: "wrap",
-          }}
-        >
-          <div>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "var(--s-2)",
-                marginBottom: 4,
-              }}
-            >
-              <h2 className="card-heading" style={{ margin: 0 }}>
-                Your sandbox
-              </h2>
-              <Badge variant="info">Test region</Badge>
-            </div>
-            <p className="card-sub" style={{ margin: 0 }}>
-              A private region only you can see — switch in to browse, list, and
-              try the partner tools end to end. {inSandbox ? "You're in it now." : ""}
-            </p>
-          </div>
-          {inSandbox ? (
-            <Badge variant="ok">Active now</Badge>
-          ) : (
-            <form action={enterSandbox}>
-              <input type="hidden" name="region_id" value={sandbox.id} />
-              <input type="hidden" name="next" value="/listings" />
-              <Button type="submit" variant="primary" size="sm" iconRight="arrow">
-                Enter sandbox
-              </Button>
-            </form>
-          )}
-        </section>
-      )}
+      {sandboxCard}
 
       {sp.saved && !feeError && (
         <p className="form-success" style={{ marginBottom: "var(--s-5)" }}>
@@ -343,7 +353,7 @@ export default async function PartnerDashboardPage({
             gap: "var(--s-3)",
           }}
         >
-          {partnerRegions.map((r) => (
+          {regions.map((r) => (
             <div
               key={r.id}
               style={{
