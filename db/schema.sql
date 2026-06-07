@@ -77,6 +77,10 @@ ALTER TABLE users
   ADD COLUMN IF NOT EXISTS title             TEXT,
   ADD COLUMN IF NOT EXISTS first_name        TEXT,
   ADD COLUMN IF NOT EXISTS surname           TEXT,
+  -- Optional contact number. Captured by the streamlined partner-apply
+  -- signup so we can reach a prospective partner; free-text (we don't
+  -- normalise/validate format beyond a light length cap).
+  ADD COLUMN IF NOT EXISTS mobile            TEXT,
   ADD COLUMN IF NOT EXISTS town              TEXT,
   ADD COLUMN IF NOT EXISTS postcode          TEXT,
   -- Buyer-side body measurements (cm), used by the fit calculator on

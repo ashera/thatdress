@@ -1,6 +1,5 @@
 import Link from "next/link";
 import Image from "next/image";
-import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import {
   getApplyRegions,
@@ -8,10 +7,15 @@ import {
   PARTNER_FREE_MONTHS,
   PARTNER_PLATFORM_FEE_PCT,
 } from "@/lib/partner-programme";
-import { applyForRegion } from "@/lib/actions/partner-apply";
+import {
+  applyForRegion,
+  registerPartnerApplicant,
+} from "@/lib/actions/partner-apply";
 import { getSandboxRegionForUser } from "@/lib/regions";
+import { PASSWORD_RULES_SUMMARY } from "@/lib/password-rules";
 import { Badge, Button, Field, Input, Textarea } from "../../_components/ui";
 import { ApplicationTimeline } from "../../_components/application-timeline";
+import { PasswordRules } from "../../_components/password-rules";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Apply to partner — frockd" };
@@ -20,7 +24,40 @@ const ERRORS: Record<string, string> = {
   region: "Please choose a region.",
   unavailable: "That region isn't available anymore.",
   duplicate: "You already have a pending application for that region.",
+  "invalid-email": "Please enter a valid email address.",
+  "weak-password": PASSWORD_RULES_SUMMARY,
+  "long-password": "Password must be 72 characters or fewer.",
+  "email-taken": "An account with that email already exists. Log in instead.",
 };
+
+function ApplyHero() {
+  return (
+    <section className="hero">
+      <div className="hero-sketch">
+        <Image
+          src="/dress-sketch-tr-back.png"
+          alt="Illustration of a pre-loved formal dress on a hanger"
+          fill
+          priority
+          sizes="(max-width: 900px) 100vw, 50vw"
+        />
+      </div>
+      <div className="hero-grid">
+        <div>
+          <p className="eyebrow">Partner programme</p>
+          <h1>
+            Apply to run a <span className="accent">region.</span>
+          </h1>
+          <p className="sub">
+            Pick a region and tell us a little about you. We review every
+            application and activate your region once approved — your first{" "}
+            {PARTNER_FREE_MONTHS} months are free.
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 function statusBadge(status: string) {
   if (status === "approved") return <Badge variant="ok">Approved</Badge>;
@@ -31,12 +68,23 @@ function statusBadge(status: string) {
 export default async function PartnerApplyPage({
   searchParams,
 }: {
-  searchParams: Promise<{ submitted?: string; error?: string }>;
+  searchParams: Promise<{
+    submitted?: string;
+    error?: string;
+    registered?: string;
+  }>;
 }) {
   const user = await getCurrentUser();
-  if (!user) redirect(`/login?next=${encodeURIComponent("/partners/apply")}`);
+  const { submitted, error, registered } = await searchParams;
+  const errorMessage = error ? ERRORS[error] ?? "Something went wrong." : null;
 
-  const { submitted, error } = await searchParams;
+  // Anonymous prospects register inline here rather than detouring through
+  // the standard login/register pages. Once they have an account they fall
+  // through to the region chooser below.
+  if (!user) {
+    return <PartnerSignup errorMessage={errorMessage} />;
+  }
+
   const [regions, myApps, sandbox] = await Promise.all([
     getApplyRegions(user.id),
     getMyApplications(user.id),
@@ -49,30 +97,7 @@ export default async function PartnerApplyPage({
 
   return (
     <div className="page">
-      <section className="hero">
-        <div className="hero-sketch">
-          <Image
-            src="/dress-sketch-tr-back.png"
-            alt="Illustration of a pre-loved formal dress on a hanger"
-            fill
-            priority
-            sizes="(max-width: 900px) 100vw, 50vw"
-          />
-        </div>
-        <div className="hero-grid">
-          <div>
-            <p className="eyebrow">Partner programme</p>
-            <h1>
-              Apply to run a <span className="accent">region.</span>
-            </h1>
-            <p className="sub">
-              Pick a region and tell us a little about you. We review every
-              application and activate your region once approved — your first{" "}
-              {PARTNER_FREE_MONTHS} months are free.
-            </p>
-          </div>
-        </div>
-      </section>
+      <ApplyHero />
 
       <div
         style={{
@@ -81,15 +106,21 @@ export default async function PartnerApplyPage({
           padding: "var(--s-7) 0 var(--s-9)",
         }}
       >
-        {submitted && (
+        {registered && (
+        <p className="form-success" style={{ marginBottom: "var(--s-4)" }}>
+          Account created — welcome! Choose the region you&rsquo;d like to run
+          below.
+        </p>
+      )}
+      {submitted && (
         <p className="form-success" style={{ marginBottom: "var(--s-4)" }}>
           Application received — we&rsquo;ll review it and be in touch. You can
           track its status below.
         </p>
       )}
-      {error && (
+      {errorMessage && (
         <p className="form-error" style={{ marginBottom: "var(--s-4)" }}>
-          {ERRORS[error] ?? "Something went wrong."}
+          {errorMessage}
         </p>
       )}
 
@@ -283,6 +314,120 @@ export default async function PartnerApplyPage({
           After your free year, a {PARTNER_PLATFORM_FEE_PCT}% platform fee
           applies to the listing fees you collect.{" "}
           <Link href="/partners">How it works →</Link>
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/** Inline signup shown to anonymous visitors on /partners/apply. Captures
+ *  name + contact + password, then drops them back here authenticated to
+ *  choose a region. */
+function PartnerSignup({ errorMessage }: { errorMessage: string | null }) {
+  return (
+    <div className="page">
+      <ApplyHero />
+
+      <div
+        style={{
+          maxWidth: 760,
+          margin: "0 auto",
+          padding: "var(--s-7) 0 var(--s-9)",
+        }}
+      >
+        <section className="form-card">
+          <h2 className="card-heading" style={{ marginTop: 0 }}>
+            Create your partner account
+          </h2>
+          <p className="card-sub" style={{ marginTop: 0 }}>
+            A few details to get you started — then you&rsquo;ll pick the
+            region you want to run. Already have an account?{" "}
+            <Link href={`/login?next=${encodeURIComponent("/partners/apply")}`}>
+              Log in
+            </Link>
+            .
+          </p>
+
+          {errorMessage && (
+            <p className="form-error" style={{ marginBottom: "var(--s-4)" }}>
+              {errorMessage}
+            </p>
+          )}
+
+          <form
+            action={registerPartnerApplicant}
+            style={{ display: "flex", flexDirection: "column", gap: "var(--s-4)" }}
+          >
+            <div className="grid-2">
+              <Field label="First name" htmlFor="first_name">
+                <Input
+                  id="first_name"
+                  name="first_name"
+                  required
+                  maxLength={64}
+                  autoComplete="given-name"
+                />
+              </Field>
+              <Field label="Surname" htmlFor="surname">
+                <Input
+                  id="surname"
+                  name="surname"
+                  required
+                  maxLength={64}
+                  autoComplete="family-name"
+                />
+              </Field>
+            </div>
+
+            <Field label="Email" htmlFor="email">
+              <Input
+                id="email"
+                type="email"
+                name="email"
+                required
+                autoComplete="email"
+              />
+            </Field>
+
+            <Field
+              label="Mobile (optional)"
+              htmlFor="mobile"
+              help="So we can reach you about your application."
+            >
+              <Input
+                id="mobile"
+                type="tel"
+                name="mobile"
+                maxLength={32}
+                autoComplete="tel"
+              />
+            </Field>
+
+            <Field label="Password" htmlFor="partner-password">
+              <Input
+                id="partner-password"
+                type="password"
+                name="password"
+                required
+                minLength={8}
+                maxLength={72}
+                autoComplete="new-password"
+              />
+            </Field>
+            <PasswordRules inputId="partner-password" />
+
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <Button type="submit" variant="primary" iconRight="arrow">
+                Create account &amp; continue
+              </Button>
+            </div>
+          </form>
+        </section>
+
+        <p className="card-sub" style={{ marginTop: "var(--s-5)" }}>
+          Run an exclusive region: your first {PARTNER_FREE_MONTHS} months are
+          free, then a {PARTNER_PLATFORM_FEE_PCT}% platform fee applies to the
+          listing fees you collect. <Link href="/partners">How it works →</Link>
         </p>
       </div>
     </div>

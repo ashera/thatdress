@@ -467,6 +467,29 @@ export async function getLastEmailTo(
   });
 }
 
+/** Read the fields the streamlined partner signup captures, for asserting
+ *  an inline-registered account landed correctly. Null if no such user. */
+export async function getUserSignup(email: string): Promise<{
+  id: string;
+  first_name: string | null;
+  surname: string | null;
+  mobile: string | null;
+} | null> {
+  return withDb(async (c) => {
+    const r = await c.query<{
+      id: string;
+      first_name: string | null;
+      surname: string | null;
+      mobile: string | null;
+    }>(
+      `SELECT id::text, first_name, surname, mobile FROM users
+        WHERE email = $1 LIMIT 1`,
+      [email],
+    );
+    return r.rows[0] ?? null;
+  });
+}
+
 /** Look up a user id by email (for cleaning up users created via the UI). */
 export async function findUserIdByEmail(email: string): Promise<string | null> {
   return withDb(async (c) => {

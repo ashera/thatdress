@@ -1,14 +1,79 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth";
+import { createSession, getCurrentUser, hashPassword } from "@/lib/auth";
 import { query } from "@/lib/db";
+import { dispatchVerificationEmail } from "@/lib/email-verify";
+import { passwordMeetsRules } from "@/lib/password-rules";
+import {
+  ensureReferralCode,
+  findReferrerByCode,
+  REFERRAL_COOKIE,
+} from "@/lib/referral";
 
 const APPLY = "/partners/apply";
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function field(formData: FormData, key: string, max: number): string | null {
   const v = String(formData.get(key) ?? "").trim().slice(0, max);
   return v.length > 0 ? v : null;
+}
+
+/**
+ * Streamlined signup for a prospective partner arriving on /partners/apply.
+ * Captures name + contact + password inline (no detour through the standard
+ * register page), creates the account, logs them in, and drops them back on
+ * the apply page — now authenticated — to choose a region. Mirrors the
+ * referral + verification-email behaviour of the main register action.
+ */
+export async function registerPartnerApplicant(
+  formData: FormData,
+): Promise<void> {
+  if (await getCurrentUser()) redirect(APPLY);
+
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const password = String(formData.get("password") ?? "");
+  const firstName = field(formData, "first_name", 64);
+  const surname = field(formData, "surname", 64);
+  const mobile = field(formData, "mobile", 32);
+
+  if (!email || !EMAIL_RE.test(email)) redirect(`${APPLY}?error=invalid-email`);
+  if (password.length > 72) redirect(`${APPLY}?error=long-password`);
+  if (!passwordMeetsRules(password)) redirect(`${APPLY}?error=weak-password`);
+
+  const password_hash = await hashPassword(password);
+
+  // Honour an active ?ref= cookie just like the main register flow.
+  const jar = await cookies();
+  const refCode = jar.get(REFERRAL_COOKIE)?.value ?? null;
+  const referrerId = refCode ? await findReferrerByCode(refCode) : null;
+
+  let userId: string;
+  try {
+    const result = await query<{ id: string }>(
+      `INSERT INTO users
+         (email, password_hash, first_name, surname, mobile,
+          referred_by_user_id, referred_at)
+       VALUES ($1, $2, $3, $4, $5, $6::bigint,
+               CASE WHEN $6 IS NULL THEN NULL ELSE NOW() END)
+       RETURNING id::text`,
+      [email, password_hash, firstName, surname, mobile, referrerId],
+    );
+    userId = result.rows[0]!.id;
+  } catch (err) {
+    if ((err as { code?: string }).code === "23505") {
+      redirect(`${APPLY}?error=email-taken`);
+    }
+    throw err;
+  }
+
+  await ensureReferralCode(userId);
+  if (referrerId) jar.delete(REFERRAL_COOKIE);
+
+  await createSession(userId);
+  await dispatchVerificationEmail(userId, email);
+  redirect(`${APPLY}?registered=1`);
 }
 
 /**
