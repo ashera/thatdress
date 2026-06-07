@@ -370,7 +370,6 @@ function buildSpecs(l: ListingRow): { group: string; items: Spec[] }[] {
   if (l.year) overview.push({ k: "Year", v: String(l.year) });
   if (l.condition_label) overview.push({ k: "Condition", v: l.condition_label });
   if (l.occasion_label) overview.push({ k: "Occasion", v: l.occasion_label });
-  if (l.region_label) overview.push({ k: "Region", v: l.region_label });
   if (l.location_postal)
     overview.push({ k: "Location", v: l.location_postal });
 
@@ -1102,7 +1101,29 @@ export default async function ListingDetailPage({
       )}
 
       <article className="detail">
-        <ListingGallery images={result.images} title={l.title} />
+        <div>
+          {l.region_label && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                marginBottom: "var(--s-3)",
+                fontFamily: "var(--font-mono)",
+                fontSize: 12,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                color: "var(--ink-3)",
+              }}
+            >
+              <span aria-hidden>📍</span>
+              <span style={{ color: "var(--ink-1)", fontWeight: 700 }}>
+                {l.region_label}
+              </span>
+            </div>
+          )}
+          <ListingGallery images={result.images} title={l.title} />
+        </div>
 
         <div className="detail-body">
           {(() => {

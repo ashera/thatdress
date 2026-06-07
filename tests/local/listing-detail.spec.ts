@@ -9,8 +9,9 @@ import {
 } from "../support/db";
 
 /**
- * The listing detail page always shows the listing's region, regardless of
- * the viewer's own region. Runs against the LOCAL app + DB.
+ * The listing detail page always shows the listing's region (above the
+ * dress image), regardless of the viewer's own region. Runs against the
+ * LOCAL app + DB.
  */
 
 let seller: TestUser;
@@ -31,8 +32,18 @@ test.afterAll(async () => {
   await deleteTestRegions([region.id]);
 });
 
-test("the listing detail page shows the listing's region", async ({ page }) => {
+test("the listing detail page shows the listing's region above the image", async ({
+  page,
+}) => {
   await page.goto(`/listings/${listingId}`, { waitUntil: "networkidle" });
-  await expect(page.getByText("Region", { exact: true })).toBeVisible();
-  await expect(page.getByText(region.label).first()).toBeVisible();
+  // The region label sits above the gallery image.
+  const region$ = page.getByText(region.label).first();
+  await expect(region$).toBeVisible();
+  const gallery$ = page.locator(".detail .gallery, .detail .detail-photo").first();
+  await expect(gallery$).toBeVisible();
+  const regionBox = await region$.boundingBox();
+  const galleryBox = await gallery$.boundingBox();
+  expect(regionBox).not.toBeNull();
+  expect(galleryBox).not.toBeNull();
+  expect(regionBox!.y).toBeLessThan(galleryBox!.y);
 });
