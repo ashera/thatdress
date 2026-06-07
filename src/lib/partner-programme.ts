@@ -120,6 +120,22 @@ export async function listApplications(): Promise<AdminApplication[]> {
   }
 }
 
+/** Whether a user has an in-flight (pending) partner application. Drives
+ *  the "My Applications" shortcut in the profile menu. */
+export async function hasPendingApplication(userId: string): Promise<boolean> {
+  if (!/^\d+$/.test(userId)) return false;
+  try {
+    const r = await query(
+      `SELECT 1 FROM partner_applications
+        WHERE user_id = $1::bigint AND status = 'pending' LIMIT 1`,
+      [userId],
+    );
+    return r.rows.length > 0;
+  } catch {
+    return false;
+  }
+}
+
 export async function countPendingApplications(): Promise<number> {
   try {
     const r = await query<{ n: string }>(

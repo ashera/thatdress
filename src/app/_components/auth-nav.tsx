@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { query } from "@/lib/db";
 import { resolveCurrentRegion, getCurrentRegionId } from "@/lib/regions";
 import { unreadMessageCount } from "@/lib/messages";
+import { hasPendingApplication } from "@/lib/partner-programme";
 import { countFriendsListed } from "@/lib/referral";
 import { currentReferralTier } from "@/lib/referral-tiers";
 import { ButtonLink } from "./ui";
@@ -72,11 +73,13 @@ export async function AuthNav() {
   ]);
   const currentRegion =
     region.kind === "selected" || region.kind === "auto" ? region.region : null;
-  const [listingCount, unread, friendsListed] = await Promise.all([
-    getListingCount(user, regionId),
-    user ? unreadMessageCount(user.id) : Promise.resolve(0),
-    user ? countFriendsListed(user.id) : Promise.resolve(0),
-  ]);
+  const [listingCount, unread, friendsListed, hasApplication] =
+    await Promise.all([
+      getListingCount(user, regionId),
+      user ? unreadMessageCount(user.id) : Promise.resolve(0),
+      user ? countFriendsListed(user.id) : Promise.resolve(0),
+      user ? hasPendingApplication(user.id) : Promise.resolve(false),
+    ]);
   const tier = currentReferralTier(friendsListed);
 
   return (
@@ -215,6 +218,9 @@ export async function AuthNav() {
                   tierEmoji={tier?.emoji ?? null}
                   tierLabel={tier?.label ?? null}
                 >
+                  {hasApplication && (
+                    <Link href="/partners/apply">My Applications</Link>
+                  )}
                   <Link href="/listings/mine">My Wardrobe</Link>
                   {user.isPartner && (
                     <Link href="/partner">Partner Dashboard</Link>
