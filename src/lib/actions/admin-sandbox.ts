@@ -78,3 +78,44 @@ export async function endAdminSandbox(formData: FormData): Promise<void> {
   revalidatePath("/", "layout");
   redirect(`${REGIONS}?done=sandbox-ended`);
 }
+
+/** Only ever redirect back to an admin region page (guards the `from`
+ *  field against an open redirect). */
+function safeRegionFrom(from: string): string {
+  return /^\/admin\/regions(\/\d+)?$/.test(from) ? from : REGIONS;
+}
+
+/** Provision a sandbox for a region's assigned partner, driven from the
+ *  region detail page. The partner then launches it from their dashboard. */
+export async function createPartnerSandbox(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const userId = String(formData.get("user_id") ?? "");
+  const back = safeRegionFrom(String(formData.get("from") ?? REGIONS));
+  if (!/^\d+$/.test(userId)) redirect(`${back}?error=sandbox-failed`);
+
+  try {
+    await provisionSandboxForUser(userId);
+  } catch (e) {
+    const code = e instanceof Error ? e.message : "error";
+    redirect(`${back}?error=sandbox-${code === "exists" ? "exists" : "failed"}`);
+  }
+  revalidatePath(back);
+  revalidatePath("/partner");
+  revalidatePath("/", "layout");
+  redirect(`${back}?done=sandbox-created`);
+}
+
+/** Tear down a partner's sandbox from the region detail page. Gated to test
+ *  regions by teardownSandbox itself. */
+export async function endPartnerSandbox(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const regionId = String(formData.get("region_id") ?? "");
+  const back = safeRegionFrom(String(formData.get("from") ?? REGIONS));
+  if (!/^\d+$/.test(regionId)) redirect(back);
+
+  await teardownSandbox(regionId);
+  revalidatePath(back);
+  revalidatePath("/partner");
+  revalidatePath("/", "layout");
+  redirect(`${back}?done=sandbox-ended`);
+}

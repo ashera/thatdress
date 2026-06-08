@@ -274,3 +274,62 @@ test("an admin can create and tear down their own sandbox from Manage regions", 
     await cleanupUsers([adminUser.id]);
   }
 });
+
+test("an admin creates a sandbox for a partner; the partner launches it from their dashboard", async ({
+  browser,
+}) => {
+  const adminUser = await createTestUser({ isAdmin: true });
+  const partnerUser = await createTestUser({ isPartner: true });
+  const reg = await createTestRegion();
+  await assignPartnerRegion(partnerUser.id, reg.id);
+
+  const adminCtx = await browser.newContext();
+  await adminCtx.addCookies([
+    { name: "session", value: await mintSession(adminUser.id), url: BASE, httpOnly: true },
+  ]);
+  const adminP = await adminCtx.newPage();
+  try {
+    // --- Admin creates the sandbox from the region detail page ----------
+    await adminP.goto(`/admin/regions/${reg.id}`, { waitUntil: "networkidle" });
+    await Promise.all([
+      adminP.waitForURL(/done=sandbox-created/, { timeout: 30_000 }),
+      adminP
+        .getByRole("button", { name: /Create sandbox for this partner/i })
+        .click(),
+    ]);
+    const sb = await getSandboxRegion(partnerUser.id);
+    expect(sb).not.toBeNull();
+    expect(await countListingsInRegion(sb!.id)).toBeGreaterThan(0);
+    await expect(
+      adminP.getByRole("button", { name: /Tear down sandbox/i }),
+    ).toBeVisible();
+
+    // --- The partner can launch it from their dashboard -----------------
+    const partnerCtx = await browser.newContext();
+    await partnerCtx.addCookies([
+      { name: "session", value: await mintSession(partnerUser.id), url: BASE, httpOnly: true },
+    ]);
+    const partnerP = await partnerCtx.newPage();
+    await partnerP.goto("/partner", { waitUntil: "networkidle" });
+    await expect(
+      partnerP.getByRole("heading", { name: /Your sandbox/i }),
+    ).toBeVisible();
+    await Promise.all([
+      partnerP.waitForURL(/\/listings/, { timeout: 30_000 }),
+      partnerP.getByRole("button", { name: /Enter sandbox/i }).click(),
+    ]);
+    await partnerCtx.close();
+
+    // --- Admin tears it back down ---------------------------------------
+    await adminP.goto(`/admin/regions/${reg.id}`, { waitUntil: "networkidle" });
+    await Promise.all([
+      adminP.waitForURL(/done=sandbox-ended/, { timeout: 30_000 }),
+      adminP.getByRole("button", { name: /Tear down sandbox/i }).click(),
+    ]);
+    expect(await getSandboxRegion(partnerUser.id)).toBeNull();
+  } finally {
+    await cleanupSandboxFor(partnerUser.id);
+    await cleanupUsers([adminUser.id, partnerUser.id]);
+    await deleteTestRegions([reg.id]);
+  }
+});

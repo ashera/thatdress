@@ -11,6 +11,11 @@ import {
   approveApplication,
   rejectApplication,
 } from "@/lib/actions/admin-partner-applications";
+import {
+  createPartnerSandbox,
+  endPartnerSandbox,
+} from "@/lib/actions/admin-sandbox";
+import { getSandboxRegionForUser } from "@/lib/regions";
 import { showSamplesFromParam } from "@/lib/admin-test-data";
 import { Badge, Button, Field, Input } from "../../../_components/ui";
 import { DeleteConfirmDialog } from "../../../_components/delete-confirm-dialog";
@@ -24,6 +29,9 @@ const DONE: Record<string, string> = {
   approved: "Application approved — partner activated.",
   rejected: "Application rejected.",
   saved: "Region saved.",
+  "sandbox-created":
+    "Sandbox created — the partner can launch it from their dashboard.",
+  "sandbox-ended": "Partner sandbox torn down.",
 };
 const ERR: Record<string, string> = {
   email: "Enter the partner's email.",
@@ -35,6 +43,8 @@ const ERR: Record<string, string> = {
     "That account already runs a region. Partners manage a single region for now.",
   taken: "That region was already taken by another partner.",
   approve: "Couldn't approve — the application may already be decided.",
+  "sandbox-exists": "That partner already has a sandbox.",
+  "sandbox-failed": "Couldn't update the sandbox — please try again.",
 };
 
 function fmtAud(cents: number): string {
@@ -81,6 +91,10 @@ export default async function RegionDetailPage({
   if (!detail) notFound();
   const { config: c, partner, stats, listings, pendingApplications } = detail!;
   const from = `/admin/regions/${id}`;
+  // The assigned partner's private sandbox (if the admin has set one up).
+  const partnerSandbox = partner
+    ? await getSandboxRegionForUser(partner.user_id)
+    : null;
 
   return (
     <div className="page page--pad" style={{ maxWidth: 1000 }}>
@@ -153,6 +167,63 @@ export default async function RegionDetailPage({
                 To hand this region to someone else, unassign first — then
                 assign or approve a new application.
               </span>
+            </div>
+
+            {/* Partner sandbox: a private test region this partner can
+                launch from their dashboard to trial the tools. */}
+            <div
+              style={{
+                marginTop: "var(--s-4)",
+                paddingTop: "var(--s-4)",
+                borderTop: "1px solid var(--hairline)",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "var(--s-2)",
+                  marginBottom: 4,
+                }}
+              >
+                <h3 className="card-sub" style={{ margin: 0, fontWeight: 600, color: "var(--ink-1)" }}>
+                  Partner sandbox
+                </h3>
+                <Badge variant="info">Test region</Badge>
+                {partnerSandbox && <Badge variant="ok">Active</Badge>}
+              </div>
+              {partnerSandbox ? (
+                <div
+                  style={{ display: "flex", gap: "var(--s-3)", flexWrap: "wrap", alignItems: "center" }}
+                >
+                  <span style={{ fontSize: 13, color: "var(--ink-2)" }}>
+                    {partner.email} can launch it from their partner dashboard.
+                  </span>
+                  <form action={endPartnerSandbox}>
+                    <input type="hidden" name="region_id" value={partnerSandbox.id} />
+                    <input type="hidden" name="from" value={from} />
+                    <Button type="submit" variant="ghost" size="sm">
+                      Tear down sandbox
+                    </Button>
+                  </form>
+                </div>
+              ) : (
+                <div
+                  style={{ display: "flex", gap: "var(--s-3)", flexWrap: "wrap", alignItems: "center" }}
+                >
+                  <span style={{ fontSize: 13, color: "var(--ink-3)" }}>
+                    Spin up a private, seeded test region so this partner can
+                    trial the marketplace end to end.
+                  </span>
+                  <form action={createPartnerSandbox}>
+                    <input type="hidden" name="user_id" value={partner.user_id} />
+                    <input type="hidden" name="from" value={from} />
+                    <Button type="submit" variant="primary" size="sm" iconRight="arrow">
+                      Create sandbox for this partner
+                    </Button>
+                  </form>
+                </div>
+              )}
             </div>
           </>
         ) : (
