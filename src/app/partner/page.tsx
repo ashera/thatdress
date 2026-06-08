@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requirePartner } from "@/lib/auth";
 import { query } from "@/lib/db";
 import {
@@ -281,36 +282,42 @@ export default async function PartnerDashboardPage({
       value: numberFormat(totalActive),
       caption: "Published, not sold, in your regions",
       tone: "default",
+      href: "/partner/listings?status=live",
     },
     {
       label: "Listings · sold",
       value: numberFormat(totalSold),
       caption: "All-time closed sales",
       tone: "default",
+      href: "/partner/listings?status=sold",
     },
     {
       label: "GMV (all-time)",
       value: priceFormat(totalGmv),
       caption: "Sum of sold-listing price",
       tone: "good",
+      href: "/partner/listings?status=sold",
     },
     {
       label: "Listings · new (7d)",
       value: numberFormat(newListings7d),
       caption: "Posted in the last 7 days",
       tone: "default",
+      href: "/partner/listings?new=7d",
     },
     {
       label: "Active sellers",
       value: numberFormat(activeSellers),
       caption: "With a live listing in your regions",
       tone: "default",
+      href: "/partner/sellers",
     },
     {
       label: "Listings under review",
       value: numberFormat(listingsUnderReview),
       caption: "Flagged or with open buyer reports",
       tone: listingsUnderReview > 0 ? "warn" : "default",
+      href: "/partner/listings?review=open",
     },
   ];
 
@@ -528,10 +535,20 @@ export default async function PartnerDashboardPage({
                 >
                   <td style={tdStyle}>{r.label}</td>
                   <td style={{ ...tdStyle, textAlign: "right" }}>
-                    {numberFormat(Number(r.active))}
+                    <Link
+                      href={`/partner/listings?region=${r.region_id}&status=live`}
+                      style={statLinkStyle}
+                    >
+                      {numberFormat(Number(r.active))}
+                    </Link>
                   </td>
                   <td style={{ ...tdStyle, textAlign: "right" }}>
-                    {numberFormat(Number(r.sold))}
+                    <Link
+                      href={`/partner/listings?region=${r.region_id}&status=sold`}
+                      style={statLinkStyle}
+                    >
+                      {numberFormat(Number(r.sold))}
+                    </Link>
                   </td>
                   <td
                     style={{
@@ -540,7 +557,12 @@ export default async function PartnerDashboardPage({
                       fontVariantNumeric: "tabular-nums",
                     }}
                   >
-                    {priceFormat(Number(r.gmv))}
+                    <Link
+                      href={`/partner/listings?region=${r.region_id}&status=sold`}
+                      style={statLinkStyle}
+                    >
+                      {priceFormat(Number(r.gmv))}
+                    </Link>
                   </td>
                 </tr>
               ))}
@@ -570,11 +592,21 @@ const tdStyle: React.CSSProperties = {
   color: "var(--ink-1)",
 };
 
+const statLinkStyle: React.CSSProperties = {
+  color: "var(--ink-1)",
+  fontWeight: 600,
+  textDecoration: "underline",
+  textUnderlineOffset: 2,
+  textDecorationColor: "var(--hairline-strong)",
+};
+
 type Tile = {
   label: string;
   value: string;
   caption: string;
   tone: "default" | "good" | "warn";
+  /** When set, the whole tile is a link to the matching list page. */
+  href?: string;
 };
 
 function StatCard({ tile }: { tile: Tile }) {
@@ -594,20 +626,19 @@ function StatCard({ tile }: { tile: Tile }) {
             label: "var(--ink-4)",
             value: "var(--ink-1)",
           };
-  return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "space-between",
-        gap: 8,
-        padding: "var(--s-4)",
-        background: palette.bg,
-        border: `1px solid ${palette.border}`,
-        borderRadius: 10,
-        minHeight: 120,
-      }}
-    >
+  const cardStyle: React.CSSProperties = {
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "space-between",
+    gap: 8,
+    padding: "var(--s-4)",
+    background: palette.bg,
+    border: `1px solid ${palette.border}`,
+    borderRadius: 10,
+    minHeight: 120,
+  };
+  const inner = (
+    <>
       <div
         style={{
           fontFamily: "var(--font-mono)",
@@ -631,9 +662,38 @@ function StatCard({ tile }: { tile: Tile }) {
       >
         {tile.value}
       </div>
-      <div style={{ fontSize: 12, color: "var(--ink-3)", lineHeight: 1.4 }}>
-        {tile.caption}
+      <div
+        style={{
+          fontSize: 12,
+          color: "var(--ink-3)",
+          lineHeight: 1.4,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 4,
+        }}
+      >
+        <span>{tile.caption}</span>
+        {tile.href && (
+          <span aria-hidden style={{ color: palette.label, fontWeight: 700 }}>
+            →
+          </span>
+        )}
       </div>
-    </div>
+    </>
   );
+
+  if (tile.href) {
+    return (
+      <Link
+        href={tile.href}
+        className="stat-card-link"
+        style={{ ...cardStyle, textDecoration: "none", cursor: "pointer" }}
+        title={`View ${tile.label.replace(/·/g, "").trim()}`}
+      >
+        {inner}
+      </Link>
+    );
+  }
+  return <div style={cardStyle}>{inner}</div>;
 }

@@ -92,6 +92,9 @@ export default async function PartnerListingsPage({
     q?: string;
     sort?: string;
     view?: string;
+    new?: string;
+    review?: string;
+    seller?: string;
   }>;
 }) {
   const user = await requirePartner();
@@ -135,6 +138,11 @@ export default async function PartnerListingsPage({
     sp.region && regionIds.includes(sp.region) ? sp.region : null;
   const occasionFilter = /^\d+$/.test(sp.occasion ?? "") ? sp.occasion! : null;
   const conditionFilter = /^\d+$/.test(sp.condition ?? "") ? sp.condition! : null;
+  // Dashboard drill-downs: "new in the last 7 days", "under review"
+  // (flagged or with open buyer reports), and a single seller.
+  const newOnly = sp.new === "7d" || sp.new === "1";
+  const underReview = sp.review === "open" || sp.review === "1";
+  const sellerFilter = /^\d+$/.test(sp.seller ?? "") ? sp.seller! : null;
 
   const filtersActive =
     status !== "all" ||
@@ -142,7 +150,10 @@ export default async function PartnerListingsPage({
     !!q ||
     !!regionFilter ||
     !!occasionFilter ||
-    !!conditionFilter;
+    !!conditionFilter ||
+    newOnly ||
+    underReview ||
+    !!sellerFilter;
 
   // Filter dropdown options (occasions / conditions present in this
   // partner's regions, so the menus only offer relevant values).
@@ -184,6 +195,21 @@ export default async function PartnerListingsPage({
   if (conditionFilter) {
     params.push(conditionFilter);
     conds.push(`l.condition_id = $${++p}::bigint`);
+  }
+  if (sellerFilter) {
+    params.push(sellerFilter);
+    conds.push(`l.seller_id = $${++p}::bigint`);
+  }
+  if (newOnly) {
+    conds.push("l.created_at >= NOW() - INTERVAL '7 days'");
+  }
+  if (underReview) {
+    conds.push(
+      `(l.trust_status = 'flagged' OR EXISTS (
+         SELECT 1 FROM listing_flags f
+          WHERE f.listing_id = l.id AND f.resolved_at IS NULL
+       ))`,
+    );
   }
   if (q) {
     params.push(`%${q}%`);
@@ -235,6 +261,17 @@ export default async function PartnerListingsPage({
   // Map view clusters the (filtered) rows by postcode centroid.
   const map = view === "map" ? await bucketByPostcode(rows) : null;
 
+  // Human description of an active dashboard drill-down, shown by the count.
+  const drillNote = [
+    newOnly ? "new in the last 7 days" : null,
+    underReview ? "under review" : null,
+    sellerFilter
+      ? `seller ${rows[0]?.seller_email ?? `#${sellerFilter}`}`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   const regionNames = regions.map((r) => r.label).join(", ");
 
   // A link to this page in the given view, preserving the active filters.
@@ -246,6 +283,9 @@ export default async function PartnerListingsPage({
     if (regionFilter) params.set("region", regionFilter);
     if (occasionFilter) params.set("occasion", occasionFilter);
     if (conditionFilter) params.set("condition", conditionFilter);
+    if (newOnly) params.set("new", "7d");
+    if (underReview) params.set("review", "open");
+    if (sellerFilter) params.set("seller", sellerFilter);
     if (v === "map") params.set("view", "map");
     const qs = params.toString();
     return qs ? `/partner/listings?${qs}` : "/partner/listings";
@@ -282,6 +322,14 @@ export default async function PartnerListingsPage({
           padding: "var(--s-4)",
         }}
       >
+        {/* Preserve dashboard drill-down filters across a manual Filter
+            submit (they have no field of their own in this form). */}
+        {newOnly && <input type="hidden" name="new" value="7d" />}
+        {underReview && <input type="hidden" name="review" value="open" />}
+        {sellerFilter && (
+          <input type="hidden" name="seller" value={sellerFilter} />
+        )}
+
         <label style={{ ...filterField, flex: "2 1 240px" }}>
           Search
           <Input
@@ -381,7 +429,8 @@ export default async function PartnerListingsPage({
         >
           <p className="card-sub" style={{ margin: 0 }}>
             <strong>{rows.length}</strong> listing{rows.length === 1 ? "" : "s"}
-            {rows.length >= MAX_ROWS ? ` (showing newest ${MAX_ROWS})` : ""}.
+            {rows.length >= MAX_ROWS ? ` (showing newest ${MAX_ROWS})` : ""}
+            {drillNote ? ` · ${drillNote}` : ""}.
           </p>
           <div style={{ display: "flex", gap: 4 }}>
             {(["list", "map"] as const).map((v) => (
