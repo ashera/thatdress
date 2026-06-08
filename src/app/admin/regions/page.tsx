@@ -1,7 +1,15 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
 import { listRegionsWithDetail, type RegionListRow } from "@/lib/admin-regions";
-import { createRegion } from "@/lib/actions/regions";
+import {
+  getCurrentTestRegion,
+  getSandboxRegionForUser,
+} from "@/lib/regions";
+import { createRegion, enterSandbox, exitSandbox } from "@/lib/actions/regions";
+import {
+  createAdminSandbox,
+  endAdminSandbox,
+} from "@/lib/actions/admin-sandbox";
 import { Badge, Button, Field, Input } from "../../_components/ui";
 
 export const dynamic = "force-dynamic";
@@ -10,6 +18,14 @@ export const metadata = { title: "Manage Regions — Admin" };
 const ERRORS: Record<string, string> = {
   "missing-label": "A label is required.",
   "missing-slug": "Slug couldn't be derived from that label.",
+  "sandbox-exists": "You already have a sandbox.",
+  "sandbox-failed": "Couldn't update your sandbox — please try again.",
+};
+
+const DONE: Record<string, string> = {
+  "sandbox-created":
+    "Your private sandbox is ready — enter it to trial the marketplace.",
+  "sandbox-ended": "Your sandbox was torn down.",
 };
 
 function fmtAud(cents: number | null): string {
@@ -84,15 +100,23 @@ export default async function AdminRegionsPage({
 }: {
   searchParams: Promise<{
     error?: string;
+    done?: string;
     vis?: string;
     assign?: string;
     sort?: string;
     dir?: string;
   }>;
 }) {
-  await requireAdmin();
-  const { error, vis, assign, sort, dir } = await searchParams;
+  const user = await requireAdmin();
+  const { error, done, vis, assign, sort, dir } = await searchParams;
   const errorMessage = error ? (ERRORS[error] ?? "Something went wrong.") : null;
+  const doneMessage = done ? (DONE[done] ?? null) : null;
+
+  const [ownSandbox, currentTest] = await Promise.all([
+    getSandboxRegionForUser(user.id),
+    getCurrentTestRegion(),
+  ]);
+  const inSandbox = !!ownSandbox && currentTest?.id === ownSandbox.id;
 
   const sortKey: SortKey = (SORT_KEYS as readonly string[]).includes(sort ?? "")
     ? (sort as SortKey)
@@ -159,6 +183,104 @@ export default async function AdminRegionsPage({
           {errorMessage}
         </p>
       )}
+      {doneMessage && (
+        <p className="form-success" style={{ marginBottom: "var(--s-5)" }}>
+          {doneMessage}
+        </p>
+      )}
+
+      {/* Your private admin sandbox */}
+      <section
+        className="form-card"
+        style={{
+          marginBottom: "var(--s-6)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "var(--s-4)",
+          flexWrap: "wrap",
+        }}
+      >
+        <div style={{ minWidth: 0 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "var(--s-2)",
+              marginBottom: 4,
+            }}
+          >
+            <h2 className="card-heading" style={{ margin: 0 }}>
+              Your sandbox
+            </h2>
+            <Badge variant="info">Test region</Badge>
+            {inSandbox && <Badge variant="ok">Active now</Badge>}
+          </div>
+          <p className="card-sub" style={{ margin: 0 }}>
+            A private test region only you can enter, seeded with sample
+            listings so you can trial the marketplace end to end. It never
+            shows on any public surface.
+            {inSandbox ? " You're in it now." : ""}
+          </p>
+        </div>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--s-3)",
+            flexWrap: "wrap",
+          }}
+        >
+          {ownSandbox ? (
+            <>
+              {inSandbox ? (
+                <form action={exitSandbox}>
+                  <input type="hidden" name="next" value="/admin/regions" />
+                  <Button type="submit" variant="ghost" size="sm">
+                    Exit sandbox
+                  </Button>
+                </form>
+              ) : (
+                <form action={enterSandbox}>
+                  <input type="hidden" name="region_id" value={ownSandbox.id} />
+                  <input type="hidden" name="next" value="/listings" />
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    size="sm"
+                    iconRight="arrow"
+                  >
+                    Enter sandbox
+                  </Button>
+                </form>
+              )}
+              <Link
+                href={`/admin/regions/${ownSandbox.id}`}
+                style={{ fontSize: "var(--t-body-s)", color: "var(--volt-700)", fontWeight: 600 }}
+              >
+                Manage
+              </Link>
+              <form action={endAdminSandbox}>
+                <input type="hidden" name="region_id" value={ownSandbox.id} />
+                <Button type="submit" variant="ghost" size="sm">
+                  Tear down
+                </Button>
+              </form>
+            </>
+          ) : (
+            <form action={createAdminSandbox}>
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                iconRight="arrow"
+              >
+                Create my sandbox
+              </Button>
+            </form>
+          )}
+        </div>
+      </section>
 
       {/* Add a region */}
       <section className="form-card" style={{ marginBottom: "var(--s-6)" }}>
