@@ -114,8 +114,11 @@ export async function endPartnerSandbox(formData: FormData): Promise<void> {
   if (!/^\d+$/.test(regionId)) redirect(back);
 
   await teardownSandbox(regionId);
-  revalidatePath(back);
+  // If we were torn down from the sandbox region's OWN detail page, that
+  // page no longer exists — fall back to the regions list instead of 404ing.
+  const dest = back === `${REGIONS}/${regionId}` ? REGIONS : back;
+  revalidatePath(REGIONS);
   revalidatePath("/partner");
   revalidatePath("/", "layout");
-  redirect(`${back}?done=sandbox-ended`);
+  redirect(`${dest}?done=sandbox-ended`);
 }

@@ -309,6 +309,53 @@ test("exiting a sandbox restores the region you came from (no marketing region)"
   }
 });
 
+test("tearing down a sandbox from the sandbox region's own detail page lands on the list, not a 404", async ({
+  browser,
+}) => {
+  const adminUser = await createTestUser({ isAdmin: true });
+  const partnerUser = await createTestUser({ isPartner: true });
+  const reg = await createTestRegion();
+  await assignPartnerRegion(partnerUser.id, reg.id);
+
+  const ctx = await browser.newContext();
+  await ctx.addCookies([
+    { name: "session", value: await mintSession(adminUser.id), url: BASE, httpOnly: true },
+  ]);
+  const page = await ctx.newPage();
+  try {
+    // Provision the partner's sandbox from their real region detail page.
+    await page.goto(`/admin/regions/${reg.id}`, { waitUntil: "networkidle" });
+    await Promise.all([
+      page.waitForURL(/done=sandbox-created/, { timeout: 30_000 }),
+      page
+        .getByRole("button", { name: /Create sandbox for this partner/i })
+        .click(),
+    ]);
+    const sb = await getSandboxRegion(partnerUser.id);
+    expect(sb).not.toBeNull();
+
+    // Tear it down from the SANDBOX region's OWN detail page — the page we'd
+    // come back to is the one being deleted, so it must not 404.
+    const resp = await page.goto(`/admin/regions/${sb!.id}`, {
+      waitUntil: "networkidle",
+    });
+    expect(resp?.status()).toBe(200);
+    await Promise.all([
+      page.waitForURL(/\/admin\/regions(\?|$)/, { timeout: 30_000 }),
+      page.getByRole("button", { name: /Tear down sandbox/i }).click(),
+    ]);
+    expect(page.url()).not.toContain(`/admin/regions/${sb!.id}`);
+    await expect(
+      page.getByRole("heading", { name: /Manage regions/i }),
+    ).toBeVisible();
+    expect(await getSandboxRegion(partnerUser.id)).toBeNull();
+  } finally {
+    await cleanupSandboxFor(partnerUser.id);
+    await cleanupUsers([adminUser.id, partnerUser.id]);
+    await deleteTestRegions([reg.id]);
+  }
+});
+
 test("an admin creates a sandbox for a partner; the partner launches it from their dashboard", async ({
   browser,
 }) => {
