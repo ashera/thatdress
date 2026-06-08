@@ -28,14 +28,22 @@ export function sampleEmailSql(emailCol: string): string {
 }
 
 /** TRUE when a listing (by alias) is seeded sample/test data: its seller is
- *  a sample/sandbox account, or it sits in a test region. `sellerEmailCol`
- *  is the joined seller-email column for the query. */
+ *  a sample/sandbox account, or it sits in a test region. Pass
+ *  `sellerEmailCol` when the query already joins the seller's email (cheaper);
+ *  otherwise the seller is resolved with a self-contained subquery so this can
+ *  drop straight into any listings query without a join. */
 export function listingIsSampleSql(
   listingAlias = "l",
-  sellerEmailCol = "u.email",
+  sellerEmailCol?: string,
 ): string {
+  const sellerPart = sellerEmailCol
+    ? sampleEmailSql(sellerEmailCol)
+    : `EXISTS (
+        SELECT 1 FROM users su_s
+         WHERE su_s.id = ${listingAlias}.seller_id AND ${sampleEmailSql("su_s.email")}
+      )`;
   return `(
-    ${sampleEmailSql(sellerEmailCol)}
+    ${sellerPart}
     OR EXISTS (
       SELECT 1 FROM regions rg_s
        WHERE rg_s.id = ${listingAlias}.region_id AND rg_s.is_test

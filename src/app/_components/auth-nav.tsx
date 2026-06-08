@@ -5,6 +5,7 @@ import { endImpersonation } from "@/lib/actions/impersonation";
 import { getCurrentUser } from "@/lib/auth";
 import { query } from "@/lib/db";
 import { resolveCurrentRegion, getCurrentRegionId } from "@/lib/regions";
+import { listingIsSampleSql } from "@/lib/admin-test-data";
 import { unreadMessageCount } from "@/lib/messages";
 import { hasPendingApplication } from "@/lib/partner-programme";
 import { countFriendsListed } from "@/lib/referral";
@@ -27,15 +28,21 @@ async function getDbOk(): Promise<boolean> {
  * For everyone else: count of listings the viewer would see on the
  * browse page — published, in their current region, plus their own
  * listings regardless of region.
+ *
+ * Seeded sample/sandbox listings (and anything in a test region) are
+ * excluded from the count everywhere, so the status pill reflects real
+ * marketplace inventory rather than demo data.
  */
 async function getListingCount(
   user: { id: string; isAdmin: boolean } | null,
   regionId: string | null,
 ): Promise<number | null> {
+  const notSample = `NOT ${listingIsSampleSql("l")}`;
   try {
     if (user?.isAdmin) {
       const r = await query<{ n: string }>(
-        "SELECT COUNT(*)::text AS n FROM listings WHERE is_draft = FALSE",
+        `SELECT COUNT(*)::text AS n FROM listings l
+          WHERE l.is_draft = FALSE AND ${notSample}`,
       );
       return Number(r.rows[0]?.n ?? 0);
     }
@@ -46,7 +53,7 @@ async function getListingCount(
     if (user) {
       const r = await query<{ n: string }>(
         `SELECT COUNT(*)::text AS n FROM listings l
-          WHERE l.is_published = TRUE
+          WHERE l.is_published = TRUE AND ${notSample}
             AND (l.region_id = $1::bigint OR l.seller_id = $2::bigint)`,
         [regionId, user.id],
       );
@@ -54,7 +61,7 @@ async function getListingCount(
     }
     const r = await query<{ n: string }>(
       `SELECT COUNT(*)::text AS n FROM listings l
-        WHERE l.is_published = TRUE
+        WHERE l.is_published = TRUE AND ${notSample}
           AND l.region_id = $1::bigint`,
       [regionId],
     );
