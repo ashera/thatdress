@@ -275,6 +275,40 @@ test("an admin can create and tear down their own sandbox from Manage regions", 
   }
 });
 
+test("exiting a sandbox restores the region you came from (no marketing region)", async ({
+  browser,
+}) => {
+  // An admin (no marketing region) browsing a real region, who enters their
+  // own sandbox and exits, must land back on that region — not the picker.
+  const adminUser = await createTestUser({ isAdmin: true });
+  const homeRegion = await createTestRegion();
+  await createSandboxRegion(adminUser.id);
+
+  const ctx = await browser.newContext();
+  await ctx.addCookies([
+    { name: "session", value: await mintSession(adminUser.id), url: BASE, httpOnly: true },
+    { name: "region_id", value: homeRegion.id, url: BASE, httpOnly: true },
+  ]);
+  const page = await ctx.newPage();
+  try {
+    await page.goto("/admin/regions", { waitUntil: "networkidle" });
+    await Promise.all([
+      page.waitForURL(/\/listings/, { timeout: 30_000 }),
+      page.getByRole("button", { name: /Enter sandbox/i }).click(),
+    ]);
+    await expect(page.getByText(/Sandbox mode/i)).toBeVisible();
+
+    // Exit via the global banner; the prior region is restored.
+    await page.getByRole("button", { name: /Exit sandbox/i }).click();
+    await expect(page.locator(".region-pill")).toContainText(homeRegion.label);
+    await expect(page.locator(".region-pill")).not.toContainText(/Pick region/i);
+  } finally {
+    await cleanupSandboxFor(adminUser.id);
+    await cleanupUsers([adminUser.id]);
+    await deleteTestRegions([homeRegion.id]);
+  }
+});
+
 test("an admin creates a sandbox for a partner; the partner launches it from their dashboard", async ({
   browser,
 }) => {

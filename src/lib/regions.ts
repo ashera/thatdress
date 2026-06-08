@@ -5,6 +5,9 @@ import { getAnonymousLocation } from "@/lib/geo";
 import { getCurrentUser } from "@/lib/auth";
 
 export const REGION_COOKIE = "region_id";
+/** Stashes the region the viewer was in before entering a sandbox, so
+ *  exiting can drop them back exactly where they came from. */
+export const PREV_REGION_COOKIE = "prev_region_id";
 
 export type Region = {
   id: string;
@@ -133,6 +136,21 @@ export async function hasRealMarketingRegion(userId: string): Promise<boolean> {
         WHERE pmr.user_id = $1::bigint AND rg.is_test = FALSE
         LIMIT 1`,
       [userId],
+    );
+    return r.rows.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+/** True when `id` is an existing, active region — i.e. one the region picker
+ *  would treat as a valid selection (so it's safe to restore on sandbox exit). */
+export async function isActiveRegionId(id: string): Promise<boolean> {
+  if (!/^\d+$/.test(id)) return false;
+  try {
+    const r = await query(
+      `SELECT 1 FROM regions WHERE id = $1::bigint AND is_active = TRUE LIMIT 1`,
+      [id],
     );
     return r.rows.length > 0;
   } catch {

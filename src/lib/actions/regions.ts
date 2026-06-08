@@ -5,10 +5,23 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { query } from "@/lib/db";
 import { getCurrentUser, requireAdmin } from "@/lib/auth";
-import { REGION_COOKIE, getHomeRegionIdForUser } from "@/lib/regions";
+import {
+  REGION_COOKIE,
+  PREV_REGION_COOKIE,
+  getHomeRegionIdForUser,
+  isActiveRegionId,
+} from "@/lib/regions";
 import { teardownSandbox } from "@/lib/partner-sandbox";
 
 const COOKIE_MAX_AGE = 30 * 24 * 60 * 60;
+
+const REGION_COOKIE_OPTS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax" as const,
+  path: "/",
+  maxAge: COOKIE_MAX_AGE,
+};
 
 function slugify(input: string): string {
   return input
@@ -31,13 +44,9 @@ export async function setRegion(formData: FormData): Promise<void> {
   if (r.rows.length === 0) redirect("/");
 
   const jar = await cookies();
-  jar.set(REGION_COOKIE, id, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: COOKIE_MAX_AGE,
-  });
+  jar.set(REGION_COOKIE, id, REGION_COOKIE_OPTS);
+  // An explicit pick supersedes any remembered pre-sandbox region.
+  jar.delete(PREV_REGION_COOKIE);
 
   const next = String(formData.get("next") ?? "/listings");
   revalidatePath("/", "layout");
@@ -47,6 +56,7 @@ export async function setRegion(formData: FormData): Promise<void> {
 export async function clearRegion(): Promise<void> {
   const jar = await cookies();
   jar.delete(REGION_COOKIE);
+  jar.delete(PREV_REGION_COOKIE);
   revalidatePath("/", "layout");
   redirect("/");
 }
@@ -71,35 +81,40 @@ export async function enterSandbox(formData: FormData): Promise<void> {
   if (r.rows.length === 0) redirect("/partner");
 
   const jar = await cookies();
-  jar.set(REGION_COOKIE, id, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: COOKIE_MAX_AGE,
-  });
+  // Remember the region they were in so exiting drops them back there
+  // (not on the picker). Skip when there's nothing to remember or they're
+  // already pointed at this sandbox.
+  const prev = jar.get(REGION_COOKIE)?.value;
+  if (prev && /^\d+$/.test(prev) && prev !== id) {
+    jar.set(PREV_REGION_COOKIE, prev, REGION_COOKIE_OPTS);
+  }
+  jar.set(REGION_COOKIE, id, REGION_COOKIE_OPTS);
 
   revalidatePath("/", "layout");
   const next = String(formData.get("next") ?? "/listings");
   redirect(next.startsWith("/") ? next : "/listings");
 }
 
-/** Leave the sandbox — restore the user's real (active, non-test) marketing
- *  region so they land back on it rather than the region picker. Falls back
- *  to clearing the cookie when they have no real region (e.g. an admin who
- *  was only trialing their own sandbox). */
+/** Leave the sandbox — restore the region they came from so they land back
+ *  on it rather than the region picker. Preference order: the region they
+ *  were in before entering (if still active), then their own home/marketing
+ *  region, then clear the cookie (auto-resolution / picker). */
 export async function exitSandbox(formData: FormData): Promise<void> {
   const user = await getCurrentUser();
   const jar = await cookies();
-  const homeRegionId = user ? await getHomeRegionIdForUser(user.id) : null;
-  if (homeRegionId) {
-    jar.set(REGION_COOKIE, homeRegionId, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: COOKIE_MAX_AGE,
-    });
+
+  const prev = jar.get(PREV_REGION_COOKIE)?.value;
+  jar.delete(PREV_REGION_COOKIE);
+
+  let restore: string | null = null;
+  if (prev && /^\d+$/.test(prev) && (await isActiveRegionId(prev))) {
+    restore = prev;
+  } else if (user) {
+    restore = await getHomeRegionIdForUser(user.id);
+  }
+
+  if (restore) {
+    jar.set(REGION_COOKIE, restore, REGION_COOKIE_OPTS);
   } else {
     jar.delete(REGION_COOKIE);
   }
