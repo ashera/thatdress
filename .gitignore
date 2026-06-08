@@ -39,6 +39,9 @@
 .DS_Store
 *.pem
 
+# Local design assets / scratch (mockups, sketches, references not shipped).
+/design/
+
 # debug
 npm-debug.log*
 yarn-debug.log*
