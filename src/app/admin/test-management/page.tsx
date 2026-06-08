@@ -1,62 +1,53 @@
+import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
 import { runTestSuite } from "@/lib/actions/admin-tests";
 import {
+  buildCatalog,
   getRecentRuns,
   getTestsWithLatestResult,
   hasRunningRun,
+  type CatalogTest,
   type RunRow,
-  type TestRow,
 } from "@/lib/tests/queries";
+import { SUITES, type Suite } from "@/lib/tests/categories";
 import { Badge, Button } from "../../_components/ui";
 import { AutoRefresh } from "./_auto-refresh";
+import {
+  CategoryChip,
+  RunsTable,
+  fmtWhen,
+  statusBadge,
+} from "./_shared";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Test Management — Admin" };
 
-type BadgeVariant = "ok" | "warn" | "info" | "ink" | "default";
+const FAILED = new Set(["failed", "timedOut", "errored", "interrupted"]);
 
-function statusBadge(status: string | null): {
-  variant: BadgeVariant;
-  label: string;
-} {
-  switch (status) {
-    case "passed":
-      return { variant: "ok", label: "passed" };
-    case "failed":
-    case "timedOut":
-    case "errored":
-    case "interrupted":
-      return { variant: "warn", label: status };
-    case "skipped":
-      return { variant: "ink", label: "skipped" };
-    case "running":
-      return { variant: "info", label: "running" };
-    default:
-      return { variant: "default", label: "never run" };
+const SUITE_META: Record<Suite, { label: string; blurb: string }> = {
+  smoke: {
+    label: "Smoke",
+    blurb: "Hit production read-only.",
+  },
+  local: {
+    label: "Local",
+    blurb: "Hit your local app + database.",
+  },
+};
+
+function summarize(rows: CatalogTest[]) {
+  const passed = rows.filter((t) => t.status === "passed").length;
+  const failed = rows.filter((t) => FAILED.has(t.status ?? "")).length;
+  const neverRun = rows.filter((t) => !t.status).length;
+  const other = rows.length - passed - failed - neverRun;
+  const catCounts = new Map<string, number>();
+  for (const t of rows) {
+    catCounts.set(t.category, (catCounts.get(t.category) ?? 0) + 1);
   }
-}
-
-function fmtWhen(iso: string | null): string {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  return d.toLocaleString("en-AU", {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function fmtDuration(ms: number | null): string {
-  if (ms == null) return "—";
-  if (ms < 1000) return `${ms}ms`;
-  return `${(ms / 1000).toFixed(1)}s`;
-}
-
-function runDuration(run: RunRow): string {
-  if (!run.finished_at) return "—";
-  const ms = new Date(run.finished_at).getTime() - new Date(run.started_at).getTime();
-  return fmtDuration(ms);
+  const categories = [...catCounts.entries()].sort((a, b) =>
+    a[0].localeCompare(b[0]),
+  );
+  return { total: rows.length, passed, failed, neverRun, other, categories };
 }
 
 export default async function TestManagementPage({
@@ -72,8 +63,7 @@ export default async function TestManagementPage({
     getRecentRuns(15),
     hasRunningRun(),
   ]);
-
-  const bySuite = (s: string) => tests.filter((t) => t.suite === s);
+  const catalog = buildCatalog(tests);
 
   return (
     <div className="page page--pad">
@@ -85,7 +75,8 @@ export default async function TestManagementPage({
           Playwright suites for frockd. Runs are triggered here and execute
           on the machine serving the app (your PC during local dev) —{" "}
           <strong>smoke</strong> tests hit production read-only;{" "}
-          <strong>local</strong> tests hit your local app + database.
+          <strong>local</strong> tests hit your local app + database. Pick a
+          suite below to see every test, its number and category.
         </p>
       </header>
 
@@ -107,7 +98,7 @@ export default async function TestManagementPage({
         </h2>
         <p className="card-sub" style={{ marginTop: 0, marginBottom: "var(--s-4)" }}>
           {running
-            ? "A run is in progress — results refresh automatically below."
+            ? "A run is in progress — results refresh automatically."
             : "Kick off a suite. Tests run in the background; this page updates as results land."}
         </p>
         <div style={{ display: "flex", gap: "var(--s-3)", flexWrap: "wrap" }}>
@@ -126,36 +117,28 @@ export default async function TestManagementPage({
         </div>
       </section>
 
-      {/* Tests + latest result */}
-      <section className="form-card" style={{ marginBottom: "var(--s-6)" }}>
-        <h2 className="card-heading" style={{ marginTop: 0 }}>
-          Tests &amp; latest result
-        </h2>
-        {tests.length === 0 ? (
-          <p className="card-sub">
-            No tests recorded yet — run a suite to populate this list.
-          </p>
-        ) : (
-          (["smoke", "local"] as const).map((suite) =>
-            bySuite(suite).length === 0 ? null : (
-              <div key={suite} style={{ marginTop: "var(--s-4)" }}>
-                <h3
-                  style={{
-                    fontFamily: "var(--font-mono)",
-                    fontSize: 12,
-                    letterSpacing: "0.14em",
-                    textTransform: "uppercase",
-                    color: "var(--ink-3)",
-                    margin: "0 0 var(--s-2)",
-                  }}
-                >
-                  {suite}
-                </h3>
-                <TestTable rows={bySuite(suite)} />
-              </div>
-            ),
-          )
-        )}
+      {/* Suite summary cards */}
+      <section
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+          gap: "var(--s-4)",
+          marginBottom: "var(--s-6)",
+        }}
+      >
+        {SUITES.map((suite) => {
+          const rows = catalog.filter((t) => t.suite === suite);
+          const s = summarize(rows);
+          const latest = runs.find((r) => r.suite === suite) ?? null;
+          return (
+            <SuiteCard
+              key={suite}
+              suite={suite}
+              summary={s}
+              latest={latest}
+            />
+          );
+        })}
       </section>
 
       {/* Recent runs */}
@@ -166,112 +149,86 @@ export default async function TestManagementPage({
         {runs.length === 0 ? (
           <p className="card-sub">No runs yet.</p>
         ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table className="data-table" style={{ width: "100%" }}>
-              <thead>
-                <tr>
-                  <th style={cellHead}>#</th>
-                  <th style={cellHead}>Suite</th>
-                  <th style={cellHead}>Status</th>
-                  <th style={cellHead}>Passed</th>
-                  <th style={cellHead}>Started</th>
-                  <th style={cellHead}>Duration</th>
-                  <th style={cellHead}>Trigger</th>
-                </tr>
-              </thead>
-              <tbody>
-                {runs.map((run) => {
-                  const b = statusBadge(run.status);
-                  return (
-                    <tr key={run.id}>
-                      <td style={cell}>{run.id}</td>
-                      <td style={cell}>{run.suite}</td>
-                      <td style={cell}>
-                        <Badge variant={b.variant}>{b.label}</Badge>
-                      </td>
-                      <td style={cell}>
-                        {run.passed}/{run.total}
-                        {run.failed > 0 ? ` · ${run.failed} failed` : ""}
-                      </td>
-                      <td style={cell}>{fmtWhen(run.started_at)}</td>
-                      <td style={cell}>{runDuration(run)}</td>
-                      <td style={cell}>{run.trigger}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <RunsTable runs={runs} />
         )}
       </section>
     </div>
   );
 }
 
-const cellHead: React.CSSProperties = {
-  textAlign: "left",
-  padding: "var(--s-2) var(--s-3)",
-  fontSize: 12,
-  color: "var(--ink-3)",
-  borderBottom: "1px solid var(--hairline)",
-  whiteSpace: "nowrap",
-};
-const cell: React.CSSProperties = {
-  padding: "var(--s-2) var(--s-3)",
-  fontSize: "var(--t-body-s)",
-  borderBottom: "1px solid var(--hairline)",
-  verticalAlign: "top",
-};
-
-function TestTable({ rows }: { rows: TestRow[] }) {
+function SuiteCard({
+  suite,
+  summary,
+  latest,
+}: {
+  suite: Suite;
+  summary: ReturnType<typeof summarize>;
+  latest: RunRow | null;
+}) {
+  const meta = SUITE_META[suite];
+  const lb = latest ? statusBadge(latest.status) : null;
   return (
-    <div style={{ overflowX: "auto" }}>
-      <table className="data-table" style={{ width: "100%" }}>
-        <thead>
-          <tr>
-            <th style={cellHead}>Test</th>
-            <th style={cellHead}>Latest</th>
-            <th style={cellHead}>Last run</th>
-            <th style={cellHead}>Duration</th>
-            <th style={cellHead}>Last error</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((t) => {
-            const b = statusBadge(t.status);
-            return (
-              <tr key={t.test_key}>
-                <td style={cell}>{t.title}</td>
-                <td style={cell}>
-                  <Badge variant={b.variant}>{b.label}</Badge>
-                </td>
-                <td style={cell}>{fmtWhen(t.last_run_at)}</td>
-                <td style={cell}>{fmtDuration(t.duration_ms)}</td>
-                <td style={{ ...cell, maxWidth: 360 }}>
-                  {t.error ? (
-                    <code
-                      style={{
-                        fontFamily: "var(--font-mono)",
-                        fontSize: 11,
-                        color: "var(--ink-2)",
-                        display: "block",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                      title={t.error}
-                    >
-                      {t.error}
-                    </code>
-                  ) : (
-                    <span style={{ color: "var(--ink-4)" }}>—</span>
-                  )}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+    <Link
+      href={`/admin/test-management/${suite}`}
+      className="form-card"
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "var(--s-3)",
+        padding: "var(--s-5)",
+        textDecoration: "none",
+        color: "inherit",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: "var(--s-2)",
+        }}
+      >
+        <h2 className="card-heading" style={{ margin: 0 }}>
+          {meta.label}
+        </h2>
+        <span style={{ color: "var(--volt-700)", fontWeight: 600, fontSize: 14 }}>
+          View {summary.total} test{summary.total === 1 ? "" : "s"} →
+        </span>
+      </div>
+      <p className="card-sub" style={{ margin: 0 }}>
+        {meta.blurb}
+      </p>
+
+      <div style={{ display: "flex", gap: "var(--s-2)", flexWrap: "wrap" }}>
+        <Badge variant="ok">{summary.passed} passed</Badge>
+        {summary.failed > 0 && (
+          <Badge variant="warn">{summary.failed} failing</Badge>
+        )}
+        {summary.neverRun > 0 && (
+          <Badge variant="default">{summary.neverRun} never run</Badge>
+        )}
+        {summary.other > 0 && (
+          <Badge variant="ink">{summary.other} other</Badge>
+        )}
+      </div>
+
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+        {summary.categories.map(([cat, n]) => (
+          <CategoryChip key={cat} label={`${cat} · ${n}`} />
+        ))}
+      </div>
+
+      <div style={{ fontSize: 12, color: "var(--ink-3)" }}>
+        {latest && lb ? (
+          <>
+            Last run {fmtWhen(latest.started_at)} ·{" "}
+            <Badge variant={lb.variant}>{lb.label}</Badge> · {latest.passed}/
+            {latest.total} passed
+          </>
+        ) : (
+          "Not run yet."
+        )}
+      </div>
+    </Link>
   );
 }
