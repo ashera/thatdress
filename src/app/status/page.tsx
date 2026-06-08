@@ -2,6 +2,7 @@ import os from "node:os";
 import { query, getPoolStats } from "@/lib/db";
 import { pingAnthropic } from "@/lib/anthropic";
 import { buildInfo } from "@/lib/build-info";
+import { sampleEmailSql, listingIsSampleSql } from "@/lib/admin-test-data";
 
 export const dynamic = "force-dynamic";
 
@@ -57,17 +58,25 @@ async function getActiveConnections() {
 }
 
 async function getCounts() {
+  // `users`/`listings` are raw table row counts (for the Tables card);
+  // `users_real`/`listings_real` exclude seeded sample/sandbox + test-region
+  // rows so the headline KPIs match the menu pill and admin consoles.
   const r = await query<{
     users: string;
+    users_real: string;
     sessions: string;
     active_sessions: string;
     listings: string;
+    listings_real: string;
   }>(`
     SELECT
       (SELECT COUNT(*) FROM users)::text AS users,
+      (SELECT COUNT(*) FROM users WHERE NOT ${sampleEmailSql("email")})::text AS users_real,
       (SELECT COUNT(*) FROM sessions)::text AS sessions,
       (SELECT COUNT(*) FROM sessions WHERE expires_at > NOW())::text AS active_sessions,
-      (SELECT COUNT(*) FROM listings)::text AS listings
+      (SELECT COUNT(*) FROM listings)::text AS listings,
+      (SELECT COUNT(*) FROM listings l
+        WHERE l.is_draft = FALSE AND NOT ${listingIsSampleSql("l")})::text AS listings_real
   `);
   return r.rows[0];
 }
@@ -181,9 +190,9 @@ export default async function StatusPage() {
         />
         <KPI
           label="Listings"
-          value={counts.ok ? counts.value.listings : "—"}
+          value={counts.ok ? counts.value.listings_real : "—"}
         />
-        <KPI label="Users" value={counts.ok ? counts.value.users : "—"} />
+        <KPI label="Users" value={counts.ok ? counts.value.users_real : "—"} />
         <KPI
           label="Active sessions"
           value={counts.ok ? counts.value.active_sessions : "—"}
@@ -238,8 +247,14 @@ export default async function StatusPage() {
         <DetailCard title="Tables">
           {counts.ok ? (
             <KVList>
-              <KV k="users" v={counts.value.users} />
-              <KV k="listings" v={counts.value.listings} />
+              <KV
+                k="users"
+                v={`${counts.value.users} (${counts.value.users_real} excl. sample)`}
+              />
+              <KV
+                k="listings"
+                v={`${counts.value.listings} (${counts.value.listings_real} excl. sample)`}
+              />
               <KV
                 k="sessions"
                 v={`${counts.value.sessions} (${counts.value.active_sessions} active)`}

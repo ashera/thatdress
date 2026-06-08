@@ -53,14 +53,23 @@ export function listingIsSampleSql(
 
 /** TRUE when a dress (by alias) is seeded sample/test data: its current
  *  owner or original creator is a sample/sandbox account, or any of its
- *  listings sits in a test region. `ownerEmailCol` is the joined
- *  current-owner email column for the query. */
+ *  listings sits in a test region. Pass `ownerEmailCol` when the query
+ *  already joins the current-owner email (cheaper); otherwise the owner is
+ *  resolved with a self-contained subquery so this can drop into any dresses
+ *  query without a join. */
 export function dressIsSampleSql(
   dressAlias = "d",
-  ownerEmailCol = "u.email",
+  ownerEmailCol?: string,
 ): string {
+  const ownerPart = ownerEmailCol
+    ? sampleEmailSql(ownerEmailCol)
+    : `EXISTS (
+        SELECT 1 FROM users ou_s
+         WHERE ou_s.id = ${dressAlias}.current_owner_user_id
+           AND ${sampleEmailSql("ou_s.email")}
+      )`;
   return `(
-    ${sampleEmailSql(ownerEmailCol)}
+    ${ownerPart}
     OR EXISTS (
       SELECT 1 FROM users cu_s
        WHERE cu_s.id = ${dressAlias}.created_by_user_id

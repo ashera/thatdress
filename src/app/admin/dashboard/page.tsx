@@ -1,6 +1,13 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
 import { query } from "@/lib/db";
+import {
+  sampleEmailSql,
+  listingIsSampleSql,
+  dressIsSampleSql,
+  showSamplesFromParam,
+} from "@/lib/admin-test-data";
+import { SampleDataToggle } from "../_components/sample-data-toggle";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Dashboard — Admin" };
@@ -60,8 +67,23 @@ function numberFormat(n: number): string {
   return new Intl.NumberFormat("en-AU").format(n);
 }
 
-export default async function AdminDashboardPage() {
+export default async function AdminDashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ samples?: string }>;
+}) {
   await requireAdmin();
+  const sp = await searchParams;
+  const showSamples = showSamplesFromParam(sp.samples);
+
+  // Default: exclude seeded sample/sandbox + test-region rows so the
+  // headline numbers match what the consoles (which default-hide them) show
+  // when you click a tile. The toggle flips it. TRUE is a no-op predicate.
+  const notSampleUser = showSamples ? "TRUE" : `NOT ${sampleEmailSql("email")}`;
+  const notSampleListing = showSamples
+    ? "TRUE"
+    : `NOT ${listingIsSampleSql("l")}`;
+  const notSampleDress = showSamples ? "TRUE" : `NOT ${dressIsSampleSql("d")}`;
 
   const [
     totalUsers,
@@ -77,44 +99,52 @@ export default async function AdminDashboardPage() {
     listingsUnderReview,
     openTickets,
   ] = await Promise.all([
-    safeCount(`SELECT COUNT(*)::text AS count FROM users`),
+    safeCount(`SELECT COUNT(*)::text AS count FROM users WHERE ${notSampleUser}`),
     safeCount(
       `SELECT COUNT(*)::text AS count FROM users
         WHERE email_verified_at IS NOT NULL
-          AND suspended_at IS NULL`,
+          AND suspended_at IS NULL
+          AND ${notSampleUser}`,
     ),
     safeCount(
       `SELECT COUNT(*)::text AS count FROM users
-        WHERE suspended_at IS NOT NULL`,
+        WHERE suspended_at IS NOT NULL
+          AND ${notSampleUser}`,
     ),
     safeCount(
       `SELECT COUNT(*)::text AS count FROM users
-        WHERE created_at >= NOW() - INTERVAL '7 days'`,
+        WHERE created_at >= NOW() - INTERVAL '7 days'
+          AND ${notSampleUser}`,
     ),
     safeCount(
-      `SELECT COUNT(*)::text AS count FROM listings
-        WHERE is_draft = FALSE
-          AND is_published = TRUE
-          AND sold_at IS NULL`,
+      `SELECT COUNT(*)::text AS count FROM listings l
+        WHERE l.is_draft = FALSE
+          AND l.is_published = TRUE
+          AND l.sold_at IS NULL
+          AND ${notSampleListing}`,
     ),
     safeCount(
-      `SELECT COUNT(*)::text AS count FROM listings
-        WHERE sold_at IS NOT NULL`,
+      `SELECT COUNT(*)::text AS count FROM listings l
+        WHERE l.sold_at IS NOT NULL
+          AND ${notSampleListing}`,
     ),
     safeSum(
-      `SELECT COALESCE(SUM(price_cents), 0)::text AS sum FROM listings
-        WHERE sold_at IS NOT NULL`,
+      `SELECT COALESCE(SUM(l.price_cents), 0)::text AS sum FROM listings l
+        WHERE l.sold_at IS NOT NULL
+          AND ${notSampleListing}`,
     ),
     safeCount(
-      `SELECT COUNT(*)::text AS count FROM listings
-        WHERE is_draft = FALSE
-          AND created_at >= NOW() - INTERVAL '7 days'`,
+      `SELECT COUNT(*)::text AS count FROM listings l
+        WHERE l.is_draft = FALSE
+          AND l.created_at >= NOW() - INTERVAL '7 days'
+          AND ${notSampleListing}`,
     ),
-    safeCount(`SELECT COUNT(*)::text AS count FROM dresses`),
+    safeCount(`SELECT COUNT(*)::text AS count FROM dresses d WHERE ${notSampleDress}`),
     safeCount(
-      `SELECT COUNT(*)::text AS count FROM dresses
-        WHERE current_owner_user_id IS NOT NULL
-          AND disposition = 'in-use'`,
+      `SELECT COUNT(*)::text AS count FROM dresses d
+        WHERE d.current_owner_user_id IS NOT NULL
+          AND d.disposition = 'in-use'
+          AND ${notSampleDress}`,
     ),
     safeCount(
       `SELECT COUNT(*)::text AS count FROM (
@@ -127,6 +157,7 @@ export default async function AdminDashboardPage() {
                   WHERE f.listing_id = l.id AND f.resolved_at IS NULL
               )
             )
+            AND ${notSampleListing}
        ) x`,
     ),
     safeCount(
@@ -135,12 +166,16 @@ export default async function AdminDashboardPage() {
     ),
   ]);
 
+  // Carry the toggle state into the console drill-downs so they open in the
+  // same mode (the users/listings/dresses consoles read ?samples=1).
+  const sampleQs = showSamples ? "?samples=1" : "";
+
   const tiles: Tile[] = [
     {
       label: "Users · total",
       value: numberFormat(totalUsers),
       caption: `${numberFormat(verifiedUsers)} verified, ${numberFormat(suspendedUsers)} suspended`,
-      href: "/admin/users",
+      href: `/admin/users${sampleQs}`,
       tone: "default",
     },
     {
@@ -150,63 +185,63 @@ export default async function AdminDashboardPage() {
         totalUsers > 0
           ? `${Math.round((verifiedUsers / totalUsers) * 100)}% of total`
           : "—",
-      href: "/admin/users",
+      href: `/admin/users${sampleQs}`,
       tone: "default",
     },
     {
       label: "Users · new (7d)",
       value: numberFormat(newUsers7d),
       caption: "Sign-ups in the last 7 days",
-      href: "/admin/users",
+      href: `/admin/users${sampleQs}`,
       tone: "default",
     },
     {
       label: "Users · suspended",
       value: numberFormat(suspendedUsers),
       caption: "Currently locked out",
-      href: "/admin/users",
+      href: `/admin/users${sampleQs}`,
       tone: suspendedUsers > 0 ? "warn" : "default",
     },
     {
       label: "Listings · active",
       value: numberFormat(activeListings),
       caption: "Published, not sold",
-      href: "/admin/listings",
+      href: `/admin/listings${sampleQs}`,
       tone: "default",
     },
     {
       label: "Listings · sold",
       value: numberFormat(soldListings),
       caption: "All-time closed sales",
-      href: "/admin/listings",
+      href: `/admin/listings${sampleQs}`,
       tone: "default",
     },
     {
       label: "GMV (all-time)",
       value: priceFormat(gmvCents),
       caption: "Sum of sold-listing price",
-      href: "/admin/listings",
+      href: `/admin/listings${sampleQs}`,
       tone: "good",
     },
     {
       label: "Listings · new (7d)",
       value: numberFormat(newListings7d),
       caption: "Posted in the last 7 days",
-      href: "/admin/listings",
+      href: `/admin/listings${sampleQs}`,
       tone: "default",
     },
     {
       label: "Dresses · total",
       value: numberFormat(totalDresses),
       caption: "Garments tracked",
-      href: "/admin/dresses",
+      href: `/admin/dresses${sampleQs}`,
       tone: "default",
     },
     {
       label: "Dresses · in use",
       value: numberFormat(dressesInUse),
       caption: "Owned, eligible for relist nudge",
-      href: "/admin/dresses",
+      href: `/admin/dresses${sampleQs}`,
       tone: "default",
     },
     {
@@ -229,16 +264,26 @@ export default async function AdminDashboardPage() {
     <div className="page admin-page" style={{ maxWidth: 1280 }}>
       <header
         className="admin-header"
-        style={{ marginBottom: "var(--s-4)" }}
+        style={{
+          marginBottom: "var(--s-4)",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          gap: "var(--s-4)",
+          flexWrap: "wrap",
+        }}
       >
-        <p className="eyebrow" style={{ marginBottom: 4 }}>
-          Admin · Dashboard
-        </p>
-        <h1 style={{ marginBottom: 4 }}>Dashboard</h1>
-        <p className="sub" style={{ margin: 0 }}>
-          Vital signs at a glance — click any tile to drill into the
-          underlying data.
-        </p>
+        <div style={{ minWidth: 0 }}>
+          <p className="eyebrow" style={{ marginBottom: 4 }}>
+            Admin · Dashboard
+          </p>
+          <h1 style={{ marginBottom: 4 }}>Dashboard</h1>
+          <p className="sub" style={{ margin: 0 }}>
+            Vital signs at a glance — click any tile to drill into the
+            underlying data.
+          </p>
+        </div>
+        <SampleDataToggle show={showSamples} />
       </header>
 
       <div
