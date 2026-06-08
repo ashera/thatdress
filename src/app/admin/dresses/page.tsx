@@ -2,8 +2,13 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
 import { query } from "@/lib/db";
 import { forceRelistNudge, deleteDress } from "@/lib/actions/admin-dresses";
+import {
+  dressIsSampleSql,
+  showSamplesFromParam,
+} from "@/lib/admin-test-data";
 import { Button } from "../../_components/ui";
 import { DeleteConfirmDialog } from "../../_components/delete-confirm-dialog";
+import { SampleDataToggle } from "../_components/sample-data-toggle";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Dresses — Admin" };
@@ -81,7 +86,11 @@ type Row = {
   sold_listing_count: string;
 };
 
-async function fetchDresses(): Promise<Row[]> {
+async function fetchDresses(showSamples: boolean): Promise<Row[]> {
+  // Hide seeded sample/sandbox dresses by default; the admin toggle flips it.
+  const sampleFilter = showSamples
+    ? ""
+    : `WHERE NOT ${dressIsSampleSql("d", "u.email")}`;
   try {
     const r = await query<Row>(
       `SELECT d.id::text                              AS dress_id,
@@ -134,6 +143,7 @@ async function fetchDresses(): Promise<Row[]> {
                      li.is_primary DESC, li.position, li.id
             LIMIT 1
          ) thumb ON TRUE
+        ${sampleFilter}
         ORDER BY
           CASE d.disposition
             WHEN 'in-use'     THEN 1
@@ -277,11 +287,17 @@ function dressLabel(row: Row): string {
 export default async function AdminDressesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ nudge?: string; id?: string; deleted?: string }>;
+  searchParams: Promise<{
+    nudge?: string;
+    id?: string;
+    deleted?: string;
+    samples?: string;
+  }>;
 }) {
   await requireAdmin();
   const sp = await searchParams;
-  const rows = await fetchDresses();
+  const showSamples = showSamplesFromParam(sp.samples);
+  const rows = await fetchDresses(showSamples);
 
   const flash = sp.nudge ? NUDGE_MESSAGES[sp.nudge] : null;
   const deleteFlash = sp.deleted ? DELETE_MESSAGES[sp.deleted] : null;
@@ -301,6 +317,16 @@ export default async function AdminDressesPage({
           <em> in use</em> dresses are eligible.
         </p>
       </header>
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          marginBottom: "var(--s-4)",
+        }}
+      >
+        <SampleDataToggle show={showSamples} />
+      </div>
 
       <DispositionLegend />
 
@@ -328,8 +354,9 @@ export default async function AdminDressesPage({
         <div className="empty-state">
           <h3>No owned dresses yet</h3>
           <p style={{ margin: 0 }}>
-            Once a listing is closed with an attributed buyer the
-            dress will appear here.
+            {showSamples
+              ? "Once a listing is closed with an attributed buyer the dress will appear here."
+              : "Sample & test dresses are hidden — toggle them on above if you're looking for seeded data."}
           </p>
         </div>
       ) : (

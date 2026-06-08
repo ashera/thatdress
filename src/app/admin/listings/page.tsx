@@ -2,7 +2,12 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
 import { query } from "@/lib/db";
 import { sendSaleNudge, deleteListing } from "@/lib/actions/admin-listings";
+import {
+  listingIsSampleSql,
+  showSamplesFromParam,
+} from "@/lib/admin-test-data";
 import { DeleteConfirmDialog } from "@/app/_components/delete-confirm-dialog";
+import { SampleDataToggle } from "../_components/sample-data-toggle";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "All listings — Admin" };
@@ -85,13 +90,20 @@ async function fetchListings(opts: {
   sort: SortValue;
   status: StatusValue;
   sellerId: string | null;
+  showSamples: boolean;
 }): Promise<Row[]> {
-  const { search, sort, status, sellerId } = opts;
+  const { search, sort, status, sellerId, showSamples } = opts;
   const sortSql =
     SORT_OPTIONS.find((o) => o.value === sort)?.sql ?? SORT_OPTIONS[0].sql;
 
   const params: unknown[] = [];
   const where: string[] = ["l.is_draft = FALSE"];
+
+  // Hide seeded sample/sandbox listings (and anything in a test region) by
+  // default; the admin toggle flips it.
+  if (!showSamples) {
+    where.push(`NOT ${listingIsSampleSql("l", "u.email")}`);
+  }
 
   // Lock to a single seller when drilling in from the referrals
   // detail page or user detail page. seller_id wins over the text
@@ -240,10 +252,12 @@ export default async function AdminListingsPage({
     seller_id?: string;
     nudge?: string;
     deleted?: string;
+    samples?: string;
   }>;
 }) {
   await requireAdmin();
   const sp = await searchParams;
+  const showSamples = showSamplesFromParam(sp.samples);
   const nudgeMessage = sp.nudge
     ? NUDGE_MESSAGES[sp.nudge] ?? null
     : null;
@@ -273,7 +287,13 @@ export default async function AdminListingsPage({
     sellerEmail = r.rows[0]?.email ?? null;
   }
 
-  const rows = await fetchListings({ search, sort, status, sellerId });
+  const rows = await fetchListings({
+    search,
+    sort,
+    status,
+    sellerId,
+    showSamples,
+  });
 
   return (
     <div className="page admin-page" style={{ maxWidth: 1280 }}>
@@ -284,23 +304,35 @@ export default async function AdminListingsPage({
         ← {sellerId ? "All listings" : "Admin console"}
       </Link>
 
-      <header className="admin-header">
-        <p className="eyebrow">
-          Admin · Listings{sellerId ? " · By seller" : ""}
-        </p>
-        <h1>
-          {sellerId
-            ? sellerEmail
-              ? `Listings by ${sellerEmail}`
-              : "Listings by this seller"
-            : "All listings"}
-        </h1>
-        <p className="sub">
-          {rows.length} of up to 200 shown.{" "}
-          {sellerId
-            ? "Filtered to one seller; click any row to open the listing."
-            : "Click any card to open the listing — buyer conversations and offers appear inline on the detail page for admins."}
-        </p>
+      <header
+        className="admin-header"
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          gap: "var(--s-4)",
+          flexWrap: "wrap",
+        }}
+      >
+        <div style={{ minWidth: 0 }}>
+          <p className="eyebrow">
+            Admin · Listings{sellerId ? " · By seller" : ""}
+          </p>
+          <h1>
+            {sellerId
+              ? sellerEmail
+                ? `Listings by ${sellerEmail}`
+                : "Listings by this seller"
+              : "All listings"}
+          </h1>
+          <p className="sub">
+            {rows.length} of up to 200 shown.{" "}
+            {sellerId
+              ? "Filtered to one seller; click any row to open the listing."
+              : "Click any card to open the listing — buyer conversations and offers appear inline on the detail page for admins."}
+          </p>
+        </div>
+        <SampleDataToggle show={showSamples} />
       </header>
 
       {nudgeMessage && (
@@ -339,6 +371,8 @@ export default async function AdminListingsPage({
         {sellerId && (
           <input type="hidden" name="seller_id" value={sellerId} />
         )}
+        {/* Preserve the sample/test toggle when applying other filters. */}
+        {showSamples && <input type="hidden" name="samples" value="1" />}
         <label style={{ flex: "2 1 240px" }}>
           <span
             style={{
@@ -479,7 +513,9 @@ export default async function AdminListingsPage({
         <div className="empty-state">
           <h3>No listings match</h3>
           <p style={{ margin: 0 }}>
-            Try a different search term or change the filter.
+            {showSamples
+              ? "Try a different search term or change the filter."
+              : "Try a different search term or change the filter. Sample & test listings are hidden — toggle them on above to include seeded data."}
           </p>
         </div>
       ) : (

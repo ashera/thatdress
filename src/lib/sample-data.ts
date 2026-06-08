@@ -18,7 +18,7 @@ export const SAMPLE_LISTINGS_MAX = 48;
  * Guarded to non-production. Buttons live in /admin/sample-data.
  */
 
-const SAMPLE_EMAIL_LIKE = "sample+%@frockd.test";
+export const SAMPLE_EMAIL_LIKE = "sample+%@frockd.test";
 
 export function sampleDataEnabled(): boolean {
   return process.env.NODE_ENV !== "production";
