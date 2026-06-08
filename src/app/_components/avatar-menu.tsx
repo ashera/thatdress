@@ -93,7 +93,18 @@ export function AvatarMenu({
           </span>
         )}
       </button>
-      <div className="avatar-menu-panel">{children}</div>
+      <div className="avatar-menu-panel">
+        {/* Mobile only: the toggle pill (which shows the name on desktop) is
+            hidden in the hamburger panel, so surface the name as a header. */}
+        <div className="avatar-menu-name" aria-hidden>
+          <Icon name="user" />
+          <span>{displayName}</span>
+          {tierEmoji && (
+            <span style={{ fontSize: "1em", lineHeight: 1 }}>{tierEmoji}</span>
+          )}
+        </div>
+        {children}
+      </div>
     </div>
   );
 }

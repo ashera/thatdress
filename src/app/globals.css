@@ -634,6 +634,9 @@ input, select, textarea { font: inherit; color: inherit; }
   z-index: 60;
 }
 .avatar-menu.is-open .avatar-menu-panel { display: flex; }
+/* Name header inside the dropdown — only used on mobile (see below), where
+   the toggle pill that normally shows the name is hidden. */
+.avatar-menu-name { display: none; }
 .avatar-menu-panel a,
 .avatar-menu-panel button {
   display: block;
@@ -667,6 +670,29 @@ input, select, textarea { font: inherit; color: inherit; }
     background: transparent;
     border-radius: 0;
     min-width: 0;
+  }
+  .avatar-menu-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 4px;
+    border-bottom: 1px solid var(--hairline);
+    font-size: var(--t-body);
+    font-weight: 700;
+    color: var(--ink-1);
+  }
+  .avatar-menu-name .ico {
+    width: 18px;
+    height: 18px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.8;
+    flex-shrink: 0;
+  }
+  .avatar-menu-name span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .avatar-menu-panel a,
   .avatar-menu-panel button {
