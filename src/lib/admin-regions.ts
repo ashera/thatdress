@@ -1,5 +1,6 @@
 import "server-only";
 import { query } from "@/lib/db";
+import { listingIsSampleSql } from "@/lib/admin-test-data";
 
 /**
  * Admin region management data layer — gives regions the same depth as
@@ -143,8 +144,15 @@ export type RegionDetail = {
   pendingApplications: RegionApplication[];
 };
 
-export async function getRegionDetail(id: string): Promise<RegionDetail | null> {
+export async function getRegionDetail(
+  id: string,
+  showSamples = false,
+): Promise<RegionDetail | null> {
   if (!/^\d+$/.test(id)) return null;
+  // The Activity card hides seeded sample/sandbox listings by default; the
+  // toggle on the page flips it. (In a test region everything is sample, so
+  // the default view is empty until you toggle it on.)
+  const sampleFilter = showSamples ? "" : `AND NOT ${listingIsSampleSql("l")}`;
   try {
     const cfg = await query<RegionConfig>(
       `SELECT id::text, slug, label, short_name, match_pattern, sort_order, is_active, is_test
@@ -174,11 +182,12 @@ export async function getRegionDetail(id: string): Promise<RegionDetail | null> 
       ),
       query<{ active: string; sold: string; gmv: string; sellers: string }>(
         `SELECT
-           COUNT(*) FILTER (WHERE is_published AND sold_at IS NULL)::text AS active,
-           COUNT(*) FILTER (WHERE sold_at IS NOT NULL)::text              AS sold,
-           COALESCE(SUM(price_cents) FILTER (WHERE sold_at IS NOT NULL),0)::text AS gmv,
-           COUNT(DISTINCT seller_id) FILTER (WHERE is_published AND sold_at IS NULL)::text AS sellers
-         FROM listings WHERE region_id = $1::bigint AND is_draft = FALSE`,
+           COUNT(*) FILTER (WHERE l.is_published AND l.sold_at IS NULL)::text AS active,
+           COUNT(*) FILTER (WHERE l.sold_at IS NOT NULL)::text               AS sold,
+           COALESCE(SUM(l.price_cents) FILTER (WHERE l.sold_at IS NOT NULL),0)::text AS gmv,
+           COUNT(DISTINCT l.seller_id) FILTER (WHERE l.is_published AND l.sold_at IS NULL)::text AS sellers
+         FROM listings l
+          WHERE l.region_id = $1::bigint AND l.is_draft = FALSE ${sampleFilter}`,
         [id],
       ),
       query<RegionListing>(
@@ -191,7 +200,7 @@ export async function getRegionDetail(id: string): Promise<RegionDetail | null> 
            FROM listings l
            JOIN dresses dr ON dr.id = l.dress_id
            LEFT JOIN designers d ON d.id = dr.designer_id
-          WHERE l.region_id = $1::bigint AND l.is_draft = FALSE
+          WHERE l.region_id = $1::bigint AND l.is_draft = FALSE ${sampleFilter}
           ORDER BY l.created_at DESC LIMIT 12`,
         [id],
       ),

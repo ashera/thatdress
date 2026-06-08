@@ -11,8 +11,10 @@ import {
   approveApplication,
   rejectApplication,
 } from "@/lib/actions/admin-partner-applications";
+import { showSamplesFromParam } from "@/lib/admin-test-data";
 import { Badge, Button, Field, Input } from "../../../_components/ui";
 import { DeleteConfirmDialog } from "../../../_components/delete-confirm-dialog";
+import { SampleDataToggle } from "../../_components/sample-data-toggle";
 
 export const dynamic = "force-dynamic";
 
@@ -69,12 +71,13 @@ export default async function RegionDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ done?: string; error?: string }>;
+  searchParams: Promise<{ done?: string; error?: string; samples?: string }>;
 }) {
   await requireAdmin();
   const { id } = await params;
-  const { done, error } = await searchParams;
-  const detail = await getRegionDetail(id);
+  const { done, error, samples } = await searchParams;
+  const showSamples = showSamplesFromParam(samples);
+  const detail = await getRegionDetail(id, showSamples);
   if (!detail) notFound();
   const { config: c, partner, stats, listings, pendingApplications } = detail!;
   const from = `/admin/regions/${id}`;
@@ -231,9 +234,21 @@ export default async function RegionDetailPage({
 
       {/* Activity */}
       <section className="form-card" style={cardStyle}>
-        <h2 className="card-heading" style={{ marginTop: 0 }}>
-          Activity
-        </h2>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: "var(--s-3)",
+            flexWrap: "wrap",
+            marginBottom: "var(--s-3)",
+          }}
+        >
+          <h2 className="card-heading" style={{ margin: 0 }}>
+            Activity
+          </h2>
+          <SampleDataToggle show={showSamples} />
+        </div>
         <div
           style={{
             display: "grid",
