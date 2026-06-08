@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { query } from "@/lib/db";
 import { getCurrentUser, requireAdmin } from "@/lib/auth";
-import { REGION_COOKIE } from "@/lib/regions";
+import { REGION_COOKIE, getHomeRegionIdForUser } from "@/lib/regions";
 import { teardownSandbox } from "@/lib/partner-sandbox";
 
 const COOKIE_MAX_AGE = 30 * 24 * 60 * 60;
@@ -84,11 +84,25 @@ export async function enterSandbox(formData: FormData): Promise<void> {
   redirect(next.startsWith("/") ? next : "/listings");
 }
 
-/** Leave the sandbox — clears the region cookie so the next request
- *  re-resolves to the user's real (active) region or the picker. */
+/** Leave the sandbox — restore the user's real (active, non-test) marketing
+ *  region so they land back on it rather than the region picker. Falls back
+ *  to clearing the cookie when they have no real region (e.g. an admin who
+ *  was only trialing their own sandbox). */
 export async function exitSandbox(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
   const jar = await cookies();
-  jar.delete(REGION_COOKIE);
+  const homeRegionId = user ? await getHomeRegionIdForUser(user.id) : null;
+  if (homeRegionId) {
+    jar.set(REGION_COOKIE, homeRegionId, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: COOKIE_MAX_AGE,
+    });
+  } else {
+    jar.delete(REGION_COOKIE);
+  }
   revalidatePath("/", "layout");
   const next = String(formData.get("next") ?? "/partner");
   redirect(next.startsWith("/") ? next : "/partner");

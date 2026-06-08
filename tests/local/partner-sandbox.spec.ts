@@ -318,6 +318,19 @@ test("an admin creates a sandbox for a partner; the partner launches it from the
       partnerP.waitForURL(/\/listings/, { timeout: 30_000 }),
       partnerP.getByRole("button", { name: /Enter sandbox/i }).click(),
     ]);
+    // The global banner confirms they're inside the sandbox.
+    await expect(partnerP.getByText(/Sandbox mode/i)).toBeVisible();
+
+    // Leaving restores their real region — the pill shows it, not "Pick
+    // region".
+    await Promise.all([
+      partnerP.waitForURL(/\/partner/, { timeout: 30_000 }),
+      partnerP.getByRole("button", { name: /Exit sandbox/i }).click(),
+    ]);
+    await expect(partnerP.locator(".region-pill")).toContainText(reg.label);
+    await expect(partnerP.locator(".region-pill")).not.toContainText(
+      /Pick region/i,
+    );
     await partnerCtx.close();
 
     // --- Admin tears it back down ---------------------------------------

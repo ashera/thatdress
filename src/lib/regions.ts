@@ -140,6 +140,32 @@ export async function hasRealMarketingRegion(userId: string): Promise<boolean> {
   }
 }
 
+/** A user's "home" region to fall back to when they leave a sandbox: their
+ *  first real (active, non-test) marketing region. Null if they have none
+ *  (e.g. an admin trialing their own sandbox) — caller falls back to the
+ *  picker. */
+export async function getHomeRegionIdForUser(
+  userId: string,
+): Promise<string | null> {
+  if (!/^\d+$/.test(userId)) return null;
+  try {
+    const r = await query<{ id: string }>(
+      `SELECT rg.id::text AS id
+         FROM partner_marketing_regions pmr
+         JOIN regions rg ON rg.id = pmr.region_id
+        WHERE pmr.user_id = $1::bigint
+          AND rg.is_test = FALSE
+          AND rg.is_active = TRUE
+        ORDER BY rg.sort_order, rg.id
+        LIMIT 1`,
+      [userId],
+    );
+    return r.rows[0]?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
 /** The listing fee (in cents) the partner who markets `regionId` charges
  *  sellers there. Returns 0 when no partner markets the region, the
  *  partner left it free, or on any lookup error — i.e. "no fee owed" is
