@@ -329,24 +329,45 @@ export default async function RegionDetailPage({
               <span>Active (visible to the public)</span>
             </label>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <DeleteConfirmDialog
-              deleteAction={deleteRegion}
-              idName="id"
-              idValue={c.id}
-              title="Delete this region?"
-              intro={`Permanently delete “${c.label}”.`}
-              warnings={[
-                "Any partner assignment and applications for this region are removed.",
-                "Listings keep their data but lose their region link.",
-              ]}
-              triggerLabel="Delete region"
-            />
+          <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center" }}>
             <Button type="submit" variant="primary">
               Save changes
             </Button>
           </div>
         </form>
+
+        {/* Delete lives OUTSIDE the edit form — the dialog renders its own
+            <form action={deleteRegion}>, and a nested <form> is invalid HTML
+            (the inner submit never fires). */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-start",
+            marginTop: "var(--s-4)",
+            paddingTop: "var(--s-4)",
+            borderTop: "1px solid var(--hairline)",
+          }}
+        >
+          <DeleteConfirmDialog
+            deleteAction={deleteRegion}
+            idName="id"
+            idValue={c.id}
+            title="Delete this region?"
+            intro={`Permanently delete “${c.label}”.`}
+            warnings={
+              c.is_test
+                ? [
+                    "All sandbox sample sellers, their listings and dresses are deleted.",
+                    "The partner grant is removed and the prospect is demoted.",
+                  ]
+                : [
+                    "Any partner assignment and applications for this region are removed.",
+                    "Listings keep their data but lose their region link.",
+                  ]
+            }
+            triggerLabel="Delete region"
+          />
+        </div>
       </section>
     </div>
   );

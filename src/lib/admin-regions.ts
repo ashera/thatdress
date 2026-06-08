@@ -95,6 +95,7 @@ export type RegionConfig = {
   match_pattern: string | null;
   sort_order: number;
   is_active: boolean;
+  is_test: boolean;
 };
 
 export type RegionPartner = {
@@ -146,7 +147,7 @@ export async function getRegionDetail(id: string): Promise<RegionDetail | null> 
   if (!/^\d+$/.test(id)) return null;
   try {
     const cfg = await query<RegionConfig>(
-      `SELECT id::text, slug, label, short_name, match_pattern, sort_order, is_active
+      `SELECT id::text, slug, label, short_name, match_pattern, sort_order, is_active, is_test
          FROM regions WHERE id = $1::bigint LIMIT 1`,
       [id],
     );

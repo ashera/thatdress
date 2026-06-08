@@ -10,6 +10,7 @@ import {
   createTestUser,
   deleteTestRegions,
   firstListingIdInRegion,
+  getListing,
   getSandboxRegion,
   getUserIsPartner,
   mintSession,
@@ -154,6 +155,47 @@ test("sandbox listings only appear in /partner/listings from inside the sandbox"
   } finally {
     await cleanupSandboxFor(owner.id);
     await cleanupUsers([owner.id]);
+    await deleteTestRegions([regionId]);
+  }
+});
+
+test("deleting a sandbox region tears down its listings (no orphans)", async ({
+  browser,
+}) => {
+  const owner = await createTestUser();
+  const seller = await createTestUser();
+  const { regionId } = await createSandboxRegion(owner.id);
+  const { listingId } = await seedListing(seller.id, { regionId });
+  expect(await countListingsInRegion(regionId)).toBe(1);
+
+  const ctx = await browser.newContext();
+  await ctx.addCookies([
+    { name: "session", value: await mintSession(admin.id), url: BASE, httpOnly: true },
+  ]);
+  const page = await ctx.newPage();
+  try {
+    await page.goto(`/admin/regions/${regionId}`, { waitUntil: "networkidle" });
+
+    // Open the "type DELETE to confirm" dialog robustly.
+    const confirm = page.locator('dialog input[aria-label="Type DELETE to confirm"]');
+    await expect(async () => {
+      await page.getByRole("button", { name: /Delete region/i }).first().click();
+      await expect(confirm).toBeVisible({ timeout: 1_000 });
+    }).toPass({ timeout: 20_000 });
+    await confirm.fill("DELETE");
+    const submit = page.locator('dialog button[type="submit"]');
+    await expect(submit).toBeEnabled();
+    await submit.click();
+
+    // The region is gone AND its listing was deleted (not just detached) —
+    // i.e. routed through teardownSandbox, leaving no orphans. Poll the DB
+    // (the action does a soft client redirect).
+    await expect
+      .poll(async () => await getSandboxRegion(owner.id), { timeout: 20_000 })
+      .toBeNull();
+    expect(await getListing(listingId)).toBeNull();
+  } finally {
+    await cleanupUsers([owner.id, seller.id]);
     await deleteTestRegions([regionId]);
   }
 });

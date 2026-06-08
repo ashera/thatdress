@@ -6,6 +6,7 @@ import { cookies } from "next/headers";
 import { query } from "@/lib/db";
 import { getCurrentUser, requireAdmin } from "@/lib/auth";
 import { REGION_COOKIE } from "@/lib/regions";
+import { teardownSandbox } from "@/lib/partner-sandbox";
 
 const COOKIE_MAX_AGE = 30 * 24 * 60 * 60;
 
@@ -177,7 +178,19 @@ export async function deleteRegion(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "");
   if (!/^\d+$/.test(id)) redirect("/admin/regions");
 
-  await query(`DELETE FROM regions WHERE id = $1::bigint`, [id]);
+  // A sandbox/test region owns seeded sample sellers + listings + dresses.
+  // Tear those down (teardownSandbox also removes the region itself);
+  // otherwise a plain DELETE would orphan them (listings.region_id SET NULL,
+  // dresses + sandbox users left behind). Real regions just delete.
+  const isTest = await query<{ is_test: boolean }>(
+    `SELECT is_test FROM regions WHERE id = $1::bigint LIMIT 1`,
+    [id],
+  );
+  if (isTest.rows[0]?.is_test) {
+    await teardownSandbox(id);
+  } else {
+    await query(`DELETE FROM regions WHERE id = $1::bigint`, [id]);
+  }
 
   revalidatePath("/admin/regions");
   revalidatePath("/", "layout");
