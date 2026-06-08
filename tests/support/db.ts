@@ -46,9 +46,17 @@ export type TestUser = { id: string; email: string; password: string };
  *  changes it through the UI (otherwise a non-verifying placeholder is
  *  stored and you authenticate via mintSession). */
 export async function createTestUser(
-  opts: { isPartner?: boolean; isAdmin?: boolean; password?: string } = {},
+  opts: {
+    isPartner?: boolean;
+    isAdmin?: boolean;
+    password?: string;
+    /** Override the generated email — e.g. to mint a sample/sandbox-marked
+     *  account (sample+…@frockd.test) for the admin sample/test filters. */
+    email?: string;
+  } = {},
 ): Promise<TestUser> {
-  const email = `e2e-${Date.now()}-${randomBytes(3).toString("hex")}@frockd.test`;
+  const email =
+    opts.email ?? `e2e-${Date.now()}-${randomBytes(3).toString("hex")}@frockd.test`;
   const password = opts.password ?? "";
   const hash = password ? await bcrypt.hash(password, 10) : DISABLED_HASH;
   return withDb(async (c) => {
@@ -536,6 +544,55 @@ export async function setListingPublished(
       published,
     ]),
   );
+}
+
+/** Mark a listing sold (optionally to a buyer) — for the partner dashboard
+ *  "sold" / GMV drill-downs. */
+export async function setListingSold(
+  listingId: string,
+  buyerId?: string,
+): Promise<void> {
+  await withDb((c) =>
+    c.query(
+      `UPDATE listings SET sold_at = NOW(), sold_to_user_id = $2::bigint
+        WHERE id = $1::bigint`,
+      [listingId, buyerId ?? null],
+    ),
+  );
+}
+
+/** Upsert a row in the tests catalog (drives /admin/test-management), so a
+ *  test can assert numbering/category rendering without a real Playwright
+ *  run having populated it. */
+export async function seedTestCatalogRow(opts: {
+  testKey: string;
+  title: string;
+  suite: string;
+  file?: string;
+}): Promise<void> {
+  await withDb((c) =>
+    c.query(
+      `INSERT INTO tests (test_key, title, suite, file, is_active)
+         VALUES ($1, $2, $3, $4, TRUE)
+       ON CONFLICT (test_key) DO UPDATE
+         SET title = EXCLUDED.title, suite = EXCLUDED.suite,
+             file = EXCLUDED.file, is_active = TRUE`,
+      [opts.testKey, opts.title, opts.suite, opts.file ?? null],
+    ),
+  );
+}
+
+/** Remove catalogue rows (and their results) by test_key. */
+export async function deleteTestCatalogRows(testKeys: string[]): Promise<void> {
+  if (testKeys.length === 0) return;
+  await withDb(async (c) => {
+    await c.query(`DELETE FROM test_results WHERE test_key = ANY($1::text[])`, [
+      testKeys,
+    ]);
+    await c.query(`DELETE FROM tests WHERE test_key = ANY($1::text[])`, [
+      testKeys,
+    ]);
+  });
 }
 
 /** Insert a session row and return its id (use as the `session` cookie). */

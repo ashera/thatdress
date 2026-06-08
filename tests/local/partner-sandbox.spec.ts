@@ -238,3 +238,39 @@ test("a prospect can create their own sandbox from the apply page", async ({
     await deleteTestRegions([r.id]);
   }
 });
+
+test("an admin can create and tear down their own sandbox from Manage regions", async ({
+  browser,
+}) => {
+  const adminUser = await createTestUser({ isAdmin: true });
+  const ctx = await browser.newContext();
+  await ctx.addCookies([
+    { name: "session", value: await mintSession(adminUser.id), url: BASE, httpOnly: true },
+  ]);
+  const page = await ctx.newPage();
+  try {
+    await page.goto("/admin/regions", { waitUntil: "networkidle" });
+
+    // No sandbox yet → the card offers to create one.
+    await Promise.all([
+      page.waitForURL(/done=sandbox-created/, { timeout: 30_000 }),
+      page.getByRole("button", { name: /Create my sandbox/i }).click(),
+    ]);
+    const sb = await getSandboxRegion(adminUser.id);
+    expect(sb).not.toBeNull();
+
+    // Now it offers to enter or tear down instead.
+    await expect(
+      page.getByRole("button", { name: /Enter sandbox/i }),
+    ).toBeVisible();
+
+    await Promise.all([
+      page.waitForURL(/done=sandbox-ended/, { timeout: 30_000 }),
+      page.getByRole("button", { name: /Tear down/i }).click(),
+    ]);
+    expect(await getSandboxRegion(adminUser.id)).toBeNull();
+  } finally {
+    await cleanupSandboxFor(adminUser.id);
+    await cleanupUsers([adminUser.id]);
+  }
+});
